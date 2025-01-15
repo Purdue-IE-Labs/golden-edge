@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+message TagData {
+    enum DataType {
+        UNKNOWN = 0;
+        INT = 1;
+        FLOAT = 2;
+        STRING = 3;
+        BOOL = 4;
+        LIST_INT = 5;
+        LIST_FLOAT = 6;
+        LIST_STRING = 7;
+        LIST_BOOL = 8;
+    }
+
+    DataType data = 1;
+}
