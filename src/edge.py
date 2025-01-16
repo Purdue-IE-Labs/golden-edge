@@ -1,12 +1,14 @@
 from tag import Tag
 from typing import Any, List, Set
 from proto.tag_data_pb2 import TagData
+from proto.meta_pb2 import Meta
 from error import TagIncorrectDataType, TagNotFound, TagDuplicateName
 
-class EdgeNode():
+class EdgeNode:
     def __init__(self, key_prefix: str, name: str):
         self.key_prefix = key_prefix
         self.name = name
+        self.connected = False
         self.tags: Set[Tag] = set()
     
     # TODO: should external API use a protobuf definition
@@ -30,6 +32,10 @@ class EdgeNode():
         pass
     
     def connect(self):
-        # send META message
-        # TODO
+        meta: Meta = self._build_meta()
+        # Send STATE message
         pass
+
+    def _build_meta(self) -> Meta:
+        meta = Meta(tags=[Meta.Tag(name=t.name, type=t.type, properties=t.properties) for t in self.tags])
+        return meta
