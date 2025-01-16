@@ -1,3 +1,19 @@
+[project]
+name = "golden-edge"
+version = "0.0.1"
+authors = [
+    { name = "Grayson Nocera", email = "gnocera@purdue.edu" }
+]
+description = "A replacement for MQTT Sparkplug"
+readme = "README.md"
+dependencies = [
+    "protobuf",
+    "eclipse-zenoh"
+]
+
+[project.urls]
+Homepage = "https://github.com/Purdue-IE-Labs/build-at-zenoh"
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"

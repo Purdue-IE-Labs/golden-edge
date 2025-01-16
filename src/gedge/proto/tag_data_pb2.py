@@ -24,15 +24,15 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0etag_data.proto\"\xab\x01\n\x07TagData\x12\x1f\n\x04\x64\x61ta\x18\x01 \x01(\x0e\x32\x11.TagData.DataType\"\x7f\n\x08\x44\x61taType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x07\n\x03INT\x10\x01\x12\t\n\x05\x46LOAT\x10\x02\x12\n\n\x06STRING\x10\x03\x12\x08\n\x04\x42OOL\x10\x04\x12\x0c\n\x08LIST_INT\x10\x05\x12\x0e\n\nLIST_FLOAT\x10\x06\x12\x0f\n\x0bLIST_STRING\x10\x07\x12\r\n\tLIST_BOOL\x10\x08\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0etag_data.proto\"\"\n\x07TagData\x12\x17\n\x04\x64\x61ta\x18\x01 \x01(\x0e\x32\t.DataType*\x7f\n\x08\x44\x61taType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x07\n\x03INT\x10\x01\x12\t\n\x05\x46LOAT\x10\x02\x12\n\n\x06STRING\x10\x03\x12\x08\n\x04\x42OOL\x10\x04\x12\x0c\n\x08LIST_INT\x10\x05\x12\x0e\n\nLIST_FLOAT\x10\x06\x12\x0f\n\x0bLIST_STRING\x10\x07\x12\r\n\tLIST_BOOL\x10\x08\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'tag_data_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_TAGDATA']._serialized_start=19
-  _globals['_TAGDATA']._serialized_end=190
-  _globals['_TAGDATA_DATATYPE']._serialized_start=63
-  _globals['_TAGDATA_DATATYPE']._serialized_end=190
+  _globals['_DATATYPE']._serialized_start=54
+  _globals['_DATATYPE']._serialized_end=181
+  _globals['_TAGDATA']._serialized_start=18
+  _globals['_TAGDATA']._serialized_end=52
 # @@protoc_insertion_point(module_scope)
