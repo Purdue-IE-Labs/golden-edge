@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, Dict
 from proto.tag_data_pb2 import TagData
 
-class Tag():
-    def __init__(self, name: str, type: TagData.DataType, properties: dict = {}):
+class Tag:
+    def __init__(self, name: str, type: TagData.DataType, properties: Dict[str, Any] = {}):
         self.name = name
         self.type = type
         self.properties = properties
@@ -25,3 +25,4 @@ class Tag():
                 return list([str(x) for x in value])
             case TagData.DataType.LIST_BOOL:
                 return list([bool(x) for x in value])
+        raise ValueError
