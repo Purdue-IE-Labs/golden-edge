@@ -12,6 +12,9 @@ if res.returncode != 0:
 import re
 import os
 
+# Python protobuf does not support relative imports (see https://github.com/protocolbuffers/protobuf/issues/1491). This breaks in Python3. 
+# Our current fix is to use a regex to change import statements to relative imports. This could break if the structure of the proto folder 
+# increases in complexity.
 files = [f for f in os.listdir(python_proto_folder) if os.path.isfile(python_proto_folder / f)]
 for file in files:
     path = python_proto_folder / file
