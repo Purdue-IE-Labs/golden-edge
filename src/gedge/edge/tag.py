@@ -1,8 +1,8 @@
 from typing import Any, Dict
-from proto.tag_data_pb2 import TagData
+from gedge.proto import TagData, DataType
 
 class Tag:
-    def __init__(self, name: str, type: TagData.DataType, properties: Dict[str, Any] = {}):
+    def __init__(self, name: str, type: DataType, properties: Dict[str, Any] = {}):
         self.name = name
         self.type = type
         self.properties = properties
