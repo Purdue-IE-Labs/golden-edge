@@ -1,10 +1,9 @@
-from tag import Tag
-from typing import Any, List, Set
-from proto.tag_data_pb2 import TagData
-from proto.meta_pb2 import Meta
-from error import TagIncorrectDataType, TagNotFound, TagDuplicateName
+from gedge.edge import Tag
+from typing import Any, Set
+from gedge.proto import TagData, Meta
+from gedge.edge.error import TagIncorrectDataType, TagNotFound, TagDuplicateName
 from contextlib import contextmanager
-from comm import Comm
+from gedge.comm.comm import Comm
 
 class EdgeNode:
     def __init__(self, key_prefix: str, name: str):
