@@ -4,7 +4,7 @@ from gedge.edge.tag import Tag
 from gedge.proto import Meta, TagData, DataType
 
 # handle Zenoh communications
-# The user will not interact with this item, so we can assume in all functions that it is connected
+# The user will not interact with this item, so we can assume in all functions that zenoh is connected
 class Comm:
     def __init__(self, key_prefix: str, name: str, config: zenoh.Config = zenoh.Config()):
         self._meta_key = ""
@@ -43,8 +43,8 @@ class Comm:
         res = self.session.put(self._meta_key, meta.SerializeToString())
         print(res)
     
-    def send_tag(self, tag: Tag, value: TagData, key: str):
-        res = self.session.put(self._tag_key_prefix + "/" + key.strip("/"), value.SerializeToString())
+    def send_tag(self, value: TagData, key_expr: str):
+        res = self.session.put(self._tag_data_key_prefix + "/" + key_expr.strip("/"), value.SerializeToString())
         print(res)
 
     def send_state(self):
