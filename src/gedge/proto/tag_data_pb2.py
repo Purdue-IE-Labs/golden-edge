@@ -24,15 +24,25 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0etag_data.proto\"\"\n\x07TagData\x12\x17\n\x04\x64\x61ta\x18\x01 \x01(\x0e\x32\t.DataType*\x7f\n\x08\x44\x61taType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x07\n\x03INT\x10\x01\x12\t\n\x05\x46LOAT\x10\x02\x12\n\n\x06STRING\x10\x03\x12\x08\n\x04\x42OOL\x10\x04\x12\x0c\n\x08LIST_INT\x10\x05\x12\x0e\n\nLIST_FLOAT\x10\x06\x12\x0f\n\x0bLIST_STRING\x10\x07\x12\r\n\tLIST_BOOL\x10\x08\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0etag_data.proto\"\x17\n\x07ListInt\x12\x0c\n\x04list\x18\x01 \x03(\r\"\x18\n\x08ListLong\x12\x0c\n\x04list\x18\x01 \x03(\r\"\x19\n\tListFloat\x12\x0c\n\x04list\x18\x01 \x03(\r\"\x1a\n\nListString\x12\x0c\n\x04list\x18\x01 \x03(\r\"\x18\n\x08ListBool\x12\x0c\n\x04list\x18\x01 \x03(\r\"\xb9\x02\n\x07TagData\x12\x12\n\x08int_data\x18\x01 \x01(\rH\x00\x12\x13\n\tlong_data\x18\x02 \x01(\x04H\x00\x12\x14\n\nfloat_data\x18\x03 \x01(\x02H\x00\x12\x15\n\x0bstring_data\x18\x04 \x01(\tH\x00\x12\x13\n\tbool_data\x18\x05 \x01(\x08H\x00\x12!\n\rlist_int_data\x18\x06 \x01(\x0b\x32\x08.ListIntH\x00\x12#\n\x0elist_long_data\x18\x07 \x01(\x0b\x32\t.ListLongH\x00\x12%\n\x0flist_float_data\x18\x08 \x01(\x0b\x32\n.ListFloatH\x00\x12\'\n\x10list_string_data\x18\t \x01(\x0b\x32\x0b.ListStringH\x00\x12#\n\x0elist_bool_data\x18\n \x01(\x0b\x32\t.ListBoolH\x00\x42\x06\n\x04\x64\x61ta*\x98\x01\n\x08\x44\x61taType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x07\n\x03INT\x10\x01\x12\x08\n\x04LONG\x10\x02\x12\t\n\x05\x46LOAT\x10\x03\x12\n\n\x06STRING\x10\x04\x12\x08\n\x04\x42OOL\x10\x05\x12\x0c\n\x08LIST_INT\x10\x06\x12\r\n\tLIST_LONG\x10\x07\x12\x0e\n\nLIST_FLOAT\x10\x08\x12\x0f\n\x0bLIST_STRING\x10\t\x12\r\n\tLIST_BOOL\x10\nb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'tag_data_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_DATATYPE']._serialized_start=54
-  _globals['_DATATYPE']._serialized_end=181
-  _globals['_TAGDATA']._serialized_start=18
-  _globals['_TAGDATA']._serialized_end=52
+  _globals['_DATATYPE']._serialized_start=467
+  _globals['_DATATYPE']._serialized_end=619
+  _globals['_LISTINT']._serialized_start=18
+  _globals['_LISTINT']._serialized_end=41
+  _globals['_LISTLONG']._serialized_start=43
+  _globals['_LISTLONG']._serialized_end=67
+  _globals['_LISTFLOAT']._serialized_start=69
+  _globals['_LISTFLOAT']._serialized_end=94
+  _globals['_LISTSTRING']._serialized_start=96
+  _globals['_LISTSTRING']._serialized_end=122
+  _globals['_LISTBOOL']._serialized_start=124
+  _globals['_LISTBOOL']._serialized_end=148
+  _globals['_TAGDATA']._serialized_start=151
+  _globals['_TAGDATA']._serialized_end=464
 # @@protoc_insertion_point(module_scope)

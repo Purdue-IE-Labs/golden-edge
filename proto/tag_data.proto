@@ -3,15 +3,45 @@ syntax = "proto3";
 enum DataType {
     UNKNOWN = 0;
     INT = 1;
-    FLOAT = 2;
-    STRING = 3;
-    BOOL = 4;
-    LIST_INT = 5;
-    LIST_FLOAT = 6;
-    LIST_STRING = 7;
-    LIST_BOOL = 8;
+    LONG = 2;
+    FLOAT = 3;
+    STRING = 4;
+    BOOL = 5;
+    LIST_INT = 6;
+    LIST_LONG = 7;
+    LIST_FLOAT = 8;
+    LIST_STRING = 9;
+    LIST_BOOL = 10;
+}
+
+// These messages are defined because "repeated" is not allowed in a "oneof"
+message ListInt {
+    repeated uint32 list = 1;
+}
+message ListLong {
+    repeated uint32 list = 1;
+}
+message ListFloat {
+    repeated uint32 list = 1;
+}
+message ListString {
+    repeated uint32 list = 1;
+}
+message ListBool {
+    repeated uint32 list = 1;
 }
 
 message TagData {
-    DataType data = 1;
+    oneof data {
+        uint32 int_data = 1;
+        uint64 long_data = 2;
+        float float_data = 3;
+        string string_data = 4;
+        bool bool_data = 5;
+        ListInt list_int_data = 6;
+        ListLong list_long_data = 7;
+        ListFloat list_float_data = 8;
+        ListString list_string_data = 9;
+        ListBool list_bool_data = 10;
+    };
 }
