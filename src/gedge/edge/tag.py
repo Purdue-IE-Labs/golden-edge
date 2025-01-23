@@ -3,12 +3,13 @@ from types import GenericAlias
 from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString
 
 class Tag:
-    def __init__(self, name: str, type: Any, properties: Dict[str, Any] = {}):
+    def __init__(self, name: str, type: Any, key_expr: str, properties: Dict[str, Any] = {}):
         self.name = name
         if not isinstance(type, int):
             type = Tag._convert_type(type)
         self.type: int = type
         self.properties = properties
+        self.key_expr = key_expr
 
     def convert(self, value: Any) -> TagData:
         tag_data = TagData()

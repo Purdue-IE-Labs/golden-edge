@@ -1,5 +1,5 @@
 from gedge.edge import Tag
-from typing import Any, Set
+from typing import Any, Set, Union, Type
 from gedge.proto import TagData, Meta, DataType
 from gedge.edge.error import TagIncorrectDataType, TagNotFound, TagDuplicateName
 from contextlib import contextmanager
@@ -14,21 +14,19 @@ class EdgeNode:
         self._comm: Comm = Comm(key_prefix, name)
     
     # TODO: should external API use a protobuf definition
-    def add_tag(self, name: str, type: DataType, properties: dict = {}):
+    def add_tag(self, name: str, type: Any, key_expr: str, properties: dict = {}):
         if len([t for t in self.tags if t.name == name]) >= 1:
             # for now, we disallow tags with duplicate names
             raise TagDuplicateName
-        tag = Tag(name, type, properties)
+        tag = Tag(name, type, key_expr, properties)
         self.tags.add(tag)
 
-    def write_tag(self, name: str, value: Any, key: str):
+    def write_tag(self, name: str, value: Any):
         tag = [tag for tag in self.tags if tag.name == name]
         if len(tag) == 0:
             raise KeyError
         tag = tag[0]
-        self._comm.send_tag()
-        # zenoh write
-        # TODO
+        self._comm.send_tag(value=tag.convert(value), key=tag.key_expr)
     
     def delete_tag(self, name: str):
         # TODO
