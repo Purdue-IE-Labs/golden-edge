@@ -1,1 +1,1 @@
-from .edge.edge import EdgeNodeConfig, EdgeNodeSession
+from .edge.edge import EdgeNodeConfig, EdgeNodeSession, connect
