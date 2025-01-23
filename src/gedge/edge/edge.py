@@ -1,7 +1,7 @@
 import zenoh
 from gedge.edge import Tag
 from typing import Any, Set, Union, Type, Generator
-from gedge.proto import TagData, Meta, DataType
+from gedge.proto import TagData, Meta, DataType, State
 from gedge.edge.error import TagIncorrectDataType, TagNotFound, TagDuplicateName
 from contextlib import contextmanager
 from gedge.comm.comm import Comm
@@ -27,24 +27,25 @@ class EdgeNodeConfig:
     @contextmanager
     def connect(self):
         comm: Comm = Comm(self.key_prefix, self.name)
-        with comm.connect() as session:
-            yield EdgeNodeSession(config=self, z_session=session, comm=comm)
+        with comm.connect():
+            yield EdgeNodeSession(config=self, comm=comm)
     
     def build_meta(self) -> Meta:
         meta = Meta(tags=[Meta.Tag(name=t.name, type=t.type, properties=t.properties) for t in self.tags])
         return meta
 
 class EdgeNodeSession:
-    def __init__(self, config: EdgeNodeConfig, z_session: zenoh.Session, comm: Comm):
-        self._z_session = z_session
+    def __init__(self, config: EdgeNodeConfig, comm: Comm):
         self._comm = comm 
         self.config = config
+        self.startup()
 
     def startup(self):
         meta: Meta = self.config.build_meta()
-        # Send STATE message
-        # Receive META messages
+        state: State = State(online=True)
+        self.node_liveliness = self._comm.declare_liveliness_token()
         self._comm.send_meta(meta)
+        self._comm.send_state(state)
     
     def write_tag(self, name: str, value: Any):
         tag = [tag for tag in self.config.tags if tag.name == name]
@@ -52,7 +53,6 @@ class EdgeNodeSession:
             raise KeyError
         tag = tag[0]
         self._comm.send_tag(value=tag.convert(value), key_expr=tag.key_expr)
-
     
 @contextmanager
 def connect(config: EdgeNodeConfig) -> Generator[EdgeNodeSession, None, None]:
