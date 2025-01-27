@@ -9,15 +9,16 @@ from gedge.comm.comm import Comm
 
 class EdgeNodeConfig:
     def __init__(self, key_prefix: str, name: str, tags: Set[Tag] = set()):
-        self.key_prefix = key_prefix
+        self.key_prefix = key_prefix.strip("/")
         self.name = name
         self.connected = False
         self.tags: Set[Tag] = tags
 
-    def add_tag(self, name: str, type: Any, key_expr: str, properties: dict = {}):
+    def add_tag(self, name: str, type: int | type, key_expr: str, properties: dict = {}):
         if len([t for t in self.tags if t.name == name]) >= 1:
             # for now, we disallow tags with duplicate names
             raise TagDuplicateName
+        print(f"adding tag on prefix: {key_expr}")
         tag = Tag(name, type, key_expr, properties)
         self.tags.add(tag)
 
@@ -26,7 +27,7 @@ class EdgeNodeConfig:
 
     @contextmanager
     def connect(self):
-        comm: Comm = Comm(self.key_prefix, self.name)
+        comm = Comm(self.key_prefix, self.name)
         with comm.connect():
             yield EdgeNodeSession(config=self, comm=comm)
     
@@ -53,8 +54,3 @@ class EdgeNodeSession:
             raise KeyError
         tag = tag[0]
         self._comm.send_tag(value=tag.convert(value), key_expr=tag.key_expr)
-    
-@contextmanager
-def connect(config: EdgeNodeConfig) -> Generator[EdgeNodeSession, None, None]:
-    with config.connect() as session:
-        yield session
