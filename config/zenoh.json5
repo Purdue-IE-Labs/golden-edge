@@ -1,0 +1,49 @@
+{
+  metadata: {
+    name: "zenoh router",
+    location: "build at scale",
+  },
+  adminspace: {
+    enabled: true,
+    permissions: {
+      read: true,
+      write: false
+    }
+  },
+  connect: {
+    endpoints: ["tcp/localhost:7447"],
+  },
+  plugins: {
+    storage_manager: {
+      __required__: true,
+      volumes: {
+        influxdb2: {
+          url: "http://localhost:8086/api/v2/",
+          private: {
+            org_id: "ielabs",
+            token: "buLl_XsgWhqxHg4lzGHQnnUSz_sHZT2deY8L9fkNOV825w0uXimwLQ077QlgkQ52ouad4UmQ80WhHSwb8ftESQ=="
+          }
+        }
+      },
+      storages: {
+        meta: {
+          key_expr: "**/META/**",
+          volume: {
+            id: "influxdb2",
+            db: "meta",
+            create_db: false,
+            // Are both needed?
+            // private: {
+            //    org_id: "ielabs",
+            //    token: "H5V4O_PHxiHZlyVbTCrZE7XDp2Rgo_Zry-rGNZMWYTnuOICtuKDYwra2t1v8qmCdZwBPLDIHlFM33T_cMASsTw==" 
+            // }
+          }
+        }
+      }
+    },
+    rest: { 
+      __required__: true,
+      http_port: 8000,
+    }
+  }
+}
