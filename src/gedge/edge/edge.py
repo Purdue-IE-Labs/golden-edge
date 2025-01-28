@@ -47,6 +47,8 @@ class EdgeNodeSession:
         self.node_liveliness = self._comm.declare_liveliness_token()
         self._comm.send_meta(meta)
         self._comm.send_state(state)
+        messages = self._comm.pull_meta_messages(only_online=True)
+        print(messages)
     
     def write_tag(self, name: str, value: Any):
         tag = [tag for tag in self.config.tags if tag.name == name]
