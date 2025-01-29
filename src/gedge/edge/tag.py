@@ -1,6 +1,6 @@
 from typing import Any, Dict, Union
 from types import GenericAlias
-from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString
+from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property
 
 class Tag:
     def __init__(self, name: str, type: Any, key_expr: str, properties: Dict[str, Any] = {}):
@@ -8,12 +8,44 @@ class Tag:
         if not isinstance(type, int):
             type = Tag._convert_type(type)
         self.type: int = type
-        self.properties = properties
+
+        self.properties: dict[str, Property] = {}
+        for name, value in properties.items():
+            type_ = Tag._intuit_property_type(value)
+            self.properties[name] = Property(type=type_, value=self.convert_property(value, type_))
+
         self.key_expr = key_expr
 
     def convert(self, value: Any) -> TagData:
         tag_data = TagData()
         match self.type:
+            case DataType.INT:
+                tag_data.int_data = int(value)
+            case DataType.LONG:
+                tag_data.long_data = int(value)
+            case DataType.FLOAT:
+                tag_data.float_data = float(value)
+            case DataType.STRING:
+                tag_data.string_data = str(value)
+            case DataType.BOOL:
+                tag_data.bool_data = bool(value)
+            case DataType.LIST_INT:
+                tag_data.list_int_data.list.extend(list([int(x) for x in value]))
+            case DataType.LIST_LONG:
+                tag_data.list_long_data.list.extend(list([int(x) for x in value]))
+            case DataType.LIST_FLOAT:
+                tag_data.list_float_data.list.extend(list([float(x) for x in value]))
+            case DataType.LIST_STRING:
+                tag_data.list_string_data.list.extend(list([str(x) for x in value]))
+            case DataType.LIST_BOOL:
+                tag_data.list_bool_data.list.extend(list([bool(x) for x in value]))
+            case _:
+                raise ValueError("unknown tag type")
+        return tag_data
+
+    def convert_property(self, value: Any, type: int) -> TagData:
+        tag_data = TagData()
+        match type:
             case DataType.INT:
                 tag_data.int_data = int(value)
             case DataType.LONG:
@@ -66,6 +98,19 @@ class Tag:
             return DataType.LIST_BOOL
         else:
             raise ValueError("unknown type")
+        
+    @staticmethod
+    def _intuit_property_type(value: Any) -> DataType:
+        if isinstance(value, str):
+            return DataType.STRING
+        elif isinstance(value, int):
+            return DataType.INT
+        elif isinstance(value, float):
+            return DataType.FLOAT
+        elif isinstance(value, bool):
+            return DataType.BOOL
+        else:
+            raise ValueError("illegal type for property")
 
 if __name__ == "__main__":
     print("list int")

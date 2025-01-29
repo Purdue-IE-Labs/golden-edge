@@ -1,7 +1,7 @@
 import zenoh
 from gedge.edge import Tag
 from typing import Any, Set, Union, Type, Generator
-from gedge.proto import TagData, Meta, DataType, State
+from gedge.proto import TagData, Meta, DataType, State, Property
 from gedge.edge.error import TagIncorrectDataType, TagNotFound, TagDuplicateName
 from contextlib import contextmanager
 from gedge.comm.comm import Comm
@@ -14,7 +14,7 @@ class EdgeNodeConfig:
         self.connected = False
         self.tags: Set[Tag] = tags
 
-    def add_tag(self, name: str, type: int | type, key_expr: str, properties: dict = {}):
+    def add_tag(self, name: str, type: int | type, key_expr: str, properties: dict[str, Any] = {}):
         if len([t for t in self.tags if t.name == name]) >= 1:
             # for now, we disallow tags with duplicate names
             raise TagDuplicateName
@@ -23,7 +23,7 @@ class EdgeNodeConfig:
         self.tags.add(tag)
 
     def delete_tag(self, name: str):
-        pass
+        self.tags.remove(name)
 
     @contextmanager
     def connect(self):
@@ -32,7 +32,12 @@ class EdgeNodeConfig:
             yield EdgeNodeSession(config=self, comm=comm)
     
     def build_meta(self) -> Meta:
-        meta = Meta(tags=[Meta.Tag(name=t.name, type=t.type, properties=t.properties) for t in self.tags])
+        print(f"building meta for {self.name}")
+        tags = []
+        for t in self.tags:
+            tag = Meta.Tag(name=t.name, type=t.type, properties=t.properties)
+            tags.append(tag)
+        meta = Meta(tags=tags)
         return meta
 
 class EdgeNodeSession:
@@ -43,10 +48,10 @@ class EdgeNodeSession:
 
     def startup(self):
         meta: Meta = self.config.build_meta()
-        state: State = State(online=True)
-        self.node_liveliness = self._comm.declare_liveliness_token()
         self._comm.send_meta(meta)
+        state: State = State(online=True)
         self._comm.send_state(state)
+        self.node_liveliness = self._comm.declare_liveliness_token()
         messages = self._comm.pull_meta_messages(only_online=True)
         print(messages)
     
