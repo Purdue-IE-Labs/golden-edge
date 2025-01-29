@@ -1,8 +1,9 @@
+import base64
 import zenoh
 from contextlib import contextmanager
 from gedge.edge.tag import Tag
 from gedge.proto import Meta, TagData, DataType, State
-from typing import Callable
+from typing import Any, Callable
 
 # handle Zenoh communications
 # The user will not interact with this item, so we can assume in all functions that zenoh is connected
@@ -11,7 +12,7 @@ class Comm:
     def __init__(self, key_prefix: str, name: str, config: zenoh.Config = zenoh.Config()):
         self._key_prefix = key_prefix.strip("/")
         self._name = name
-        self._set_keys(self._key_prefix)
+        self._set_keys()
         self.config = config
         self.session: zenoh.Session = None
 
@@ -82,20 +83,27 @@ class Comm:
             self.session = session
             yield
 
+    def _send_protobuf(self, key_expr: str, value: Meta | State | Tag):
+        b = value.SerializeToString()
+        self._put(key_expr, b)
+
+    def _put(self, key_expr: str, payload: bytes):
+        b = base64.b64encode(payload)
+        self.session.put(key_expr, b)
+
     # Edge Node functions
     def send_meta(self, meta: Meta):
-        b = meta.SerializeToString()
         print(f"sending meta on key expression: {self._meta_key_prefix}")
-        res = self.session.put(self._meta_key_prefix, b)
+        self._send_protobuf(self._meta_key_prefix, meta)
     
-    def send_tag(self, value: TagData, key_expr: str):
-        key_expr = self._tag_data_key_prefix + "/" + key_expr.strip("/")
+    def send_tag(self, key_expr: str, value: TagData):
         print(f"sending tag on key expression: {key_expr}")
-        res = self.session.put(key_expr, value.SerializeToString())
+        key_expr = self._tag_data_key_prefix + "/" + key_expr.strip("/")
+        self._send_protobuf(key_expr, value)
 
     def send_state(self, state: State):
         print(f"sending state on key expression: {self._state_key_prefix}")
-        res = self.session.put(self._state_key_prefix, state.SerializeToString())
+        self._send_protobuf(self._state_key_prefix, state)
 
     def pull_meta_messages(self, only_online: bool = False) -> dict[str, Meta]:
         res = self.session.get(f"{self.key_prefix}/NODE/*/META")
@@ -106,7 +114,7 @@ class Comm:
                 continue
             result = r.result
 
-            b = result.payload.to_bytes().replace(b"\r", b"")
+            b = base64.b64decode(result.payload.to_bytes())
             node_name = self.node_name_from_key_expr(result.key_expr)
             try:
                 meta = Meta()
@@ -114,7 +122,18 @@ class Comm:
                 messages[node_name] = meta
             except Exception as e:
                 print(f"couldn't decode {e}")
+                print(b)
         return messages
+
+    def pull_meta_message(self, name: str) -> Meta:
+        reply = self.session.get(f"{self.key_prefix}/NODE/{name}/META").recv()
+        if not reply.ok:
+            raise ValueError(f"no meta message for node {name}")
+        
+        b = base64.b64decode(reply.result.payload.to_bytes())
+        meta = Meta()
+        meta.ParseFromString(b)
+        return meta
             
     def is_online(self, name: str) -> bool:
         # this command will fail is no token is declared for this prefix, meaning offline

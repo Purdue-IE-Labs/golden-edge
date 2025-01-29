@@ -1,3 +1,4 @@
+import base64
 from contextlib import contextmanager
 from gedge.comm import Comm
 from gedge.proto import State, Meta, TagData
@@ -61,7 +62,7 @@ class AppSession:
         self._comm.name = name
         handlers = []
         def _on_state(sample: zenoh.Sample):
-            payload = sample.payload.to_bytes().replace(b"\r", b"")
+            payload = base64.b64decode(sample.payload.to_bytes())
             state = State()
             state.ParseFromString(payload)
             on_state(state)
@@ -69,7 +70,7 @@ class AppSession:
                 self.disconnect_from_node(name)
 
         def _on_meta(sample: zenoh.Sample):
-            payload = sample.payload.to_bytes().replace(b"\r", b"")
+            payload = base64.b64decode(sample.payload.to_bytes())
             meta = Meta()
             meta.ParseFromString(payload)
             on_meta(meta)
@@ -108,7 +109,7 @@ class AppSession:
     def add_tag_data_callback(self, name: str, tag_key_prefix: str, on_tag_data: TagDataCallback) -> zenoh.Subscriber:
         self._comm.name = name
         def _on_tag_data(sample: zenoh.Sample):
-            payload = sample.payload.to_bytes().replace(b"\r", b"")
+            payload = base64.b64decode(sample.payload.to_bytes())
             tag_data = TagData()
             tag_data.ParseFromString(payload)
             on_tag_data(tag_data)
