@@ -16,7 +16,7 @@ message Meta {
     message Tag {
         string name = 1;
         DataType type = 2;
-        map<string, string> properties = 3;
+        map<string, TagData> properties = 3;
     }
 
     repeated Tag tags = 4;
