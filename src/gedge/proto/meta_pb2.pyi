@@ -18,15 +18,15 @@ class Meta(_message.Message):
             KEY_FIELD_NUMBER: _ClassVar[int]
             VALUE_FIELD_NUMBER: _ClassVar[int]
             key: str
-            value: str
-            def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+            value: _tag_data_pb2.TagData
+            def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_tag_data_pb2.TagData, _Mapping]] = ...) -> None: ...
         NAME_FIELD_NUMBER: _ClassVar[int]
         TYPE_FIELD_NUMBER: _ClassVar[int]
         PROPERTIES_FIELD_NUMBER: _ClassVar[int]
         name: str
         type: _tag_data_pb2.DataType
-        properties: _containers.ScalarMap[str, str]
-        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, str]] = ...) -> None: ...
+        properties: _containers.MessageMap[str, _tag_data_pb2.TagData]
+        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, _tag_data_pb2.TagData]] = ...) -> None: ...
     TAGS_FIELD_NUMBER: _ClassVar[int]
     METHODS_FIELD_NUMBER: _ClassVar[int]
     tags: _containers.RepeatedCompositeFieldContainer[Meta.Tag]
