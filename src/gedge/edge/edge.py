@@ -35,7 +35,7 @@ class EdgeNodeConfig:
         print(f"building meta for {self.name}")
         tags = []
         for t in self.tags:
-            tag = Meta.Tag(name=t.name, type=t.type, properties=t.properties)
+            tag = Meta.Tag(name=t.name, type=t.type, key_expr=t.key_expr, properties=t.properties)
             tags.append(tag)
         meta = Meta(tags=tags)
         return meta
