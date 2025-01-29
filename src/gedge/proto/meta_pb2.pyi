@@ -6,6 +6,14 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class Property(_message.Message):
+    __slots__ = ("type", "value")
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    type: _tag_data_pb2.DataType
+    value: _tag_data_pb2.TagData
+    def __init__(self, type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., value: _Optional[_Union[_tag_data_pb2.TagData, _Mapping]] = ...) -> None: ...
+
 class Meta(_message.Message):
     __slots__ = ("tags", "methods")
     class Method(_message.Message):
@@ -18,15 +26,15 @@ class Meta(_message.Message):
             KEY_FIELD_NUMBER: _ClassVar[int]
             VALUE_FIELD_NUMBER: _ClassVar[int]
             key: str
-            value: _tag_data_pb2.TagData
-            def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_tag_data_pb2.TagData, _Mapping]] = ...) -> None: ...
+            value: Property
+            def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Property, _Mapping]] = ...) -> None: ...
         NAME_FIELD_NUMBER: _ClassVar[int]
         TYPE_FIELD_NUMBER: _ClassVar[int]
         PROPERTIES_FIELD_NUMBER: _ClassVar[int]
         name: str
         type: _tag_data_pb2.DataType
-        properties: _containers.MessageMap[str, _tag_data_pb2.TagData]
-        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, _tag_data_pb2.TagData]] = ...) -> None: ...
+        properties: _containers.MessageMap[str, Property]
+        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
     TAGS_FIELD_NUMBER: _ClassVar[int]
     METHODS_FIELD_NUMBER: _ClassVar[int]
     tags: _containers.RepeatedCompositeFieldContainer[Meta.Tag]
