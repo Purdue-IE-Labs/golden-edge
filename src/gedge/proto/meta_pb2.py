@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from . import tag_data_pb2 as tag__data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nmeta.proto\x1a\x0etag_data.proto\"\xe3\x01\n\x04Meta\x12\x17\n\x04tags\x18\x04 \x03(\x0b\x32\t.Meta.Tag\x12\x1d\n\x07methods\x18\x05 \x03(\x0b\x32\x0c.Meta.Method\x1a\x08\n\x06Method\x1a\x98\x01\n\x03Tag\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.DataType\x12-\n\nproperties\x18\x03 \x03(\x0b\x32\x19.Meta.Tag.PropertiesEntry\x1a;\n\x0fPropertiesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x17\n\x05value\x18\x02 \x01(\x0b\x32\x08.TagData:\x02\x38\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nmeta.proto\x1a\x0etag_data.proto\"<\n\x08Property\x12\x17\n\x04type\x18\x06 \x01(\x0e\x32\t.DataType\x12\x17\n\x05value\x18\x07 \x01(\x0b\x32\x08.TagData\"\xe4\x01\n\x04Meta\x12\x17\n\x04tags\x18\x04 \x03(\x0b\x32\t.Meta.Tag\x12\x1d\n\x07methods\x18\x05 \x03(\x0b\x32\x0c.Meta.Method\x1a\x08\n\x06Method\x1a\x99\x01\n\x03Tag\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.DataType\x12-\n\nproperties\x18\x03 \x03(\x0b\x32\x19.Meta.Tag.PropertiesEntry\x1a<\n\x0fPropertiesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0b\x32\t.Property:\x02\x38\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,12 +34,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_META_TAG_PROPERTIESENTRY']._loaded_options = None
   _globals['_META_TAG_PROPERTIESENTRY']._serialized_options = b'8\001'
-  _globals['_META']._serialized_start=31
-  _globals['_META']._serialized_end=258
-  _globals['_META_METHOD']._serialized_start=95
-  _globals['_META_METHOD']._serialized_end=103
-  _globals['_META_TAG']._serialized_start=106
-  _globals['_META_TAG']._serialized_end=258
-  _globals['_META_TAG_PROPERTIESENTRY']._serialized_start=199
-  _globals['_META_TAG_PROPERTIESENTRY']._serialized_end=258
+  _globals['_PROPERTY']._serialized_start=30
+  _globals['_PROPERTY']._serialized_end=90
+  _globals['_META']._serialized_start=93
+  _globals['_META']._serialized_end=321
+  _globals['_META_METHOD']._serialized_start=157
+  _globals['_META_METHOD']._serialized_end=165
+  _globals['_META_TAG']._serialized_start=168
+  _globals['_META_TAG']._serialized_end=321
+  _globals['_META_TAG_PROPERTIESENTRY']._serialized_start=261
+  _globals['_META_TAG_PROPERTIESENTRY']._serialized_end=321
 # @@protoc_insertion_point(module_scope)

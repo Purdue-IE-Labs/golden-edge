@@ -2,6 +2,11 @@ syntax = "proto3";
 
 import "tag_data.proto";
 
+message Property {
+    DataType type = 6;
+    TagData value = 7;
+}
+
 message Meta {
     // methods
         // parameters
@@ -16,7 +21,7 @@ message Meta {
     message Tag {
         string name = 1;
         DataType type = 2;
-        map<string, TagData> properties = 3;
+        map<string, Property> properties = 3;
     }
 
     repeated Tag tags = 4;
