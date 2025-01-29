@@ -20,7 +20,7 @@ class Meta(_message.Message):
         __slots__ = ()
         def __init__(self) -> None: ...
     class Tag(_message.Message):
-        __slots__ = ("name", "type", "properties")
+        __slots__ = ("name", "type", "key_expr", "properties")
         class PropertiesEntry(_message.Message):
             __slots__ = ("key", "value")
             KEY_FIELD_NUMBER: _ClassVar[int]
@@ -30,11 +30,13 @@ class Meta(_message.Message):
             def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Property, _Mapping]] = ...) -> None: ...
         NAME_FIELD_NUMBER: _ClassVar[int]
         TYPE_FIELD_NUMBER: _ClassVar[int]
+        KEY_EXPR_FIELD_NUMBER: _ClassVar[int]
         PROPERTIES_FIELD_NUMBER: _ClassVar[int]
         name: str
         type: _tag_data_pb2.DataType
+        key_expr: str
         properties: _containers.MessageMap[str, Property]
-        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
+        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., key_expr: _Optional[str] = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
     TAGS_FIELD_NUMBER: _ClassVar[int]
     METHODS_FIELD_NUMBER: _ClassVar[int]
     tags: _containers.RepeatedCompositeFieldContainer[Meta.Tag]
