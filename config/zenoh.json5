@@ -16,6 +16,7 @@
   plugins: {
     storage_manager: {
       __required__: true,
+      backend_search_dirs: "./config/",
       volumes: {
         influxdb2: {
           url: "http://localhost:8086/api/v2/",
