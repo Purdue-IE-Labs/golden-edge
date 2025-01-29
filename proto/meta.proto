@@ -3,8 +3,8 @@ syntax = "proto3";
 import "tag_data.proto";
 
 message Property {
-    DataType type = 6;
-    TagData value = 7;
+    DataType type = 7;
+    TagData value = 8;
 }
 
 message Meta {
@@ -21,9 +21,10 @@ message Meta {
     message Tag {
         string name = 1;
         DataType type = 2;
-        map<string, Property> properties = 3;
+        string key_expr = 3;
+        map<string, Property> properties = 4;
     }
 
-    repeated Tag tags = 4;
-    repeated Method methods = 5;
+    repeated Tag tags = 5;
+    repeated Method methods = 6;
 }
