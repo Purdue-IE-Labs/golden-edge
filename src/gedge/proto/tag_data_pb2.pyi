@@ -46,20 +46,20 @@ class ListLong(_message.Message):
 class ListFloat(_message.Message):
     __slots__ = ("list",)
     LIST_FIELD_NUMBER: _ClassVar[int]
-    list: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, list: _Optional[_Iterable[int]] = ...) -> None: ...
+    list: _containers.RepeatedScalarFieldContainer[float]
+    def __init__(self, list: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class ListString(_message.Message):
     __slots__ = ("list",)
     LIST_FIELD_NUMBER: _ClassVar[int]
-    list: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, list: _Optional[_Iterable[int]] = ...) -> None: ...
+    list: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, list: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ListBool(_message.Message):
     __slots__ = ("list",)
     LIST_FIELD_NUMBER: _ClassVar[int]
-    list: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, list: _Optional[_Iterable[int]] = ...) -> None: ...
+    list: _containers.RepeatedScalarFieldContainer[bool]
+    def __init__(self, list: _Optional[_Iterable[bool]] = ...) -> None: ...
 
 class TagData(_message.Message):
     __slots__ = ("int_data", "long_data", "float_data", "string_data", "bool_data", "list_int_data", "list_long_data", "list_float_data", "list_string_data", "list_bool_data")
