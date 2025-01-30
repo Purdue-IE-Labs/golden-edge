@@ -1,6 +1,7 @@
 import base64
 from contextlib import contextmanager
 from gedge.comm import Comm
+from gedge.edge.tag import Tag
 from gedge.proto import State, Meta, TagData
 from typing import Callable, List, Tuple, TypeAlias, TypeVar, Any
 import zenoh
@@ -18,7 +19,7 @@ class AppConfig:
 
 StateCallback: TypeAlias = Callable[[State], None]
 MetaCallback: TypeAlias = Callable[[Meta], None]
-TagDataCallback: TypeAlias = Callable[[TagData], None]
+TagDataCallback: TypeAlias = Callable[[Any], None]
 LivelinessCallback: TypeAlias = Callable[[bool, str], None]
 Callbacks: TypeAlias = Tuple[StateCallback, MetaCallback, TagDataCallback]
 class AppSession:
@@ -112,11 +113,18 @@ class AppSession:
         del self.nodes[name]
     
     def add_tag_data_callback(self, name: str, tag_key_prefix: str, on_tag_data: TagDataCallback) -> zenoh.Subscriber:
+        meta = self._comm.pull_meta_message(name)
         def _on_tag_data(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             tag_data = TagData()
             tag_data.ParseFromString(payload)
-            on_tag_data(tag_data)
+
+            tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.key_expr)]
+            if len(tag_config) == 0:
+                raise ValueError(f"no tag found at key expression {sample.key_expr}")
+            tag_config = tag_config[0]
+            value = Tag.from_tag_data(tag_data, tag_config.type)
+            on_tag_data(value)
         key_expr = self._comm.tag_data_key_expr(self.config.key_prefix, name, tag_key_prefix)
         print(f"tag data key expr: {key_expr}")
         subscriber = self._comm.session.declare_subscriber(key_expr, _on_tag_data)
