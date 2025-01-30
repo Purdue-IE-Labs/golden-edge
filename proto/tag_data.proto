@@ -19,16 +19,16 @@ message ListInt {
     repeated uint32 list = 1;
 }
 message ListLong {
-    repeated uint32 list = 1;
+    repeated uint64 list = 1;
 }
 message ListFloat {
-    repeated uint32 list = 1;
+    repeated float list = 1;
 }
 message ListString {
-    repeated uint32 list = 1;
+    repeated string list = 1;
 }
 message ListBool {
-    repeated uint32 list = 1;
+    repeated bool list = 1;
 }
 
 message TagData {
