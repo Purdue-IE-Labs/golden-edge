@@ -81,8 +81,6 @@ class AppSession:
                 print(f"node {sample.key_expr} went offline")
             is_online = sample.kind == zenoh.SampleKind.PUT
             on_liveliness_change(is_online, name)
-            if not is_online:
-                self.disconnect_from_node(name)
         
         for tag_key_prefix in tag_data_callbacks:
             subscriber = self.add_tag_data_callback(name, tag_key_prefix, tag_data_callbacks[tag_key_prefix])
@@ -90,15 +88,18 @@ class AppSession:
 
         if on_state:
             key_expr = self._comm.state_key_prefix(self.config.key_prefix, name)
+            print(f"state key expr: {key_expr}")
             subscriber = self._comm.session.declare_subscriber(key_expr, _on_state)
             handlers.append(subscriber)
         if on_meta:
             key_expr = self._comm.meta_key_prefix(self.config.key_prefix, name)
+            print(f"meta key expr: {key_expr}")
             subscriber = self._comm.session.declare_subscriber(key_expr, _on_meta)
             handlers.append(subscriber)
         if on_liveliness_change:
             key_expr = self._comm.liveliness_key_prefix(self.config.key_prefix, name)
-            subscriber = self._comm.declare_liveliness_subscriber(_on_liveliness)
+            print(f"liveliness key expr: {key_expr}")
+            subscriber = self._comm.declare_liveliness_subscriber(key_expr, _on_liveliness)
             handlers.append(subscriber)
         self.nodes[name] = handlers
 
@@ -116,7 +117,8 @@ class AppSession:
             tag_data = TagData()
             tag_data.ParseFromString(payload)
             on_tag_data(tag_data)
-        key_expr = self._comm.tag_data_key_expr(self.config.key_prefix, self.config.name, tag_key_prefix)
+        key_expr = self._comm.tag_data_key_expr(self.config.key_prefix, name, tag_key_prefix)
+        print(f"tag data key expr: {key_expr}")
         subscriber = self._comm.session.declare_subscriber(key_expr, _on_tag_data)
         return subscriber
 

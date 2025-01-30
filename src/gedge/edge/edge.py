@@ -1,6 +1,5 @@
-import zenoh
 from gedge.edge import Tag
-from typing import Any, Set, Union, Type, Generator
+from typing import Any, Set
 from gedge.proto import TagData, Meta, DataType, State, Property
 from gedge.edge.error import TagIncorrectDataType, TagNotFound, TagDuplicateName
 from contextlib import contextmanager
@@ -51,7 +50,7 @@ class EdgeNodeSession:
         self._comm.send_meta(meta)
         state: State = State(online=True)
         self._comm.send_state(state)
-        self.node_liveliness = self._comm.declare_liveliness_token()
+        self.node_liveliness = self._comm.declare_liveliness_token(self._comm.liveliness_key_prefix(self.config.key_prefix, self.config.name))
         messages = self._comm.pull_meta_messages(only_online=True)
         print(messages)
     
