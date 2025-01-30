@@ -11,6 +11,13 @@ dependencies = [
     "eclipse-zenoh"
 ]
 
+[project.optional-dependencies]
+test = [
+    "pymodbus",
+    "requests",
+    "python-dotenv"
+]
+
 [project.urls]
 Homepage = "https://github.com/Purdue-IE-Labs/build-at-zenoh"
 
