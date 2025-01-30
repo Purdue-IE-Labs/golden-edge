@@ -52,6 +52,9 @@ class Comm:
 
     def tag_data_key_prefix(self, prefix: str, name: str):
         return self.node_key_prefix(prefix, name) + "/TAGS/DATA"
+
+    def tag_data_key_expr(self, prefix: str, name: str, tag_key_expr: str):
+        return self.node_key_prefix(prefix, name) + f"/TAGS/DATA/{tag_key_expr}"
     
     def tag_write_key_prefix(self, prefix: str, name: str):
         return self.node_key_prefix(prefix, name) + "/TAGS/WRITE"

@@ -57,9 +57,8 @@ class AppSession:
     def _on_liveliness_default(self):
         pass
 
-    def connect_to_node(self, name: str, on_state: StateCallback, on_meta: MetaCallback, on_liveliness_change: LivelinessCallback, tag_data_callbacks: dict[str, TagDataCallback]):
+    def connect_to_node(self, name: str, on_state: StateCallback = None, on_meta: MetaCallback = None, on_liveliness_change: LivelinessCallback = None, tag_data_callbacks: dict[str, TagDataCallback] = {}):
         print(f"connecting to node {name}")
-        self._comm.name = name
         handlers = []
         def _on_state(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
@@ -88,15 +87,20 @@ class AppSession:
         for tag_key_prefix in tag_data_callbacks:
             subscriber = self.add_tag_data_callback(name, tag_key_prefix, tag_data_callbacks[tag_key_prefix])
             handlers.append(subscriber)
-        self._comm.name = name
-        subscriber = self._comm.session.declare_subscriber(self._comm._state_key_prefix, _on_state)
-        handlers.append(subscriber)
-        subscriber = self._comm.session.declare_subscriber(self._comm._meta_key_prefix, _on_meta)
-        handlers.append(subscriber)
-        subscriber = self._comm.declare_liveliness_subscriber(_on_liveliness)
-        handlers.append(subscriber)
+
+        if on_state:
+            key_expr = self._comm.state_key_prefix(self.config.key_prefix, name)
+            subscriber = self._comm.session.declare_subscriber(key_expr, _on_state)
+            handlers.append(subscriber)
+        if on_meta:
+            key_expr = self._comm.meta_key_prefix(self.config.key_prefix, name)
+            subscriber = self._comm.session.declare_subscriber(key_expr, _on_meta)
+            handlers.append(subscriber)
+        if on_liveliness_change:
+            key_expr = self._comm.liveliness_key_prefix(self.config.key_prefix, name)
+            subscriber = self._comm.declare_liveliness_subscriber(_on_liveliness)
+            handlers.append(subscriber)
         self.nodes[name] = handlers
-        self._comm.name = self.config.name
 
     def disconnect_from_node(self, name: str):
         if name not in self.nodes:
@@ -107,12 +111,14 @@ class AppSession:
         del self.nodes[name]
     
     def add_tag_data_callback(self, name: str, tag_key_prefix: str, on_tag_data: TagDataCallback) -> zenoh.Subscriber:
-        self._comm.name = name
         def _on_tag_data(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             tag_data = TagData()
             tag_data.ParseFromString(payload)
             on_tag_data(tag_data)
-        subscriber = self._comm.session.declare_subscriber(self._comm._tag_data_key_prefix + f"/{tag_key_prefix}", _on_tag_data)
-        self._comm.name = self.config.name
+        key_expr = self._comm.tag_data_key_expr(self.config.key_prefix, self.config.name, tag_key_prefix)
+        subscriber = self._comm.session.declare_subscriber(key_expr, _on_tag_data)
         return subscriber
+
+    def close(self):
+        self._comm.session.close()

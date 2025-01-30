@@ -61,3 +61,6 @@ class EdgeNodeSession:
             raise KeyError
         tag = tag[0]
         self._comm.send_tag(value=tag.convert(value), key_expr=tag.key_expr)
+
+    def close(self):
+        self._comm.session.close()
