@@ -66,8 +66,8 @@ class AppSession:
             state = State()
             state.ParseFromString(payload)
             on_state(state)
-            if not state.online:
-                self.disconnect_from_node(name)
+            # if not state.online:
+            #     self.disconnect_from_node(name)
 
         def _on_meta(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
