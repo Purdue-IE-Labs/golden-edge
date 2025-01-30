@@ -1,4 +1,5 @@
 from .edge.edge import EdgeNodeConfig, EdgeNodeSession
+from .edge.tag import Tag
 from .app.app import AppConfig, AppSession 
 from contextlib import contextmanager
 from typing import Generator

@@ -1,9 +1,9 @@
-from gedge.edge import Tag
 from typing import Any, Set
 from gedge.proto import TagData, Meta, DataType, State, Property
 from gedge.edge.error import TagIncorrectDataType, TagNotFound, TagDuplicateName
 from contextlib import contextmanager
 from gedge.comm.comm import Comm
+from gedge.edge.tag import Tag
 
 
 class EdgeNodeConfig:

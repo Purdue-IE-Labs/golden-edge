@@ -71,6 +71,32 @@ class Tag:
         return tag_data
 
     @staticmethod
+    def from_tag_data(tag_data: TagData, type: DataType) -> Any:
+        match type:
+            case DataType.INT:
+                return int(tag_data.int_data)
+            case DataType.LONG:
+                return int(tag_data.long_data)
+            case DataType.FLOAT:
+                return float(tag_data.float_data)
+            case DataType.STRING:
+                return str(tag_data.string_data)
+            case DataType.BOOL:
+                return bool(tag_data.bool_data)
+            case DataType.LIST_INT:
+                return list(tag_data.list_int_data.list)
+            case DataType.LIST_LONG:
+                return list(tag_data.list_long_data.list)
+            case DataType.LIST_FLOAT:
+                return list(tag_data.list_float_data.list)
+            case DataType.LIST_STRING:
+                return list(tag_data.list_string_data.list)
+            case DataType.LIST_BOOL:
+                return list(tag_data.list_bool_data.list)
+        raise ValueError("cannot convert")
+
+
+    @staticmethod
     def _convert_type(type_: Any) -> DataType:
         """
         Note: Python does not support the notion of a "long" data type.
