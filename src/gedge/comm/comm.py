@@ -69,13 +69,11 @@ class Comm:
         components = str(key_expr).split("/")
         return components[components.index("NODE") + 1]
     
-    def declare_liveliness_token(self) -> zenoh.LivelinessToken:
-        print(f"declaring liveliness token on {self._node_key_prefix}")
-        return self.session.liveliness().declare_token(self._node_key_prefix)
+    def declare_liveliness_token(self, key_expr: str) -> zenoh.LivelinessToken:
+        return self.session.liveliness().declare_token(key_expr)
 
-    def declare_liveliness_subscriber(self, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
-        print(f"declaring subscriber of liveliness of {self._node_key_prefix}")
-        return self.session.liveliness().declare_subscriber(self._node_key_prefix, handler)
+    def declare_liveliness_subscriber(self, key_expr: str, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
+        return self.session.liveliness().declare_subscriber(key_expr, handler)
 
     def query_liveliness(self, key_expr: str) -> zenoh.Reply:
         return self.session.liveliness().get(key_expr).recv()
@@ -100,8 +98,8 @@ class Comm:
         self._send_protobuf(self._meta_key_prefix, meta)
     
     def send_tag(self, key_expr: str, value: TagData):
-        print(f"sending tag on key expression: {key_expr}")
         key_expr = self._tag_data_key_prefix + "/" + key_expr.strip("/")
+        print(f"sending tag on key expression: {key_expr}")
         self._send_protobuf(key_expr, value)
 
     def send_state(self, state: State):
