@@ -24,10 +24,11 @@ config = gedge.AppConfig("BuildAtScale/Robots/Arms", "app")
 with gedge.connect(config) as session:
     session: gedge.AppSession
 
+    # tag data callbacks can be added in two ways: in the connect_to_node argument and in its own function
     session.connect_to_node("Daisy", on_state, on_meta, on_liveliness_change, tag_data_callbacks={
         "tm12/joint_pos": on_joint_position,
-        "project/is_running": on_project_running,
     })
+    session.add_tag_data_callback("Daisy", "project/is_running", on_project_running)
 
     while True:
         time.sleep(1)
