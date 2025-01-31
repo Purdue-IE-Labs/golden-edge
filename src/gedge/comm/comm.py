@@ -4,71 +4,16 @@ from contextlib import contextmanager
 from gedge.edge.tag import Tag
 from gedge.proto import Meta, TagData, DataType, State
 from typing import Any, Callable, List
+from gedge.comm import keys
 
 # handle Zenoh communications
 # The user will not interact with this item, so we can assume in all functions that zenoh is connected
 # TODO: turn the __init__ into the context manager so we don't have to set the session to null initially
 class Comm:
-    def __init__(self, key_prefix: str, name: str, config: zenoh.Config = zenoh.Config()):
-        self._key_prefix = key_prefix.strip("/")
-        self._name = name
-        self._set_keys()
+    def __init__(self, config: zenoh.Config = zenoh.Config()):
         self.config = config
         self.session: zenoh.Session = None
 
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, value: str):
-        self._name = value
-        self._set_keys()
-
-    @property
-    def key_prefix(self):
-        return self._key_prefix
-    
-    @key_prefix.setter
-    def key_prefix(self, value: str):
-        value = value.strip("/")
-        self._key_prefix = value
-        self._set_keys()
-
-    def _set_keys(self):
-        self._node_key_prefix = self.node_key_prefix(self.key_prefix, self.name)
-        self._meta_key_prefix = self.meta_key_prefix(self.key_prefix, self.name)
-        self._tag_data_key_prefix = self.tag_data_key_prefix(self.key_prefix, self.name)
-        self._tag_write_key_prefix = self.tag_write_key_prefix(self.key_prefix, self.name)
-        self._state_key_prefix = self.state_key_prefix(self.key_prefix, self.name)
-
-    def node_key_prefix(self, prefix: str, name: str):
-        node_key_prefix = prefix + f"/NODE/{name}"
-        return node_key_prefix
-
-    def meta_key_prefix(self, prefix: str, name: str):
-        meta_key_prefix = prefix + f"/NODE/{name}/META"
-        return meta_key_prefix
-
-    def tag_data_key_prefix(self, prefix: str, name: str):
-        return self.node_key_prefix(prefix, name) + "/TAGS/DATA"
-
-    def tag_data_key_expr(self, prefix: str, name: str, tag_key_expr: str):
-        return self.node_key_prefix(prefix, name) + f"/TAGS/DATA/{tag_key_expr}"
-    
-    def tag_write_key_prefix(self, prefix: str, name: str):
-        return self.node_key_prefix(prefix, name) + "/TAGS/WRITE"
-    
-    def state_key_prefix(self, prefix: str, name: str):
-        return self.node_key_prefix(prefix, name) + "/STATE"
-
-    def liveliness_key_prefix(self, prefix: str, name: str):
-        return self.node_key_prefix(prefix, name)
-    
-    def node_name_from_key_expr(self, key_expr: str | zenoh.KeyExpr):
-        components = str(key_expr).split("/")
-        return components[components.index("NODE") + 1]
-    
     def declare_liveliness_token(self, key_expr: str) -> zenoh.LivelinessToken:
         return self.session.liveliness().declare_token(key_expr)
 
@@ -93,21 +38,23 @@ class Comm:
         self.session.put(key_expr, b)
 
     # Edge Node functions
-    def send_meta(self, meta: Meta):
-        print(f"sending meta on key expression: {self._meta_key_prefix}")
-        self._send_protobuf(self._meta_key_prefix, meta)
+    def send_meta(self, key_prefix: str, name: str, meta: Meta):
+        key = keys.meta_key_prefix(key_prefix, name)
+        print(f"sending meta on key expression: {key}")
+        self._send_protobuf(key, meta)
     
-    def send_tag(self, key_expr: str, value: TagData):
-        key_expr = self._tag_data_key_prefix + "/" + key_expr.strip("/")
-        print(f"sending tag on key expression: {key_expr}")
-        self._send_protobuf(key_expr, value)
+    def send_tag(self, key_prefix: str, name: str, key_expr: str, value: TagData):
+        key = keys.tag_data_key_expr(key_prefix, name, key_expr)
+        print(f"sending tag on key expression: {key}")
+        self._send_protobuf(key, value)
 
-    def send_state(self, state: State):
-        print(f"sending state on key expression: {self._state_key_prefix}")
-        self._send_protobuf(self._state_key_prefix, state)
+    def send_state(self, key_prefix: str, name: str, state: State):
+        key = keys.state_key_prefix(key_prefix, name)
+        print(f"sending state on key expression: {key}")
+        self._send_protobuf(key, state)
 
-    def pull_meta_messages(self, only_online: bool = False) -> list[Meta]:
-        res = self.session.get(f"{self.key_prefix}/NODE/*/META")
+    def pull_meta_messages(self, key_prefix: str, only_online: bool = False) -> list[Meta]:
+        res = self.session.get(f"{key_prefix}/NODE/*/META")
         messages: list[Meta] = []
         for r in res:
             r: zenoh.Reply
@@ -119,7 +66,7 @@ class Comm:
             try:
                 meta = Meta()
                 meta.ParseFromString(b)
-                is_online = self.is_online(meta.name)
+                is_online = self.is_online(key_prefix, meta.name)
                 if only_online and not is_online:
                     continue
                 messages.append(meta)
@@ -128,8 +75,8 @@ class Comm:
                 print(b)
         return messages
 
-    def pull_meta_message(self, name: str) -> Meta:
-        reply = self.session.get(f"{self.key_prefix}/NODE/{name}/META").recv()
+    def pull_meta_message(self, key_prefix: str, name: str) -> Meta:
+        reply = self.session.get(f"{key_prefix}/NODE/{name}/META").recv()
         if not reply.ok:
             raise ValueError(f"no meta message for node {name}")
         
@@ -138,10 +85,10 @@ class Comm:
         meta.ParseFromString(b)
         return meta
             
-    def is_online(self, name: str) -> bool:
+    def is_online(self, key_prefix: str, name: str) -> bool:
         # this command will fail is no token is declared for this prefix, meaning offline
         try:
-            reply = self.session.liveliness().get(self.liveliness_key_prefix(self.key_prefix, name)).recv()
+            reply = self.session.liveliness().get(keys.liveliness_key_prefix(key_prefix, name)).recv()
             if not reply.ok:
                 return False
             return reply.result.kind == zenoh.SampleKind.PUT
