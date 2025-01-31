@@ -12,7 +12,15 @@ from gedge.comm import keys
 class Comm:
     def __init__(self, config: zenoh.Config = zenoh.Config()):
         self.config = config
-        self.session: zenoh.Session = None
+        self.__enter__()
+
+    def __enter__(self):
+        session = zenoh.open(self.config)
+        self.session = session
+        return self
+    
+    def __exit__(self, *exc):
+        self.session.close()
 
     def declare_liveliness_token(self, key_expr: str) -> zenoh.LivelinessToken:
         return self.session.liveliness().declare_token(key_expr)
@@ -22,12 +30,6 @@ class Comm:
 
     def query_liveliness(self, key_expr: str) -> zenoh.Reply:
         return self.session.liveliness().get(key_expr).recv()
-
-    @contextmanager
-    def connect(self):
-        with zenoh.open(self.config) as session:
-            self.session = session
-            yield
 
     def _send_protobuf(self, key_expr: str, value: Meta | State | Tag):
         b = value.SerializeToString()
