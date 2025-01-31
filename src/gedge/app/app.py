@@ -13,11 +13,9 @@ class AppConfig:
         self.key_prefix = key_prefix
         self.name = name
 
-    @contextmanager
     def connect(self):
         comm = Comm()
-        with comm.connect():
-            yield AppSession(config=self, comm=comm)
+        return AppSession(config=self, comm=comm)
 
 StateCallback: TypeAlias = Callable[[str, str, State], None]
 MetaCallback: TypeAlias = Callable[[str, str, Meta], None]
@@ -29,6 +27,12 @@ class AppSession:
         self._comm = comm
         self.config = config
         self.nodes: dict[str, List[zenoh.Subscriber]] = defaultdict(list) 
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *exc):
+        self._comm.__exit__(*exc)
 
     def nodes_on_network(self, only_online: bool = False) -> list[Meta]:
         return self.pull_meta_messages(only_online)

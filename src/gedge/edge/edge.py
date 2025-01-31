@@ -24,11 +24,9 @@ class EdgeNodeConfig:
     def delete_tag(self, name: str):
         self.tags.remove(name)
 
-    @contextmanager
     def connect(self):
         comm = Comm()
-        with comm.connect():
-            yield EdgeNodeSession(config=self, comm=comm)
+        return EdgeNodeSession(config=self, comm=comm)
     
     def build_meta(self) -> Meta:
         print(f"building meta for {self.name}")
@@ -44,6 +42,13 @@ class EdgeNodeSession:
         self._comm = comm 
         self.config = config
         self.startup()
+
+    def __enter__(self):
+        return self
+    
+    # TODO: use close function
+    def __exit__(self, *exc):
+        self._comm.__exit__(*exc)
 
     def startup(self):
         key_prefix = self.config.key_prefix
