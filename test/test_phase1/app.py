@@ -2,22 +2,19 @@ import gedge
 from gedge.proto import State, Meta, TagData
 import time
 
-def on_state(state: State):
+def on_state(name: str, key_expr: str, state: State):
     print(f"app got state message: {state.online}")
 
-def on_meta(meta: Meta):
+def on_meta(name: str, key_expr: str, meta: Meta):
     print(f"app got meta message: {meta}")
 
-def on_tag_data(data: TagData):
-    print(f"app got tag data: {data}")
+def on_joint_position(name: str, key_expr: str, data: list[float]):
+    print(f"from node {name}, key expr: {key_expr}, got joint position: {data}")
 
-def on_joint_position(data: list[float]):
-    print(f"got joint position: {data}")
+def on_project_running(name: str, key_expr: str, data: bool):
+    print(f"from node {name}, key expr: {key_expr}, got project running change: {data}")
 
-def on_project_running(data: bool):
-    print(f"got project running change: {data}")
-
-def on_liveliness_change(is_online: bool, name: str):
+def on_liveliness_change(name: str, is_online: bool):
     print(f"name {name} is_online: {is_online}")
 
 config = gedge.AppConfig("BuildAtScale/Robots/Arms", "app")
