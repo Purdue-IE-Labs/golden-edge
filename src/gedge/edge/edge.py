@@ -65,5 +65,5 @@ class EdgeNodeSession:
         self._comm.send_state(State(online=online))
 
     def close(self):
-        self._comm.send_state(State(online=False))
+        self.send_state(False)
         self._comm.session.close()
