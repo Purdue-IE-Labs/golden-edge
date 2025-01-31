@@ -11,40 +11,15 @@ class Tag:
 
         self.properties: dict[str, Property] = {}
         for name, value in properties.items():
-            type_ = Tag._intuit_property_type(value)
-            self.properties[name] = Property(type=type_, value=self.convert_property(value, type_))
+            property_type = Tag._intuit_property_type(value)
+            self.properties[name] = Property(type=property_type, value=self.convert(value, property_type))
 
         self.key_expr = key_expr
 
-    def convert(self, value: Any) -> TagData:
+    def convert(self, value: Any, type: int = None) -> TagData:
         tag_data = TagData()
-        match self.type:
-            case DataType.INT:
-                tag_data.int_data = int(value)
-            case DataType.LONG:
-                tag_data.long_data = int(value)
-            case DataType.FLOAT:
-                tag_data.float_data = float(value)
-            case DataType.STRING:
-                tag_data.string_data = str(value)
-            case DataType.BOOL:
-                tag_data.bool_data = bool(value)
-            case DataType.LIST_INT:
-                tag_data.list_int_data.list.extend(list([int(x) for x in value]))
-            case DataType.LIST_LONG:
-                tag_data.list_long_data.list.extend(list([int(x) for x in value]))
-            case DataType.LIST_FLOAT:
-                tag_data.list_float_data.list.extend(list([float(x) for x in value]))
-            case DataType.LIST_STRING:
-                tag_data.list_string_data.list.extend(list([str(x) for x in value]))
-            case DataType.LIST_BOOL:
-                tag_data.list_bool_data.list.extend(list([bool(x) for x in value]))
-            case _:
-                raise ValueError("unknown tag type")
-        return tag_data
-
-    def convert_property(self, value: Any, type: int) -> TagData:
-        tag_data = TagData()
+        if not type:
+           type = self.type
         match type:
             case DataType.INT:
                 tag_data.int_data = int(value)
@@ -71,7 +46,7 @@ class Tag:
         return tag_data
 
     @staticmethod
-    def from_tag_data(tag_data: TagData, type: DataType) -> Any:
+    def from_tag_data(tag_data: TagData, type: int) -> Any:
         match type:
             case DataType.INT:
                 return int(tag_data.int_data)
@@ -97,7 +72,7 @@ class Tag:
 
 
     @staticmethod
-    def _convert_type(type_: Any) -> DataType:
+    def _convert_type(type: Any) -> DataType:
         """
         Note: Python does not support the notion of a "long" data type.
         In fact, there are several data types that may be supported 
@@ -106,21 +81,21 @@ class Tag:
         has all the types allowed by our protocol. As an API convenience,
         we allow the user to use built-in Python types.
         """
-        if type_ == int:
+        if type == int:
             return DataType.INT
-        elif type_ == float:
+        elif type == float:
             return DataType.FLOAT
-        elif type_ == str:
+        elif type == str:
             return DataType.STRING
-        elif type_ == bool:
+        elif type == bool:
             return DataType.BOOL
-        elif type_ == list[int]:
+        elif type == list[int]:
             return DataType.LIST_INT
-        elif type_ == list[float]:
+        elif type == list[float]:
             return DataType.LIST_FLOAT
-        elif type_ == list[str]:
+        elif type == list[str]:
             return DataType.LIST_STRING
-        elif type_ == list[bool]:
+        elif type == list[bool]:
             return DataType.LIST_BOOL
         else:
             raise ValueError("unknown type")
@@ -136,7 +111,7 @@ class Tag:
         elif isinstance(value, bool):
             return DataType.BOOL
         else:
-            raise ValueError("illegal type for property")
+            raise ValueError("Illegal type for property. Allowed properties are str, int, float, bool")
 
 if __name__ == "__main__":
     print("list int")
