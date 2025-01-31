@@ -6,6 +6,7 @@ from gedge.proto import State, Meta, TagData
 from typing import Callable, List, Tuple, TypeAlias, TypeVar, Any
 import zenoh
 from collections import defaultdict
+from gedge.comm import keys
 
 class AppConfig:
     def __init__(self, key_prefix: str, name: str):
@@ -14,7 +15,7 @@ class AppConfig:
 
     @contextmanager
     def connect(self):
-        comm = Comm(self.key_prefix, self.name)
+        comm = Comm()
         with comm.connect():
             yield AppSession(config=self, comm=comm)
 
@@ -40,12 +41,12 @@ class AppSession:
         print("Nodes on Network:")
         i = 1
         for meta in messages:
-            print(f"{i}. {meta.name}: {"online" if self._comm.is_online(meta.name) else "offline"}")
+            print(f"{i}. {meta.name}: {"online" if self._comm.is_online(self.config.key_prefix, meta.name) else "offline"}")
             print(f"{meta}\n")
             i += 1
 
     def pull_meta_messages(self, only_online: bool) -> list[Meta]:
-        return self._comm.pull_meta_messages(only_online)
+        return self._comm.pull_meta_messages(self.config.key_prefix, only_online)
     
     def _on_state_default(self):
         pass
@@ -62,7 +63,7 @@ class AppSession:
     def connect_to_node(self, name: str, on_state: StateCallback = None, on_meta: MetaCallback = None, on_liveliness_change: LivelinessCallback = None, tag_data_callbacks: dict[str, TagDataCallback] = {}):
         print(f"connecting to node {name}")
         handlers = []
-        state_key_expr = self._comm.state_key_prefix(self.config.key_prefix, name)
+        state_key_expr = keys.state_key_prefix(self.config.key_prefix, name)
         def _on_state(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             state = State()
@@ -71,7 +72,7 @@ class AppSession:
             # if not state.online:
             #     self.disconnect_from_node(name)
 
-        meta_key_expr = self._comm.meta_key_prefix(self.config.key_prefix, name)
+        meta_key_expr = keys.meta_key_prefix(self.config.key_prefix, name)
         def _on_meta(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             meta = Meta()
@@ -98,7 +99,7 @@ class AppSession:
             subscriber = self._comm.session.declare_subscriber(meta_key_expr, _on_meta)
             handlers.append(subscriber)
         if on_liveliness_change:
-            key_expr = self._comm.liveliness_key_prefix(self.config.key_prefix, name)
+            key_expr = keys.liveliness_key_prefix(self.config.key_prefix, name)
             print(f"liveliness key expr: {key_expr}")
             subscriber = self._comm.declare_liveliness_subscriber(key_expr, _on_liveliness)
             handlers.append(subscriber)
@@ -113,8 +114,8 @@ class AppSession:
         del self.nodes[name]
     
     def add_tag_data_callback(self, node_name: str, tag_key_prefix: str, on_tag_data: TagDataCallback) -> None:
-        meta = self._comm.pull_meta_message(node_name)
-        key_expr = self._comm.tag_data_key_expr(self.config.key_prefix, node_name, tag_key_prefix)
+        meta = self._comm.pull_meta_message(self.config.key_prefix, node_name)
+        key_expr = keys.tag_data_key_expr(self.config.key_prefix, node_name, tag_key_prefix)
         def _on_tag_data(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             tag_data = TagData()
