@@ -36,7 +36,8 @@ class EdgeNodeConfig:
         for t in self.tags:
             tag = Meta.Tag(name=t.name, type=t.type, key_expr=t.key_expr, properties=t.properties)
             tags.append(tag)
-        meta = Meta(tags=tags)
+        comm = Comm(self.key_prefix, self.name)
+        meta = Meta(name=self.name, key_expr=comm._node_key_prefix, tags=tags)
         return meta
 
 class EdgeNodeSession:
