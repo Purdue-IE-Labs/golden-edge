@@ -29,23 +29,23 @@ class AppSession:
         self.config = config
         self.nodes: dict[str, List[zenoh.Subscriber]] = defaultdict(list) 
 
-    def print_nodes_on_network(self, print_meta: bool = False):
-        print("Nodes on network")
-        messages = self.pull_meta_messages()
-        for name, meta in messages.items():
-            is_online = self._comm.is_online(name)
-            print(f"\t{name}, {"online" if is_online else "offline"}")
-            if print_meta:
-                print(f"\t{meta}")
+    def nodes_on_network(self, only_online: bool = False) -> list[Meta]:
+        return self.pull_meta_messages(only_online)
 
-    def print_nodes_connected_to_app(self, print_meta: bool = False):
-        print("Nodes connected to application")
-        for name in self.nodes:
-            print(name)
+    def print_nodes_on_network(self, only_online: bool = False):
+        messages = self.pull_meta_messages(only_online=only_online)
+        if len(messages) == 0:
+            print("No Nodes on Network!")
+            return
+        print("Nodes on Network:")
+        i = 1
+        for meta in messages:
+            print(f"{i}. {meta.name}: {"online" if self._comm.is_online(meta.name) else "offline"}")
+            print(f"{meta}\n")
+            i += 1
 
-    def pull_meta_messages(self) -> dict[str, Meta]:
-        messages = self._comm.pull_meta_messages()
-        return messages
+    def pull_meta_messages(self, only_online: bool) -> list[Meta]:
+        return self._comm.pull_meta_messages(only_online)
     
     def _on_state_default(self):
         pass

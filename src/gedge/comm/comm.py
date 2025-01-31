@@ -3,7 +3,7 @@ import zenoh
 from contextlib import contextmanager
 from gedge.edge.tag import Tag
 from gedge.proto import Meta, TagData, DataType, State
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 # handle Zenoh communications
 # The user will not interact with this item, so we can assume in all functions that zenoh is connected
@@ -106,9 +106,9 @@ class Comm:
         print(f"sending state on key expression: {self._state_key_prefix}")
         self._send_protobuf(self._state_key_prefix, state)
 
-    def pull_meta_messages(self, only_online: bool = False) -> dict[str, Meta]:
+    def pull_meta_messages(self, only_online: bool = False) -> list[Meta]:
         res = self.session.get(f"{self.key_prefix}/NODE/*/META")
-        messages = {}
+        messages: list[Meta] = []
         for r in res:
             r: zenoh.Reply
             if not r.ok:
@@ -116,11 +116,13 @@ class Comm:
             result = r.result
 
             b = base64.b64decode(result.payload.to_bytes())
-            node_name = self.node_name_from_key_expr(result.key_expr)
             try:
                 meta = Meta()
                 meta.ParseFromString(b)
-                messages[node_name] = meta
+                is_online = self.is_online(meta.name)
+                if only_online and not is_online:
+                    continue
+                messages.append(meta)
             except Exception as e:
                 print(f"couldn't decode {e}")
                 print(b)
@@ -139,7 +141,7 @@ class Comm:
     def is_online(self, name: str) -> bool:
         # this command will fail is no token is declared for this prefix, meaning offline
         try:
-            reply = self.session.liveliness().get(self.node_key_prefix(self.key_prefix, name)).recv()
+            reply = self.session.liveliness().get(self.liveliness_key_prefix(self.key_prefix, name)).recv()
             if not reply.ok:
                 return False
             return reply.result.kind == zenoh.SampleKind.PUT
