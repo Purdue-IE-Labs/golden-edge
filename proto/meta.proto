@@ -25,6 +25,8 @@ message Meta {
         map<string, Property> properties = 4;
     }
 
-    repeated Tag tags = 5;
-    repeated Method methods = 6;
+    string name = 5;
+    string key_expr = 6;
+    repeated Tag tags = 7;
+    repeated Method methods = 8;
 }
