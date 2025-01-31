@@ -4,13 +4,13 @@ from gedge.edge.error import TagIncorrectDataType, TagNotFound, TagDuplicateName
 from contextlib import contextmanager
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
+from gedge.comm import keys
 
 
 class EdgeNodeConfig:
     def __init__(self, key_prefix: str, name: str, tags: Set[Tag] = set()):
         self.key_prefix = key_prefix.strip("/")
         self.name = name
-        self.connected = False
         self.tags: Set[Tag] = tags
 
     def add_tag(self, name: str, type: int | type, key_expr: str, properties: dict[str, Any] = {}):
@@ -26,7 +26,7 @@ class EdgeNodeConfig:
 
     @contextmanager
     def connect(self):
-        comm = Comm(self.key_prefix, self.name)
+        comm = Comm()
         with comm.connect():
             yield EdgeNodeSession(config=self, comm=comm)
     
@@ -36,8 +36,7 @@ class EdgeNodeConfig:
         for t in self.tags:
             tag = Meta.Tag(name=t.name, type=t.type, key_expr=t.key_expr, properties=t.properties)
             tags.append(tag)
-        comm = Comm(self.key_prefix, self.name)
-        meta = Meta(name=self.name, key_expr=comm._node_key_prefix, tags=tags)
+        meta = Meta(name=self.name, key_expr=keys.node_key_prefix(self.key_prefix, self.name), tags=tags)
         return meta
 
 class EdgeNodeSession:
@@ -47,23 +46,25 @@ class EdgeNodeSession:
         self.startup()
 
     def startup(self):
+        key_prefix = self.config.key_prefix
+        name = self.config.name
         meta: Meta = self.config.build_meta()
-        self._comm.send_meta(meta)
+        self._comm.send_meta(key_prefix, name, meta)
         state: State = State(online=True)
-        self._comm.send_state(state)
-        self.node_liveliness = self._comm.declare_liveliness_token(self._comm.liveliness_key_prefix(self.config.key_prefix, self.config.name))
-        messages = self._comm.pull_meta_messages(only_online=True)
-        print(messages)
+        self._comm.send_state(key_prefix, name, state)
+        self.node_liveliness = self._comm.declare_liveliness_token(keys.liveliness_key_prefix(key_prefix, name))
     
     def update_tag(self, name: str, value: Any):
+        key_prefix = self.config.key_prefix
+        node_name = self.config.name
         tag = [tag for tag in self.config.tags if tag.name == name]
         if len(tag) == 0:
             raise KeyError
         tag = tag[0]
-        self._comm.send_tag(value=tag.convert(value), key_expr=tag.key_expr)
+        self._comm.send_tag(key_prefix, node_name, tag.key_expr, tag.convert(value))
     
     def send_state(self, online: bool):
-        self._comm.send_state(State(online=online))
+        self._comm.send_state(self.config.key_prefix, self.config.name, State(online=online))
 
     def close(self):
         self.send_state(False)
