@@ -15,7 +15,7 @@ class Property(_message.Message):
     def __init__(self, type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., value: _Optional[_Union[_tag_data_pb2.TagData, _Mapping]] = ...) -> None: ...
 
 class Meta(_message.Message):
-    __slots__ = ("tags", "methods")
+    __slots__ = ("name", "key_expr", "tags", "methods")
     class Method(_message.Message):
         __slots__ = ()
         def __init__(self) -> None: ...
@@ -37,8 +37,12 @@ class Meta(_message.Message):
         key_expr: str
         properties: _containers.MessageMap[str, Property]
         def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., key_expr: _Optional[str] = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    KEY_EXPR_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
     METHODS_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    key_expr: str
     tags: _containers.RepeatedCompositeFieldContainer[Meta.Tag]
     methods: _containers.RepeatedCompositeFieldContainer[Meta.Method]
-    def __init__(self, tags: _Optional[_Iterable[_Union[Meta.Tag, _Mapping]]] = ..., methods: _Optional[_Iterable[_Union[Meta.Method, _Mapping]]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., key_expr: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[Meta.Tag, _Mapping]]] = ..., methods: _Optional[_Iterable[_Union[Meta.Method, _Mapping]]] = ...) -> None: ...
