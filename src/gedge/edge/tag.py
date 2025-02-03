@@ -3,8 +3,9 @@ from types import GenericAlias
 from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property
 
 class Tag:
-    def __init__(self, name: str, type: Any, key_expr: str, properties: Dict[str, Any] = {}):
-        self.name = name
+    def __init__(self, key: str, type: Any, properties: Dict[str, Any] = {}):
+        self.key = key
+
         if not isinstance(type, int):
             type = Tag._convert_type(type)
         self.type: int = type
@@ -13,8 +14,6 @@ class Tag:
         for name, value in properties.items():
             property_type = Tag._intuit_property_type(value)
             self.properties[name] = Property(type=property_type, value=self.convert(value, property_type))
-
-        self.key_expr = key_expr
 
     def convert(self, value: Any, type: int = None) -> TagData:
         tag_data = TagData()
@@ -101,7 +100,7 @@ class Tag:
             raise ValueError("unknown type")
         
     @staticmethod
-    def _intuit_property_type(value: Any) -> DataType:
+    def _intuit_property_type(value: Any) -> int:
         if isinstance(value, str):
             return DataType.STRING
         elif isinstance(value, int):

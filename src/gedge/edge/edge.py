@@ -1,6 +1,6 @@
 from typing import Any, Set
 from gedge.proto import TagData, Meta, DataType, State, Property
-from gedge.edge.error import TagIncorrectDataType, TagNotFound, TagDuplicateName
+from gedge.edge.error import SessionError, ConfigError
 from contextlib import contextmanager
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
@@ -13,16 +13,21 @@ class EdgeNodeConfig:
         self.name = name
         self.tags: Set[Tag] = tags
 
-    def add_tag(self, name: str, type: int | type, key_expr: str, properties: dict[str, Any] = {}):
-        if len([t for t in self.tags if t.name == name]) >= 1:
-            # for now, we disallow tags with duplicate names
-            raise TagDuplicateName
-        print(f"adding tag on prefix: {key_expr}")
-        tag = Tag(name, type, key_expr, properties)
+    def add_tag(self, key: str, type: int | type, properties: dict[str, Any] = {}):
+        tag = Tag(key, type, properties)
+        matching = [t for t in self.tags if t.key == key]
+        if len(matching) == 1:
+            print(f"Warning: tag {key} already exists in edge node {self.name}, updating...")
+            self.tags.remove(matching[0])
+        print(f"adding tag on key: {key}")
         self.tags.add(tag)
 
-    def delete_tag(self, name: str):
-        self.tags.remove(name)
+    def delete_tag(self, key: str):
+        tags = [t for t in self.tags if t.key == key]
+        if len(tags) == 1:
+            self.tags.remove(tags[0])
+        else:
+            raise KeyError(f"tag {key} not found in edge node {self.name}")
 
     def connect(self):
         comm = Comm()
@@ -32,9 +37,9 @@ class EdgeNodeConfig:
         print(f"building meta for {self.name}")
         tags = []
         for t in self.tags:
-            tag = Meta.Tag(name=t.name, type=t.type, key_expr=t.key_expr, properties=t.properties)
+            tag = Meta.Tag(key=t.key, type=t.type, properties=t.properties)
             tags.append(tag)
-        meta = Meta(name=self.name, key_expr=keys.node_key_prefix(self.key_prefix, self.name), tags=tags)
+        meta = Meta(name=self.name, key_prefix=keys.node_key_prefix(self.key_prefix, self.name), tags=tags)
         return meta
 
 class EdgeNodeSession:
@@ -46,9 +51,13 @@ class EdgeNodeSession:
     def __enter__(self):
         return self
     
-    # TODO: use close function
     def __exit__(self, *exc):
+        self.send_state(False)
         self._comm.__exit__(*exc)
+
+    def close(self):
+        self.send_state(False)
+        self._comm.session.close()
 
     def startup(self):
         key_prefix = self.config.key_prefix
@@ -59,18 +68,14 @@ class EdgeNodeSession:
         self._comm.send_state(key_prefix, name, state)
         self.node_liveliness = self._comm.declare_liveliness_token(keys.liveliness_key_prefix(key_prefix, name))
     
-    def update_tag(self, name: str, value: Any):
+    def update_tag(self, key: str, value: Any):
         key_prefix = self.config.key_prefix
         node_name = self.config.name
-        tag = [tag for tag in self.config.tags if tag.name == name]
+        tag = [tag for tag in self.config.tags if tag.key == key]
         if len(tag) == 0:
-            raise KeyError
+            raise LookupError(f"tag {key} does not exist on node {self.config.name}")
         tag = tag[0]
-        self._comm.send_tag(key_prefix, node_name, tag.key_expr, tag.convert(value))
+        self._comm.send_tag(key_prefix, node_name, tag.key, tag.convert(value))
     
     def send_state(self, online: bool):
         self._comm.send_state(self.config.key_prefix, self.config.name, State(online=online))
-
-    def close(self):
-        self.send_state(False)
-        self._comm.session.close()
