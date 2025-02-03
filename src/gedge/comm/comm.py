@@ -78,11 +78,15 @@ class Comm:
         return messages
 
     def pull_meta_message(self, key_prefix: str, name: str) -> Meta:
+        error_message = f"No edge node found for key expr {keys.node_key_prefix(key_prefix, name)}"
         key_expr = keys.meta_key_prefix(key_prefix, name)
-        # TODO: this throws an error if the message doesn't exist
-        reply = self.session.get(key_expr).recv()
+        print(f"searching on key expr: {key_expr}")
+        try:
+            reply = self.session.get(key_expr).recv()
+        except:
+            raise LookupError(error_message)
         if not reply.ok:
-            raise ValueError(f"no meta message for node {name}")
+            raise LookupError(error_message)
         
         b = base64.b64decode(reply.result.payload.to_bytes())
         meta = Meta()
