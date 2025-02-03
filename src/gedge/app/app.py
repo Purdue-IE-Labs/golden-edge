@@ -34,23 +34,23 @@ class AppSession:
     def __exit__(self, *exc):
         self._comm.__exit__(*exc)
 
-    def nodes_on_network(self, only_online: bool = False) -> list[Meta]:
-        return self.pull_meta_messages(only_online)
+    def nodes_on_network(self, key_prefix: str, only_online: bool = False) -> list[Meta]:
+        return self.pull_meta_messages(key_prefix, only_online)
 
-    def print_nodes_on_network(self, only_online: bool = False):
-        messages = self.pull_meta_messages(only_online=only_online)
+    def print_nodes_on_network(self, key_prefix: str, only_online: bool = False):
+        messages = self.pull_meta_messages(key_prefix, only_online=only_online)
         if len(messages) == 0:
             print("No Nodes on Network!")
             return
         print("Nodes on Network:")
         i = 1
         for meta in messages:
-            print(f"{i}. {meta.name}: {"online" if self._comm.is_online(self.config.key_prefix, meta.name) else "offline"}")
+            print(f"{i}. {meta.name}: {"online" if self._comm.is_online(key_prefix, meta.name) else "offline"}")
             print(f"{meta}\n")
             i += 1
 
-    def pull_meta_messages(self, only_online: bool) -> list[Meta]:
-        return self._comm.pull_meta_messages(self.config.key_prefix, only_online)
+    def pull_meta_messages(self, key_prefix: str, only_online: bool) -> list[Meta]:
+        return self._comm.pull_meta_messages(key_prefix, only_online)
     
     def _on_state_default(self):
         pass
@@ -64,19 +64,17 @@ class AppSession:
     def _on_liveliness_default(self):
         pass
 
-    def connect_to_node(self, name: str, on_state: StateCallback = None, on_meta: MetaCallback = None, on_liveliness_change: LivelinessCallback = None, tag_data_callbacks: dict[str, TagDataCallback] = {}):
+    def connect_to_node(self, key_prefix: str, name: str, on_state: StateCallback = None, on_meta: MetaCallback = None, on_liveliness_change: LivelinessCallback = None, tag_data_callbacks: dict[str, TagDataCallback] = {}):
         print(f"connecting to node {name}")
         handlers = []
-        state_key_expr = keys.state_key_prefix(self.config.key_prefix, name)
+        state_key_expr = keys.state_key_prefix(key_prefix, name)
         def _on_state(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             state = State()
             state.ParseFromString(payload)
             on_state(name, state_key_expr, state)
-            # if not state.online:
-            #     self.disconnect_from_node(name)
 
-        meta_key_expr = keys.meta_key_prefix(self.config.key_prefix, name)
+        meta_key_expr = keys.meta_key_prefix(key_prefix, name)
         def _on_meta(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             meta = Meta()
@@ -91,8 +89,8 @@ class AppSession:
             is_online = sample.kind == zenoh.SampleKind.PUT
             on_liveliness_change(name, is_online)
         
-        for tag_key_prefix in tag_data_callbacks:
-            self.add_tag_data_callback(name, tag_key_prefix, tag_data_callbacks[tag_key_prefix])
+        for key in tag_data_callbacks:
+            self.add_tag_data_callback(key_prefix, name, key, tag_data_callbacks[key])
 
         if on_state:
             print(f"state key expr: {state_key_expr}")
@@ -103,7 +101,7 @@ class AppSession:
             subscriber = self._comm.session.declare_subscriber(meta_key_expr, _on_meta)
             handlers.append(subscriber)
         if on_liveliness_change:
-            key_expr = keys.liveliness_key_prefix(self.config.key_prefix, name)
+            key_expr = keys.liveliness_key_prefix(key_prefix, name)
             print(f"liveliness key expr: {key_expr}")
             subscriber = self._comm.declare_liveliness_subscriber(key_expr, _on_liveliness)
             handlers.append(subscriber)
@@ -111,15 +109,15 @@ class AppSession:
 
     def disconnect_from_node(self, name: str):
         if name not in self.nodes:
-            raise IndexError(f"{name} not connected")
+            raise KeyError(f"{name} not connected")
         handlers = self.nodes[name]
         for h in handlers:
             h.undeclare()
         del self.nodes[name]
     
-    def add_tag_data_callback(self, node_name: str, tag_key_prefix: str, on_tag_data: TagDataCallback) -> None:
-        meta = self._comm.pull_meta_message(self.config.key_prefix, node_name)
-        key_expr = keys.tag_data_key(self.config.key_prefix, node_name, tag_key_prefix)
+    def add_tag_data_callback(self, key_prefix: str, node_name: str, key: str, on_tag_data: TagDataCallback) -> None:
+        meta = self._comm.pull_meta_message(key_prefix, node_name)
+        key_expr = keys.tag_data_key(key_prefix, node_name, key)
         def _on_tag_data(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             tag_data = TagData()
