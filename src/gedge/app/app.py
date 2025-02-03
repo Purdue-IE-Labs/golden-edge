@@ -119,13 +119,13 @@ class AppSession:
     
     def add_tag_data_callback(self, node_name: str, tag_key_prefix: str, on_tag_data: TagDataCallback) -> None:
         meta = self._comm.pull_meta_message(self.config.key_prefix, node_name)
-        key_expr = keys.tag_data_key_expr(self.config.key_prefix, node_name, tag_key_prefix)
+        key_expr = keys.tag_data_key(self.config.key_prefix, node_name, tag_key_prefix)
         def _on_tag_data(sample: zenoh.Sample):
             payload = base64.b64decode(sample.payload.to_bytes())
             tag_data = TagData()
             tag_data.ParseFromString(payload)
 
-            tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.key_expr)]
+            tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.key)]
             if len(tag_config) == 0:
                 raise ValueError(f"no tag found at key expression {sample.key_expr}")
             tag_config = tag_config[0]

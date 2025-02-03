@@ -11,8 +11,8 @@ def meta_key_prefix(prefix: str, name: str):
 def tag_data_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name) + "/TAGS/DATA"
 
-def tag_data_key_expr(prefix: str, name: str, tag_key_expr: str):
-    return node_key_prefix(prefix, name) + f"/TAGS/DATA/{tag_key_expr}"
+def tag_data_key(prefix: str, name: str, key: str):
+    return node_key_prefix(prefix, name) + f"/TAGS/DATA/{key}"
 
 def tag_write_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name) + "/TAGS/WRITE"
