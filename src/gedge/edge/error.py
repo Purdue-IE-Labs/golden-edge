@@ -1,9 +1,6 @@
 
-class TagNotFound(Exception):
+class ConfigError(Exception):
     pass
 
-class TagIncorrectDataType(Exception):
-    pass
-
-class TagDuplicateName(Exception):
+class SessionError(Exception):
     pass
