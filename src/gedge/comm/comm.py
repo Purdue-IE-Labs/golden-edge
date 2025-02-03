@@ -45,8 +45,8 @@ class Comm:
         print(f"sending meta on key expression: {key}")
         self._send_protobuf(key, meta)
     
-    def send_tag(self, key_prefix: str, name: str, key_expr: str, value: TagData):
-        key = keys.tag_data_key_expr(key_prefix, name, key_expr)
+    def send_tag(self, key_prefix: str, name: str, key: str, value: TagData):
+        key = keys.tag_data_key(key_prefix, name, key)
         print(f"sending tag on key expression: {key}")
         self._send_protobuf(key, value)
 
@@ -78,7 +78,9 @@ class Comm:
         return messages
 
     def pull_meta_message(self, key_prefix: str, name: str) -> Meta:
-        reply = self.session.get(f"{key_prefix}/NODE/{name}/META").recv()
+        key_expr = keys.meta_key_prefix(key_prefix, name)
+        # TODO: this throws an error if the message doesn't exist
+        reply = self.session.get(key_expr).recv()
         if not reply.ok:
             raise ValueError(f"no meta message for node {name}")
         
