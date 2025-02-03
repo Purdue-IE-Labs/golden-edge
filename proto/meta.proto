@@ -19,14 +19,13 @@ message Meta {
         // datatypes
         // properties
     message Tag {
-        string name = 1;
+        string key = 1;
         DataType type = 2;
-        string key_expr = 3;
-        map<string, Property> properties = 4;
+        map<string, Property> properties = 3;
     }
 
-    string name = 5;
-    string key_expr = 6;
-    repeated Tag tags = 7;
-    repeated Method methods = 8;
+    string name = 4;
+    string key_prefix = 5;
+    repeated Tag tags = 6;
+    repeated Method methods = 7;
 }
