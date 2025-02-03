@@ -112,10 +112,12 @@ class AppSession:
         meta = self._comm.pull_meta_message(key_prefix, name)
 
         handlers = []
-        _on_state = self._on_state(key_prefix, name, on_state)
-        _on_meta = self._on_meta(key_prefix, name, on_meta)
-        _on_liveliness = self._on_liveliness(name, on_liveliness_change)
         for key in tag_data_callbacks:
+            # The reason we don't use function self.add_tag_data_callback(...) here is that
+            # the functionality is slightly different. Most importantly, here, we just 
+            # skip those callbacks that don't match a tag, while in the function we 
+            # throw an exception. Additionally, with this approach, we can pull the 
+            # meta only once instead of pulling it with each new function call
             if len([tag for tag in meta.tags if tag.key == key]) == 0:
                 print(f"WARNING: no tag found at key {key}")
                 continue
@@ -126,21 +128,12 @@ class AppSession:
             handlers.append(subscriber)
 
         if on_state:
-            state_key_expr = keys.state_key_prefix(key_prefix, name)
-            print(f"state key expr: {state_key_expr}")
-            subscriber = self._comm.session.declare_subscriber(state_key_expr, _on_state)
-            handlers.append(subscriber)
+            self.add_state_callback(key_prefix, name, on_state)
         if on_meta:
-            meta_key_expr = keys.meta_key_prefix(key_prefix, name)
-            print(f"meta key expr: {meta_key_expr}")
-            subscriber = self._comm.session.declare_subscriber(meta_key_expr, _on_meta)
-            handlers.append(subscriber)
+            self.add_meta_callback(key_prefix, name, on_meta)
         if on_liveliness_change:
-            key_expr = keys.liveliness_key_prefix(key_prefix, name)
-            print(f"liveliness key expr: {key_expr}")
-            subscriber = self._comm.declare_liveliness_subscriber(key_expr, _on_liveliness)
-            handlers.append(subscriber)
-        self.nodes[name] = handlers
+            self.add_liveliness_callback(key_prefix, name, on_liveliness_change)
+        self.nodes[name] += handlers
 
     def disconnect_from_node(self, name: str):
         if name not in self.nodes:
@@ -159,6 +152,27 @@ class AppSession:
         key_expr = keys.tag_data_key(key_prefix, node_name, key)
         print(f"tag data key expr: {key_expr}")
         subscriber = self._comm.session.declare_subscriber(key_expr, self._on_tag_data(key_prefix, node_name, meta, on_tag_data))
+        self.nodes[node_name].append(subscriber)
+
+    def add_state_callback(self, key_prefix: str, node_name: str, on_state: StateCallback) -> None:
+        state_key_expr = keys.state_key_prefix(key_prefix, node_name)
+        _on_state = self._on_state(key_prefix, node_name, on_state)
+        print(f"state key expr: {state_key_expr}")
+        subscriber = self._comm.session.declare_subscriber(state_key_expr, _on_state)
+        self.nodes[node_name].append(subscriber)
+
+    def add_meta_callback(self, key_prefix: str, node_name: str, on_meta: MetaCallback) -> None:
+        meta_key_expr = keys.meta_key_prefix(key_prefix, node_name)
+        _on_meta = self._on_meta(key_prefix, node_name, on_meta)
+        print(f"meta key expr: {meta_key_expr}")
+        subscriber = self._comm.session.declare_subscriber(meta_key_expr, _on_meta)
+        self.nodes[node_name].append(subscriber)
+
+    def add_liveliness_callback(self, key_prefix: str, node_name: str, on_liveliness_change: LivelinessCallback) -> None:
+        key_expr = keys.liveliness_key_prefix(key_prefix, node_name)
+        _on_liveliness = self._on_liveliness(node_name, on_liveliness_change)
+        print(f"liveliness key expr: {key_expr}")
+        subscriber = self._comm.declare_liveliness_subscriber(key_expr, _on_liveliness)
         self.nodes[node_name].append(subscriber)
 
     def close(self):
