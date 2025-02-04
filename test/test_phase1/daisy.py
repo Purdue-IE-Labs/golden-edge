@@ -27,19 +27,19 @@ if __name__ == "__main__":
         raise ConnectionError(f"Unable to connect to Modbus server at {host}")
 
     config = gedge.EdgeNodeConfig('BuildAtScale/Robots/Arms', name="Daisy")
-    config.add_tag("joint_values", list[float], "tm12/joint_pos", properties={'eng_units': 'deg'})
-    config.add_tag("is_running", bool, "project/is_running", properties={'Description': 'True if a project is running, false if not'})
+    config.add_tag("tm12/joint_pos", list[float], properties={'eng_units': 'deg'})
+    config.add_tag("project/is_running", bool, properties={'Description': 'True if a project is running, false if not'})
     with gedge.connect(config) as session:
         session: gedge.EdgeNodeSession
         i = 0
         while i < 10:
             if i % 2:
-                session.update_tag("is_running", True)
+                session.update_tag("project/is_running", True)
 
             joint_pos = pull_joint_pos()
             buf = f"{joint_pos}"
             print(f"Putting Data ('tm12/joint_pos': '{buf}')")
-            session.update_tag("joint_values", joint_pos)
+            session.update_tag("tm12/joint_pos", joint_pos)
             time.sleep(1)
             i += 1
         session.send_state(False)
