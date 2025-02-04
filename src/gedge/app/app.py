@@ -27,6 +27,7 @@ class AppSession:
     def __init__(self, config: AppConfig, comm: Comm):
         self._comm = comm
         self.config = config
+        # key str is the key_expr where this node lives: <key_prefix>/NODE/<node_name>
         self.nodes: dict[str, List[zenoh.Subscriber]] = defaultdict(list) 
     
     def __enter__(self):
@@ -52,6 +53,10 @@ class AppSession:
 
     def pull_meta_messages(self, key_prefix: str, only_online: bool) -> list[Meta]:
         return self._comm.pull_meta_messages(key_prefix, only_online)
+
+    def _add_subscriber_to_node(self, key_prefix: str, name: str, *subscriber: zenoh.Subscriber):
+        node_key_expr = keys.node_key_prefix(key_prefix, name)
+        self.nodes[node_key_expr] += list(subscriber)
     
     def _on_state_default(self):
         pass
@@ -64,6 +69,9 @@ class AppSession:
 
     def _on_liveliness_default(self):
         pass
+
+    def _on_node_meta(self, sample: zenoh.Sample):
+        print("got node meta")
 
     def _on_tag_data(self, key_prefix: str, name: str, meta: Meta, on_tag_data: TagDataCallback) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
@@ -108,10 +116,15 @@ class AppSession:
         return _on_liveliness
 
     def connect_to_node(self, key_prefix: str, name: str, on_state: StateCallback = None, on_meta: MetaCallback = None, on_liveliness_change: LivelinessCallback = None, tag_data_callbacks: dict[str, TagDataCallback] = {}):
+        handlers = []
+
         print(f"connecting to node {name}")
         meta = self._comm.pull_meta_message(key_prefix, name)
+        # TODO: what if already connected?
+        meta_key_expr = keys.meta_key_prefix(key_prefix, name)
+        subscriber = self._comm.session.declare_subscriber(meta_key_expr, self._on_node_meta)
+        handlers.append(subscriber)
 
-        handlers = []
         for key in tag_data_callbacks:
             # The reason we don't use function self.add_tag_data_callback(...) here is that
             # the functionality is slightly different. Most importantly, here, we just 
@@ -133,7 +146,8 @@ class AppSession:
             self.add_meta_callback(key_prefix, name, on_meta)
         if on_liveliness_change:
             self.add_liveliness_callback(key_prefix, name, on_liveliness_change)
-        self.nodes[name] += handlers
+
+        self._add_subscriber_to_node(key_prefix, name, *handlers)
 
     def disconnect_from_node(self, name: str):
         if name not in self.nodes:
@@ -152,28 +166,28 @@ class AppSession:
         key_expr = keys.tag_data_key(key_prefix, node_name, key)
         print(f"tag data key expr: {key_expr}")
         subscriber = self._comm.session.declare_subscriber(key_expr, self._on_tag_data(key_prefix, node_name, meta, on_tag_data))
-        self.nodes[node_name].append(subscriber)
+        self._add_subscriber_to_node(key_prefix, node_name, subscriber)
 
     def add_state_callback(self, key_prefix: str, node_name: str, on_state: StateCallback) -> None:
         state_key_expr = keys.state_key_prefix(key_prefix, node_name)
         _on_state = self._on_state(key_prefix, node_name, on_state)
         print(f"state key expr: {state_key_expr}")
         subscriber = self._comm.session.declare_subscriber(state_key_expr, _on_state)
-        self.nodes[node_name].append(subscriber)
+        self._add_subscriber_to_node(key_prefix, node_name, subscriber)
 
     def add_meta_callback(self, key_prefix: str, node_name: str, on_meta: MetaCallback) -> None:
         meta_key_expr = keys.meta_key_prefix(key_prefix, node_name)
         _on_meta = self._on_meta(key_prefix, node_name, on_meta)
         print(f"meta key expr: {meta_key_expr}")
         subscriber = self._comm.session.declare_subscriber(meta_key_expr, _on_meta)
-        self.nodes[node_name].append(subscriber)
+        self._add_subscriber_to_node(key_prefix, node_name, subscriber)
 
     def add_liveliness_callback(self, key_prefix: str, node_name: str, on_liveliness_change: LivelinessCallback) -> None:
         key_expr = keys.liveliness_key_prefix(key_prefix, node_name)
         _on_liveliness = self._on_liveliness(node_name, on_liveliness_change)
         print(f"liveliness key expr: {key_expr}")
         subscriber = self._comm.declare_liveliness_subscriber(key_expr, _on_liveliness)
-        self.nodes[node_name].append(subscriber)
+        self._add_subscriber_to_node(key_prefix, node_name, subscriber)
 
     def close(self):
         self._comm.session.close()
