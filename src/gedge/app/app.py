@@ -149,13 +149,13 @@ class AppSession:
 
         self._add_subscriber_to_node(key_prefix, name, *handlers)
 
-    def disconnect_from_node(self, name: str):
-        if name not in self.nodes:
-            raise KeyError(f"{name} not connected")
-        handlers = self.nodes[name]
+    def disconnect_from_node(self, node_key_expr: str):
+        if node_key_expr not in self.nodes:
+            raise KeyError(f"{node_key_expr} not connected")
+        handlers = self.nodes[node_key_expr]
         for h in handlers:
             h.undeclare()
-        del self.nodes[name]
+        del self.nodes[node_key_expr]
     
     def add_tag_data_callback(self, key_prefix: str, node_name: str, key: str, on_tag_data: TagDataCallback) -> None:
         meta = self._comm.pull_meta_message(key_prefix, node_name)
@@ -190,4 +190,6 @@ class AppSession:
         self._add_subscriber_to_node(key_prefix, node_name, subscriber)
 
     def close(self):
+        for node in self.nodes:
+            self.disconnect_from_node(node)
         self._comm.session.close()
