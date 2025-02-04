@@ -79,7 +79,7 @@ class AppSession:
             tag_data = TagData()
             tag_data.ParseFromString(payload)
 
-            tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.key)]
+            tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.path)]
             if len(tag_config) == 0:
                 raise LookupError(f"no tag found at key expression {sample.key_expr}")
             tag_config = tag_config[0]
@@ -125,17 +125,17 @@ class AppSession:
         subscriber = self._comm.subscriber(meta_key_expr, self._on_node_meta)
         handlers.append(subscriber)
 
-        for key in tag_data_callbacks:
+        for path in tag_data_callbacks:
             # The reason we don't use function self.add_tag_data_callback(...) here is that
             # the functionality is slightly different. Most importantly, here, we just 
             # skip those callbacks that don't match a tag, while in the function we 
             # throw an exception. Additionally, with this approach, we can pull the 
             # meta only once instead of pulling it with each new function call
-            if len([tag for tag in meta.tags if tag.key == key]) == 0:
-                print(f"WARNING: no tag found at key {key}")
+            if len([tag for tag in meta.tags if tag.path == path]) == 0:
+                print(f"WARNING: no tag found at key {path}")
                 continue
-            key_expr = keys.tag_data_key(key_prefix, name, key)
-            _on_tag_data = self._on_tag_data(key_prefix, name, meta, tag_data_callbacks[key])
+            key_expr = keys.tag_data_key(key_prefix, name, path)
+            _on_tag_data = self._on_tag_data(key_prefix, name, meta, tag_data_callbacks[path])
             print(f"tag data key expr: {key_expr}")
             subscriber = self._comm.subscriber(key_expr, _on_tag_data)
             handlers.append(subscriber)
@@ -157,13 +157,13 @@ class AppSession:
             h.undeclare()
         del self.nodes[node_key_expr]
     
-    def add_tag_data_callback(self, key_prefix: str, node_name: str, key: str, on_tag_data: TagDataCallback) -> None:
+    def add_tag_data_callback(self, key_prefix: str, node_name: str, path: str, on_tag_data: TagDataCallback) -> None:
         meta = self._comm.pull_meta_message(key_prefix, node_name)
 
-        if len([tag for tag in meta.tags if tag.key == key]) == 0:
-            raise LookupError(f"no tag found at key {key}")
+        if len([tag for tag in meta.tags if tag.path == path]) == 0:
+            raise LookupError(f"no tag found at key {path}")
 
-        key_expr = keys.tag_data_key(key_prefix, node_name, key)
+        key_expr = keys.tag_data_key(key_prefix, node_name, path)
         print(f"tag data key expr: {key_expr}")
         subscriber = self._comm.subscriber(key_expr, self._on_tag_data(key_prefix, node_name, meta, on_tag_data))
         self._add_subscriber_to_node(key_prefix, node_name, subscriber)
