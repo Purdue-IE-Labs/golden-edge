@@ -66,7 +66,7 @@ class EdgeNodeSession:
         self._comm.send_meta(key_prefix, name, meta)
         state: State = State(online=True)
         self._comm.send_state(key_prefix, name, state)
-        self.node_liveliness = self._comm.declare_liveliness_token(keys.liveliness_key_prefix(key_prefix, name))
+        self.node_liveliness = self._comm.liveliness_token(keys.liveliness_key_prefix(key_prefix, name))
     
     def update_tag(self, key: str, value: Any):
         key_prefix = self.config.key_prefix

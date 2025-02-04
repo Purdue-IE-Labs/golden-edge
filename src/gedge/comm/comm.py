@@ -22,11 +22,14 @@ class Comm:
     def __exit__(self, *exc):
         self.session.close()
 
-    def declare_liveliness_token(self, key_expr: str) -> zenoh.LivelinessToken:
+    def liveliness_token(self, key_expr: str) -> zenoh.LivelinessToken:
         return self.session.liveliness().declare_token(key_expr)
 
-    def declare_liveliness_subscriber(self, key_expr: str, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
+    def liveliness_subscriber(self, key_expr: str, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
         return self.session.liveliness().declare_subscriber(key_expr, handler)
+
+    def subscriber(self, key_expr: str, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
+        return self.session.declare_subscriber(key_expr, handler)
 
     def query_liveliness(self, key_expr: str) -> zenoh.Reply:
         return self.session.liveliness().get(key_expr).recv()
@@ -39,7 +42,6 @@ class Comm:
         b = base64.b64encode(payload)
         self.session.put(key_expr, b)
 
-    # Edge Node functions
     def send_meta(self, key_prefix: str, name: str, meta: Meta):
         key = keys.meta_key_prefix(key_prefix, name)
         print(f"sending meta on key expression: {key}")
@@ -96,7 +98,7 @@ class Comm:
     def is_online(self, key_prefix: str, name: str) -> bool:
         # this command will fail is no token is declared for this prefix, meaning offline
         try:
-            reply = self.session.liveliness().get(keys.liveliness_key_prefix(key_prefix, name)).recv()
+            reply = self.query_liveliness(keys.liveliness_key_prefix(key_prefix, name))
             if not reply.ok:
                 return False
             return reply.result.kind == zenoh.SampleKind.PUT
