@@ -19,7 +19,7 @@ message Meta {
         // datatypes
         // properties
     message Tag {
-        string key = 1;
+        string path = 1;
         DataType type = 2;
         map<string, Property> properties = 3;
     }

@@ -3,8 +3,8 @@ from types import GenericAlias
 from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property
 
 class Tag:
-    def __init__(self, key: str, type: Any, properties: Dict[str, Any] = {}):
-        self.key = key
+    def __init__(self, path: str, type: Any, properties: Dict[str, Any] = {}):
+        self.path = path
 
         if not isinstance(type, int):
             type = Tag._convert_type(type)

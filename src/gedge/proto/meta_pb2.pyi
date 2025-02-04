@@ -20,7 +20,7 @@ class Meta(_message.Message):
         __slots__ = ()
         def __init__(self) -> None: ...
     class Tag(_message.Message):
-        __slots__ = ("key", "type", "properties")
+        __slots__ = ("path", "type", "properties")
         class PropertiesEntry(_message.Message):
             __slots__ = ("key", "value")
             KEY_FIELD_NUMBER: _ClassVar[int]
@@ -28,13 +28,13 @@ class Meta(_message.Message):
             key: str
             value: Property
             def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Property, _Mapping]] = ...) -> None: ...
-        KEY_FIELD_NUMBER: _ClassVar[int]
+        PATH_FIELD_NUMBER: _ClassVar[int]
         TYPE_FIELD_NUMBER: _ClassVar[int]
         PROPERTIES_FIELD_NUMBER: _ClassVar[int]
-        key: str
+        path: str
         type: _tag_data_pb2.DataType
         properties: _containers.MessageMap[str, Property]
-        def __init__(self, key: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
+        def __init__(self, path: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
     NAME_FIELD_NUMBER: _ClassVar[int]
     KEY_PREFIX_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
