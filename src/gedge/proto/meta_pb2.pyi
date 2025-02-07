@@ -19,8 +19,24 @@ class Meta(_message.Message):
     class Method(_message.Message):
         __slots__ = ()
         def __init__(self) -> None: ...
+    class WriteResponse(_message.Message):
+        __slots__ = ("code", "success", "properties")
+        class PropertiesEntry(_message.Message):
+            __slots__ = ("key", "value")
+            KEY_FIELD_NUMBER: _ClassVar[int]
+            VALUE_FIELD_NUMBER: _ClassVar[int]
+            key: str
+            value: Property
+            def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Property, _Mapping]] = ...) -> None: ...
+        CODE_FIELD_NUMBER: _ClassVar[int]
+        SUCCESS_FIELD_NUMBER: _ClassVar[int]
+        PROPERTIES_FIELD_NUMBER: _ClassVar[int]
+        code: int
+        success: bool
+        properties: _containers.MessageMap[str, Property]
+        def __init__(self, code: _Optional[int] = ..., success: bool = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
     class Tag(_message.Message):
-        __slots__ = ("path", "type", "properties")
+        __slots__ = ("path", "type", "properties", "writable", "responses")
         class PropertiesEntry(_message.Message):
             __slots__ = ("key", "value")
             KEY_FIELD_NUMBER: _ClassVar[int]
@@ -31,10 +47,14 @@ class Meta(_message.Message):
         PATH_FIELD_NUMBER: _ClassVar[int]
         TYPE_FIELD_NUMBER: _ClassVar[int]
         PROPERTIES_FIELD_NUMBER: _ClassVar[int]
+        WRITABLE_FIELD_NUMBER: _ClassVar[int]
+        RESPONSES_FIELD_NUMBER: _ClassVar[int]
         path: str
         type: _tag_data_pb2.DataType
         properties: _containers.MessageMap[str, Property]
-        def __init__(self, path: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
+        writable: bool
+        responses: _containers.RepeatedCompositeFieldContainer[Meta.WriteResponse]
+        def __init__(self, path: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, Property]] = ..., writable: bool = ..., responses: _Optional[_Iterable[_Union[Meta.WriteResponse, _Mapping]]] = ...) -> None: ...
     TRACKING_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
