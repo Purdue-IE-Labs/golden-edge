@@ -1,34 +1,42 @@
 import zenoh
 
+NODE = "NODE"
+META = "META"
+TAGS = "TAGS"
+DATA = "DATA"
+WRITE = "WRITE"
+STATE = "STATE"
+
+def key_join(*components: list[str]):
+    return "/".join(components)
+
 def node_key_prefix(prefix: str, name: str):
-    node_key_prefix = prefix + f"/NODE/{name}"
-    return node_key_prefix
+    return key_join(prefix, NODE, name)
 
 def meta_key_prefix(prefix: str, name: str):
-    meta_key_prefix = prefix + f"/NODE/{name}/META"
-    return meta_key_prefix
+    return key_join(prefix, NODE, name, META)
 
 def tag_data_key_prefix(prefix: str, name: str):
-    return node_key_prefix(prefix, name) + "/TAGS/DATA"
+    return key_join(node_key_prefix(prefix, name), TAGS, DATA)
 
 def tag_data_key(prefix: str, name: str, key: str):
-    return node_key_prefix(prefix, name) + f"/TAGS/DATA/{key}"
+    return key_join(node_key_prefix(prefix, name), TAGS, DATA, key)
 
 def tag_write_key_prefix(prefix: str, name: str):
-    return node_key_prefix(prefix, name) + "/TAGS/WRITE"
+    return key_join(node_key_prefix(prefix, name), TAGS, WRITE)
 
 def tag_write_key(prefix: str, name: str, key: str):
-    return node_key_prefix(prefix, name) + f"/TAGS/WRITE/{key}"
+    return key_join(node_key_prefix(prefix, name), TAGS, WRITE, key)
 
 def state_key_prefix(prefix: str, name: str):
-    return node_key_prefix(prefix, name) + "/STATE"
+    return key_join(node_key_prefix(prefix, name), STATE)
 
 def liveliness_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name)
 
 def node_name_from_key_expr(key_expr: str | zenoh.KeyExpr):
     components = str(key_expr).split("/")
-    return components[components.index("NODE") + 1]
+    return components[components.index(NODE) + 1]
 
 class NodeKeySpace:
     def __init__(self, prefix: str, name: str):
@@ -53,16 +61,16 @@ class NodeKeySpace:
     @staticmethod
     def name_from_key(key_expr: str):
         components = key_expr.split("/")
-        return components[components.index("NODE") + 1]
+        return components[components.index(NODE) + 1]
     
     @staticmethod
     def tag_path_from_key(key_expr: str):
         components = key_expr.split("/")
         try:
-            i = components.index("DATA")
+            i = components.index(DATA)
         except:
             try: 
-                i = components.index("WRITE")
+                i = components.index(WRITE)
             except:
                 raise ValueError(f"No tag path found in {key_expr}")
         return "/".join(components[(i + 1):])
