@@ -24,6 +24,7 @@ message Meta {
         map<string, Property> properties = 3;
     }
 
+    optional bool tracking = 7;
     string key = 8;
     repeated Tag tags = 9;
     repeated Method methods = 10;
