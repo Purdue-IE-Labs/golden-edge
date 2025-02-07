@@ -1,14 +1,10 @@
-from typing import Any, Dict, Union
+from typing import Any, Callable, Dict, Union
 from types import GenericAlias
-from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property
+from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property, Meta
 from gedge.comm.keys import NodeKeySpace
-from gedge.comm import Comm
-import zenoh
-import time
-import datetime
 
 class Tag:
-    def __init__(self, path: str, type: int | type, properties: Dict[str, Any] = {}):
+    def __init__(self, path: str, type: int | type, properties: dict[str, Any] = {}):
         self.path = path
 
         if not isinstance(type, int):
@@ -19,6 +15,13 @@ class Tag:
         for name, value in properties.items():
             property_type = Tag._intuit_property_type(value)
             self.properties[name] = Property(type=property_type, value=self.convert(value, property_type))
+
+    @classmethod
+    def from_proto_tag(cls, tag: Meta.Tag):
+        cls.path = tag.path
+        cls.type = tag.type
+        cls.properties = dict(tag.properties)
+        return cls
 
     def convert(self, value: Any, type: int = None) -> TagData:
         tag_data = TagData()
@@ -116,34 +119,6 @@ class Tag:
             return DataType.BOOL
         else:
             raise ValueError("Illegal type for property. Allowed properties are str, int, float, bool")
-
-class TagBind:
-    def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None):
-        self.value = value
-        self.last_received: datetime.datetime = datetime.datetime.now()
-        self.is_valid: bool = True
-        self.tag = tag
-        self._comm = comm
-        self._subscriber = self._comm.session.declare_subscriber(ks.tag_path(tag.path), self._on_value)
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        # write tag data
-        self._value = value
-
-    def _on_value(self, sample: zenoh.Sample):
-        t = TagData()
-        t.FromString(sample.payload)
-        value = Tag.from_tag_data(t, self.tag.type)
-        self._value = value
-
-    def close(self):
-        self._subscriber.undeclare()
-
 
 if __name__ == "__main__":
     print("list int")
