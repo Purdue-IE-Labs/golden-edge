@@ -46,9 +46,26 @@ class NodeKeySpace:
     def split_user_key(key: str):
         key = key.strip('/')
         if '/' not in key:
-            raise ValueError(f"key {key} must include a '/'")
+            raise ValueError(f"key {key} must include at least one '/'")
         prefix, _, name = key.rpartition('/')
         return prefix, name
+
+    @staticmethod
+    def name_from_key(key_expr: str):
+        components = key_expr.split("/")
+        return components[components.index("NODE") + 1]
+    
+    @staticmethod
+    def tag_path_from_key(key_expr: str):
+        components = key_expr.split("/")
+        try:
+            i = components.index("DATA")
+        except:
+            try: 
+                i = components.index("WRITE")
+            except:
+                raise ValueError(f"No tag path found in {key_expr}")
+        return "/".join(components[(i + 1):])
 
     @property
     def prefix(self):
