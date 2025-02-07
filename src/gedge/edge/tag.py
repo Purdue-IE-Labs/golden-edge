@@ -1,9 +1,10 @@
-from typing import Any, Dict, Union
+from typing import Any, Callable, Dict, Union
 from types import GenericAlias
-from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property
+from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property, Meta
+from gedge.comm.keys import NodeKeySpace
 
 class Tag:
-    def __init__(self, path: str, type: Any, properties: Dict[str, Any] = {}):
+    def __init__(self, path: str, type: int | type, properties: dict[str, Any] = {}):
         self.path = path
 
         if not isinstance(type, int):
@@ -14,6 +15,12 @@ class Tag:
         for name, value in properties.items():
             property_type = Tag._intuit_property_type(value)
             self.properties[name] = Property(type=property_type, value=self.convert(value, property_type))
+
+    @classmethod
+    def from_proto_tag(cls, tag: Meta.Tag):
+        t = Tag(tag.path, tag.type)
+        t.properties = dict(tag.properties)
+        return t
 
     def convert(self, value: Any, type: int = None) -> TagData:
         tag_data = TagData()
@@ -41,7 +48,7 @@ class Tag:
             case DataType.LIST_BOOL:
                 tag_data.list_bool_data.list.extend(list([bool(x) for x in value]))
             case _:
-                raise ValueError("unknown tag type")
+                raise ValueError(f"Unknown tag type {type}")
         return tag_data
 
     @staticmethod
@@ -67,7 +74,7 @@ class Tag:
                 return list(tag_data.list_string_data.list)
             case DataType.LIST_BOOL:
                 return list(tag_data.list_bool_data.list)
-        raise ValueError("cannot convert")
+        raise ValueError(f"Cannot convert tag to type {type}")
 
 
     @staticmethod
@@ -97,7 +104,7 @@ class Tag:
         elif type == list[bool]:
             return DataType.LIST_BOOL
         else:
-            raise ValueError("unknown type")
+            raise ValueError(f"Illegal type {type} for tag")
         
     @staticmethod
     def _intuit_property_type(value: Any) -> int:
