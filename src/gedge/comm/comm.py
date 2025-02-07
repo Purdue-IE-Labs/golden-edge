@@ -30,6 +30,7 @@ class Comm:
         return self.session.liveliness().declare_subscriber(key_expr, handler)
 
     def subscriber(self, key_expr: str, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
+        print(f"adding subscriber on key: {key_expr}")
         return self.session.declare_subscriber(key_expr, handler)
 
     def query_liveliness(self, key_expr: str) -> zenoh.Reply:
