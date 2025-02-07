@@ -66,6 +66,8 @@ class NodeSession:
         self.config = config
         self.ks = config.ks
         self.connections: list[RemoteConnection] = []
+
+        # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = self.startup()
 
     def __enter__(self):
@@ -158,7 +160,6 @@ class NodeSession:
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
 
-    # TODO: tag_bind and update_tag use different methods to pull the tags of this node
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
         tags = [t for t in self.meta.tags if t.path == path]
         if len(tags) == 0:
@@ -170,7 +171,7 @@ class NodeSession:
     def update_tag(self, path: str, value: Any):
         prefix = self.ks.prefix
         node_name = self.ks.name
-        tag = [tag for tag in self.config.tags if tag.path == path]
+        tag = [tag for tag in self.meta.tags if tag.path == path]
         if len(tag) == 0:
             raise TagLookupError(path, self.ks.name)
         tag = tag[0]
