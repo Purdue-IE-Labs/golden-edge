@@ -18,10 +18,9 @@ class Tag:
 
     @classmethod
     def from_proto_tag(cls, tag: Meta.Tag):
-        cls.path = tag.path
-        cls.type = tag.type
-        cls.properties = dict(tag.properties)
-        return cls
+        t = Tag(tag.path, tag.type)
+        t.properties = dict(tag.properties)
+        return t
 
     def convert(self, value: Any, type: int = None) -> TagData:
         tag_data = TagData()
