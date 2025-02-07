@@ -1,6 +1,7 @@
 import base64
 import zenoh
 from contextlib import contextmanager
+from gedge.edge.error import NodeLookupError
 from gedge.edge.tag import Tag
 from gedge.proto import Meta, TagData, DataType, State
 from typing import Any, Callable, List
@@ -8,8 +9,7 @@ from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace
 
 # handle Zenoh communications
-# The user will not interact with this item, so we can assume in all functions that zenoh is connected
-# TODO: turn the __init__ into the context manager so we don't have to set the session to null initially
+# The user will not interact with this item
 class Comm:
     def __init__(self, config: zenoh.Config = zenoh.Config()):
         self.config = config
@@ -87,14 +87,13 @@ class Comm:
         return messages
 
     def pull_meta_message(self, ks: NodeKeySpace) -> Meta:
-        error_message = f"No node found for key expr {ks.user_key}"
         print(f"searching on key expr: {ks.user_key}")
         try:
             reply = self.session.get(ks.meta_key_prefix).recv()
         except:
-            raise LookupError(error_message)
+            raise NodeLookupError(ks.user_key)
         if not reply.ok:
-            raise LookupError(error_message)
+            raise NodeLookupError(ks.user_key)
         
         b = base64.b64decode(reply.result.payload.to_bytes())
         meta = Meta()

@@ -48,7 +48,7 @@ class Tag:
             case DataType.LIST_BOOL:
                 tag_data.list_bool_data.list.extend(list([bool(x) for x in value]))
             case _:
-                raise ValueError("unknown tag type")
+                raise ValueError(f"Unknown tag type {type}")
         return tag_data
 
     @staticmethod
@@ -74,7 +74,7 @@ class Tag:
                 return list(tag_data.list_string_data.list)
             case DataType.LIST_BOOL:
                 return list(tag_data.list_bool_data.list)
-        raise ValueError("cannot convert")
+        raise ValueError(f"Cannot convert tag to type {type}")
 
 
     @staticmethod
@@ -104,7 +104,7 @@ class Tag:
         elif type == list[bool]:
             return DataType.LIST_BOOL
         else:
-            raise ValueError("unknown type")
+            raise ValueError(f"Illegal type {type} for tag")
         
     @staticmethod
     def _intuit_property_type(value: Any) -> int:

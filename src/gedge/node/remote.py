@@ -1,6 +1,6 @@
 from typing import Any, Set, TypeAlias, Callable
 from gedge.proto import TagData, Meta, DataType, State, Property
-from gedge.edge.error import SessionError, ConfigError
+from gedge.edge.error import SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
@@ -49,7 +49,8 @@ class RemoteConnection:
 
             tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.path)]
             if len(tag_config) == 0:
-                raise LookupError(f"no tag found at key expression {sample.key_expr}")
+                path, node = NodeKeySpace.tag_path_from_key(str(sample.key_expr)), NodeKeySpace.name_from_key(str(sample.key_expr))
+                raise TagLookupError(path, node)
             tag_config = tag_config[0]
             value = Tag.from_tag_data(tag_data, tag_config.type)
             on_tag_data(str(sample.key_expr), value)
@@ -89,7 +90,7 @@ class RemoteConnection:
     
     def add_tag_data_callback(self, path: str, on_tag_data: TagDataCallback) -> None:
         if len([tag for tag in self.meta.tags if tag.path == path]) == 0:
-            raise LookupError(f"no tag found at key {path}")
+            raise TagLookupError(path, self.ks.name)
 
         self.config.read_write_tags.append(path)
         key_expr = self.ks.tag_path(path)
@@ -121,8 +122,7 @@ class RemoteConnection:
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
         tags = [t for t in self.meta.tags if t.path == path]
         if len(tags) == 0:
-            # TODO: change this error?
-            raise LookupError()
+            raise TagLookupError(path, self.ks.name)
         tag = tags[0]
         bind = TagBind(self.ks, self._comm, Tag.from_proto_tag(tag), value, self.write_tag)
         return bind
@@ -130,8 +130,7 @@ class RemoteConnection:
     def write_tag(self, path: str, value: Any):
         tag = [tag for tag in self.meta.tags if tag.path == path]
         if len(tag) == 0:
-            # TODO: we could refactor this to its own error (the error where the given tag is not found on the node)
-            raise LookupError(f"tag {path} does not exist on node {self.ks.name}")
+            raise TagLookupError(path, self.ks.name)
         tag = Tag.from_proto_tag(tag[0])
         # TODO: writes will be a little more involved than this but for now we just write to /TAG/WRITES
         self._comm.write_tag(self.ks, tag.path, tag.convert(value))
