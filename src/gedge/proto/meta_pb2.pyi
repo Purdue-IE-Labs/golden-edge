@@ -15,7 +15,7 @@ class Property(_message.Message):
     def __init__(self, type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., value: _Optional[_Union[_tag_data_pb2.TagData, _Mapping]] = ...) -> None: ...
 
 class Meta(_message.Message):
-    __slots__ = ("key", "tags", "methods")
+    __slots__ = ("tracking", "key", "tags", "methods")
     class Method(_message.Message):
         __slots__ = ()
         def __init__(self) -> None: ...
@@ -35,10 +35,12 @@ class Meta(_message.Message):
         type: _tag_data_pb2.DataType
         properties: _containers.MessageMap[str, Property]
         def __init__(self, path: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
+    TRACKING_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
     METHODS_FIELD_NUMBER: _ClassVar[int]
+    tracking: bool
     key: str
     tags: _containers.RepeatedCompositeFieldContainer[Meta.Tag]
     methods: _containers.RepeatedCompositeFieldContainer[Meta.Method]
-    def __init__(self, key: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[Meta.Tag, _Mapping]]] = ..., methods: _Optional[_Iterable[_Union[Meta.Method, _Mapping]]] = ...) -> None: ...
+    def __init__(self, tracking: bool = ..., key: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[Meta.Tag, _Mapping]]] = ..., methods: _Optional[_Iterable[_Union[Meta.Method, _Mapping]]] = ...) -> None: ...
