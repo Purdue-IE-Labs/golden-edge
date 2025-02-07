@@ -3,20 +3,19 @@ from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import TagData, Meta, DataType, State, Property
 from gedge.edge.error import SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
-from gedge.edge.tag import Tag
+from gedge.edge.tag import Tag, WriteResponse
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
-from collections import defaultdict
 import zenoh
-import base64
 
 StateCallback: TypeAlias = Callable[[str, str, State], None]
 MetaCallback: TypeAlias = Callable[[str, str, Meta], None]
 TagDataCallback: TypeAlias = Callable[[str, str, Any], None]
 LivelinessCallback: TypeAlias = Callable[[str, bool], None]
-Callbacks: TypeAlias = tuple[StateCallback, MetaCallback, TagDataCallback]
+TagWriteCallback: TypeAlias = Callable[[str, Any], int]
 ZenohCallback = Callable[[zenoh.Sample], None]
 
+# TODO: making the tags a dictonary could be beneficial
 class NodeConfig:
     def __init__(self, key: str):
         self._user_key = key
@@ -32,14 +31,43 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
 
-    def add_tag(self, path: str, type: int | type, props: dict[str, Any] = {}):
-        tag = Tag(path, type, props)
+    def add_tag(self, path: str, type: int | type, props: dict[str, Any] = {}, writable: bool = False, responses: list[WriteResponse] = [], write_callback: TagWriteCallback = None):
+        tag = Tag(path, type, props, writable, responses, write_callback)
         matching = [t for t in self.tags if t.path == path]
         if len(matching) == 1:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
             self.tags.remove(matching[0])
         print(f"adding tag on key: {path}")
         self.tags.add(tag)
+    
+    def add_write_responses(self, path: str, responses: list[WriteResponse]):
+        matching = [t for t in self.tags if t.path == path]
+        if len(matching) != 1:
+            raise TagLookupError(path, self.ks.name)
+        tag = matching[0]
+        for response in responses:
+            tag.add_response_type(response)
+    
+    def add_write_response(self, path: str, response: WriteResponse):
+        matching = [t for t in self.tags if t.path == path]
+        if len(matching) != 1:
+            raise TagLookupError(path, self.ks.name)
+        tag = matching[0]
+        tag.add_response_type(response)
+    
+    def add_write_callback(self, path: str, callback: TagWriteCallback):
+        matching = [t for t in self.tags if t.path == path]
+        if len(matching) != 1:
+            raise TagLookupError(path, self.ks.name)
+        tag = matching[0]
+        tag.add_write_callback(callback)
+    
+    def add_props(self, path: str, props: dict[str, Any]):
+        matching = [t for t in self.tags if t.path == path]
+        if len(matching) != 1:
+            raise TagLookupError(path, self.ks.name)
+        tag = matching[0]
+        tag.add_props(props)
 
     def delete_tag(self, path: str):
         tags = [t for t in self.tags if t.path == path]
@@ -51,7 +79,7 @@ class NodeConfig:
         print(f"building meta for {self.key}")
         tags = []
         for t in self.tags:
-            tag = Meta.Tag(path=t.path, type=t.type, properties=t.properties)
+            tag = Meta.Tag(path=t.path, type=t.type, properties=t.props)
             tags.append(tag)
         meta = Meta(key=self.key, tags=tags, methods=[])
         return meta
