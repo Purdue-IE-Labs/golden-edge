@@ -81,7 +81,7 @@ class NodeKeySpace:
     def _set_keys(self, prefix: str, name: str):
         self.node_key_prefix = node_key_prefix(prefix, name)
         self.meta_key_prefix = meta_key_prefix(prefix, name)
-        self.state_key_prefix = meta_key_prefix(prefix, name)
+        self.state_key_prefix = state_key_prefix(prefix, name)
         self.tag_data_key_prefix = tag_data_key_prefix(prefix, name)
         self.tag_write_key_prefix = tag_write_key_prefix(prefix, name)
         self.liveliness_key_prefix = liveliness_key_prefix(prefix, name)
