@@ -17,25 +17,11 @@ LivelinessCallback: TypeAlias = Callable[[str, bool], None]
 Callbacks: TypeAlias = tuple[StateCallback, MetaCallback, TagDataCallback]
 ZenohCallback = Callable[[zenoh.Sample], None]
 
-class PeerConnection:
-    def __init__(self, key: str, read_tags: list[str], read_write_tags: list[str], method_calls: list[str]):
-        self.key = key
-        self.read_tags = read_tags
-        self.read_write_tags = read_write_tags
-        self.method_calls = method_calls
-
-    def connect(self):
-        pass
-    
-    def verify(self):
-        pass
-
 class NodeConfig:
     def __init__(self, key: str):
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
         self.tags: set[Tag] = set()
-        self.connections: set[PeerConnection] = set()
 
     @property
     def key(self):
