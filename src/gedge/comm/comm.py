@@ -1,14 +1,15 @@
 import base64
 import zenoh
 from contextlib import contextmanager
+from gedge.edge.error import NodeLookupError
 from gedge.edge.tag import Tag
 from gedge.proto import Meta, TagData, DataType, State
 from typing import Any, Callable, List
 from gedge.comm import keys
+from gedge.comm.keys import NodeKeySpace
 
 # handle Zenoh communications
-# The user will not interact with this item, so we can assume in all functions that zenoh is connected
-# TODO: turn the __init__ into the context manager so we don't have to set the session to null initially
+# The user will not interact with this item
 class Comm:
     def __init__(self, config: zenoh.Config = zenoh.Config()):
         self.config = config
@@ -29,12 +30,13 @@ class Comm:
         return self.session.liveliness().declare_subscriber(key_expr, handler)
 
     def subscriber(self, key_expr: str, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
+        print(f"adding subscriber on key: {key_expr}")
         return self.session.declare_subscriber(key_expr, handler)
 
     def query_liveliness(self, key_expr: str) -> zenoh.Reply:
         return self.session.liveliness().get(key_expr).recv()
 
-    def _send_protobuf(self, key_expr: str, value: Meta | State | Tag):
+    def _send_protobuf(self, key_expr: str, value: Meta | State | TagData):
         b = value.SerializeToString()
         self._put(key_expr, b)
 
@@ -47,10 +49,15 @@ class Comm:
         print(f"sending meta on key expression: {key}")
         self._send_protobuf(key, meta)
     
-    def send_tag(self, key_prefix: str, name: str, key: str, value: TagData):
+    def update_tag(self, key_prefix: str, name: str, key: str, value: TagData):
         key = keys.tag_data_key(key_prefix, name, key)
-        print(f"sending tag on key expression: {key}")
+        print(f"updating tag on key expression: {key} with value {value}")
         self._send_protobuf(key, value)
+
+    def write_tag(self, ks: NodeKeySpace, path: str, value: TagData):
+        key_expr = ks.tag_path(path, write=True)
+        print(f"writing tag on key expression: {key_expr}")
+        self._send_protobuf(key_expr, value)
 
     def send_state(self, key_prefix: str, name: str, state: State):
         key = keys.state_key_prefix(key_prefix, name)
@@ -79,26 +86,24 @@ class Comm:
                 print(b)
         return messages
 
-    def pull_meta_message(self, key_prefix: str, name: str) -> Meta:
-        error_message = f"No edge node found for key expr {keys.node_key_prefix(key_prefix, name)}"
-        key_expr = keys.meta_key_prefix(key_prefix, name)
-        print(f"searching on key expr: {key_expr}")
+    def pull_meta_message(self, ks: NodeKeySpace) -> Meta:
+        print(f"searching on key expr: {ks.user_key}")
         try:
-            reply = self.session.get(key_expr).recv()
+            reply = self.session.get(ks.meta_key_prefix).recv()
         except:
-            raise LookupError(error_message)
+            raise NodeLookupError(ks.user_key)
         if not reply.ok:
-            raise LookupError(error_message)
+            raise NodeLookupError(ks.user_key)
         
         b = base64.b64decode(reply.result.payload.to_bytes())
         meta = Meta()
         meta.ParseFromString(b)
         return meta
             
-    def is_online(self, key_prefix: str, name: str) -> bool:
+    def is_online(self, ks: NodeKeySpace) -> bool:
         # this command will fail is no token is declared for this prefix, meaning offline
         try:
-            reply = self.query_liveliness(keys.liveliness_key_prefix(key_prefix, name))
+            reply = self.query_liveliness(ks.liveliness_key_prefix)
             if not reply.ok:
                 return False
             return reply.result.kind == zenoh.SampleKind.PUT
