@@ -1,7 +1,7 @@
 from typing import Any, Set, TypeAlias, Callable
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import TagData, Meta, DataType, State, Property
-from gedge.edge.error import SessionError, ConfigError
+from gedge.edge.error import SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
@@ -44,7 +44,7 @@ class NodeConfig:
     def delete_tag(self, path: str):
         tags = [t for t in self.tags if t.path == path]
         if len(tags) != 1:
-            raise KeyError(f"tag {path} not found in edge node {self.key}")
+            raise TagLookupError(path, self.ks.name)
         self.tags.remove(tags[0])
 
     def build_meta(self) -> Meta:
@@ -137,7 +137,7 @@ class NodeSession:
     def disconnect_from_remote(self, key: str):
         connection = [c for c in self.connections if c.key == key]
         if len(connection) == 0:
-            raise KeyError(f"{key} not connected")
+            raise ValueError(f"Node {key} not connected to {self.ks.user_key}")
         connection = connection[0]
         connection.close()
         self.connections.remove(connection)
@@ -162,8 +162,7 @@ class NodeSession:
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
         tags = [t for t in self.meta.tags if t.path == path]
         if len(tags) == 0:
-            # TODO: change this error?
-            raise LookupError()
+            raise TagLookupError(path, self.ks.name)
         tag = tags[0]
         bind = TagBind(self.ks, self._comm, Tag.from_proto_tag(tag), value, self.update_tag)
         return bind
@@ -173,8 +172,7 @@ class NodeSession:
         node_name = self.ks.name
         tag = [tag for tag in self.config.tags if tag.path == path]
         if len(tag) == 0:
-            # TODO: we could refactor this to its own error (the error where the given tag is not found on the node)
-            raise LookupError(f"tag {path} does not exist on node {self.ks.name}")
+            raise TagLookupError(path, self.ks.name)
         tag = tag[0]
         self._comm.update_tag(prefix, node_name, tag.path, tag.convert(value))
     

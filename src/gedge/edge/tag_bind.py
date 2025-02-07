@@ -6,7 +6,6 @@ from typing import Any, Callable
 from datetime import datetime
 import zenoh
 
-# TODO: currently TagBind has two situations: one where the setting of a tag implies a write, and another when the setting of a tag implies an update
 class TagBind:
     def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any], None]):
         self._value = value
