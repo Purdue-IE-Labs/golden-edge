@@ -2,54 +2,67 @@ from typing import Any, Callable, Dict, Union
 from types import GenericAlias
 from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property, Meta
 from gedge.comm.keys import NodeKeySpace
+from gedge.node.node import TagWriteCallback
 
+class WriteResponse:
+    def __init__(self, code: int, success: bool, props: dict[str, Any] = {}):
+        self.code = code
+        self.success = success
+        self.props: dict[str, Property] = {} 
+        for name, value in props.items():
+            property_type = Tag._intuit_property_type(value)
+            self.props[name] = Property(type=property_type, value=convert(value, property_type))
+    
+    def to_proto(self) -> Meta.WriteResponse:
+        return Meta.WriteResponse(self.code, self.success, self.props)
+
+    @classmethod
+    def from_proto(cls, response: Meta.WriteResponse):
+        return cls(response.code, response.success, response.properties)
+
+
+# TODO: should be able to encode and decode itself? At the very least know how to go to protobuf equivalent
 class Tag:
-    def __init__(self, path: str, type: int | type, properties: dict[str, Any] = {}):
+    def __init__(self, path: str, type: int | type, props: dict[str, Any], writable: bool, responses: list[WriteResponse], write_callback: TagWriteCallback):
         self.path = path
 
         if not isinstance(type, int):
             type = Tag._convert_type(type)
         self.type: int = type
 
-        self.properties: dict[str, Property] = {}
-        for name, value in properties.items():
-            property_type = Tag._intuit_property_type(value)
-            self.properties[name] = Property(type=property_type, value=self.convert(value, property_type))
+        self.props: dict[str, Property] = {}
+        self.add_props(props)
+        
+        self.writable = writable
+        if writable:
+            self.responses = responses
+            if write_callback:
+                # TODO: only one write_callback can ever be registered
+                self.write_callback = write_callback
 
     @classmethod
     def from_proto_tag(cls, tag: Meta.Tag):
         t = Tag(tag.path, tag.type)
-        t.properties = dict(tag.properties)
+        t.props = dict(tag.properties)
         return t
+    
+    def add_response_type(self, response: WriteResponse):
+        if len([x for x in self.responses if response.code == x.code]) > 0:
+            raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")
+        self.responses.append(response)
+    
+    def add_write_callback(self, callback: TagWriteCallback):
+        self.write_callback = callback
+    
+    def add_props(self, p: dict[str, Any]):
+        for name, value in p.items():
+            property_type = Tag._intuit_property_type(value)
+            self.props[name] = Property(type=property_type, value=self.convert(value, property_type))
 
     def convert(self, value: Any, type: int = None) -> TagData:
-        tag_data = TagData()
         if not type:
            type = self.type
-        match type:
-            case DataType.INT:
-                tag_data.int_data = int(value)
-            case DataType.LONG:
-                tag_data.long_data = int(value)
-            case DataType.FLOAT:
-                tag_data.float_data = float(value)
-            case DataType.STRING:
-                tag_data.string_data = str(value)
-            case DataType.BOOL:
-                tag_data.bool_data = bool(value)
-            case DataType.LIST_INT:
-                tag_data.list_int_data.list.extend(list([int(x) for x in value]))
-            case DataType.LIST_LONG:
-                tag_data.list_long_data.list.extend(list([int(x) for x in value]))
-            case DataType.LIST_FLOAT:
-                tag_data.list_float_data.list.extend(list([float(x) for x in value]))
-            case DataType.LIST_STRING:
-                tag_data.list_string_data.list.extend(list([str(x) for x in value]))
-            case DataType.LIST_BOOL:
-                tag_data.list_bool_data.list.extend(list([bool(x) for x in value]))
-            case _:
-                raise ValueError(f"Unknown tag type {type}")
-        return tag_data
+        return convert(value, type)
 
     @staticmethod
     def from_tag_data(tag_data: TagData, type: int) -> Any:
@@ -118,6 +131,33 @@ class Tag:
             return DataType.BOOL
         else:
             raise ValueError("Illegal type for property. Allowed properties are str, int, float, bool")
+
+def convert(value: Any, type: int) -> TagData:
+    tag_data = TagData()
+    match type:
+        case DataType.INT:
+            tag_data.int_data = int(value)
+        case DataType.LONG:
+            tag_data.long_data = int(value)
+        case DataType.FLOAT:
+            tag_data.float_data = float(value)
+        case DataType.STRING:
+            tag_data.string_data = str(value)
+        case DataType.BOOL:
+            tag_data.bool_data = bool(value)
+        case DataType.LIST_INT:
+            tag_data.list_int_data.list.extend(list([int(x) for x in value]))
+        case DataType.LIST_LONG:
+            tag_data.list_long_data.list.extend(list([int(x) for x in value]))
+        case DataType.LIST_FLOAT:
+            tag_data.list_float_data.list.extend(list([float(x) for x in value]))
+        case DataType.LIST_STRING:
+            tag_data.list_string_data.list.extend(list([str(x) for x in value]))
+        case DataType.LIST_BOOL:
+            tag_data.list_bool_data.list.extend(list([bool(x) for x in value]))
+        case _:
+            raise ValueError(f"Unknown tag type {type}")
+    return tag_data
 
 if __name__ == "__main__":
     print("list int")

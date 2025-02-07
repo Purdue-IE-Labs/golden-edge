@@ -13,6 +13,12 @@ message Meta {
         // return values
     message Method {
     }
+
+    message WriteResponse {
+        int32 code = 11;
+        bool success = 12;
+        map<string, Property> properties = 13;
+    }
     
     // tags
         // name
@@ -22,6 +28,9 @@ message Meta {
         string path = 1;
         DataType type = 2;
         map<string, Property> properties = 3;
+
+        bool writable = 4;
+        repeated WriteResponse responses = 5;
     }
 
     optional bool tracking = 7;
