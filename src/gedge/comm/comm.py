@@ -2,7 +2,6 @@ import base64
 import zenoh
 from contextlib import contextmanager
 from gedge.edge.error import NodeLookupError
-from gedge.edge.tag import Tag
 from gedge.proto import Meta, TagData, DataType, State
 from typing import Any, Callable, List
 from gedge.comm import keys
