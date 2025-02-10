@@ -1,8 +1,9 @@
-from typing import Any, Callable, Dict, Union
+from typing import Any, Callable, Dict, Union, TypeAlias
 from types import GenericAlias
 from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property, Meta
 from gedge.comm.keys import NodeKeySpace
-from gedge.node.node import TagWriteCallback
+
+TagWriteCallback: TypeAlias = Callable[[str, Any], int]
 
 class WriteResponse:
     def __init__(self, code: int, success: bool, props: dict[str, Any] = {}):
@@ -14,14 +15,13 @@ class WriteResponse:
             self.props[name] = Property(type=property_type, value=convert(value, property_type))
     
     def to_proto(self) -> Meta.WriteResponse:
-        return Meta.WriteResponse(self.code, self.success, self.props)
+        return Meta.WriteResponse(code=self.code, success=self.success, properties=self.props)
 
     @classmethod
     def from_proto(cls, response: Meta.WriteResponse):
         return cls(response.code, response.success, response.properties)
 
 
-# TODO: should be able to encode and decode itself? At the very least know how to go to protobuf equivalent
 class Tag:
     def __init__(self, path: str, type: int | type, props: dict[str, Any], writable: bool, responses: list[WriteResponse], write_callback: TagWriteCallback):
         self.path = path
@@ -34,19 +34,21 @@ class Tag:
         self.add_props(props)
         
         self.writable = writable
-        if writable:
-            self.responses = responses
-            if write_callback:
-                # TODO: only one write_callback can ever be registered
-                self.write_callback = write_callback
+        self.responses = responses
+        self.write_callback = write_callback
+    
+    def to_proto(self) -> Meta.Tag:
+        responses = [r.to_proto() for r in self.responses]
+        return Meta.Tag(path=self.path, type=self.type, properties=self.props, writable=self.writable, responses=responses)
 
     @classmethod
-    def from_proto_tag(cls, tag: Meta.Tag):
+    def from_proto(cls, tag: Meta.Tag):
         t = Tag(tag.path, tag.type)
         t.props = dict(tag.properties)
         return t
     
-    def add_response_type(self, response: WriteResponse):
+    def add_response_type(self, code: int, success: bool, props: dict[str, Any] = {}):
+        response = WriteResponse(code, success, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:
             raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")
         self.responses.append(response)
@@ -56,8 +58,11 @@ class Tag:
     
     def add_props(self, p: dict[str, Any]):
         for name, value in p.items():
-            property_type = Tag._intuit_property_type(value)
-            self.props[name] = Property(type=property_type, value=self.convert(value, property_type))
+            self.add_prop(name, value)
+    
+    def add_prop(self, key: str, value: Any):
+        property_type = Tag._intuit_property_type(value)
+        self.props[key] = Property(type=property_type, value=self.convert(value, property_type))
 
     def convert(self, value: Any, type: int = None) -> TagData:
         if not type:

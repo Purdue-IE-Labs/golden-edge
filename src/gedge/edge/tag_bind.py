@@ -8,11 +8,12 @@ import zenoh
 
 class TagBind:
     def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any], None]):
+        self.path = tag.path
+        self._on_set(self.path, value)
         self._value = value
         self.last_received: datetime = datetime.now()
         self.is_valid: bool = True
         self.tag = tag
-        self.path = tag.path
         self._subscriber = comm.session.declare_subscriber(ks.tag_path(self.path), self._on_value)
         self._on_set = on_set
 

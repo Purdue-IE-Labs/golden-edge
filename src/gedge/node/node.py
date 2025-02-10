@@ -15,12 +15,12 @@ LivelinessCallback: TypeAlias = Callable[[str, bool], None]
 TagWriteCallback: TypeAlias = Callable[[str, Any], int]
 ZenohCallback = Callable[[zenoh.Sample], None]
 
-# TODO: making the tags a dictonary could be beneficial
+# TODO: eventually, should support JSON
 class NodeConfig:
     def __init__(self, key: str):
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
-        self.tags: set[Tag] = set()
+        self.tags: dict[str, Tag] = dict()
 
     @property
     def key(self):
@@ -33,61 +33,45 @@ class NodeConfig:
 
     # TODO: change write_callback name? Other options: write_handler, on_write, handle_write, on_write_callback
     def add_tag(self, path: str, type: int | type, props: dict[str, Any] = {}, writable: bool = False, responses: list[WriteResponse] = [], write_callback: TagWriteCallback = None) -> Tag:
-        tag = Tag(path, type, props, writable, responses, write_callback, self._on_delete_tag)
-        matching = [t for t in self.tags if t.path == path]
-        if len(matching) == 1:
+        tag = Tag(path, type, props, writable, responses, write_callback)
+        if path in self.tags:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
-            self.tags.remove(matching[0])
+            del self.tags[path]
         print(f"adding tag on key: {path}")
-        self.tags.add(tag)
+        self.tags[path] = tag
         return tag
     
-    def _on_delete_tag(self, path: str):
-        # TODO: delete tag from here
-        pass
-    
     def add_write_responses(self, path: str, responses: list[WriteResponse]):
-        matching = [t for t in self.tags if t.path == path]
-        if len(matching) != 1:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        tag = matching[0]
+        tag = self.tags[path]
         for response in responses:
             tag.add_response_type(response)
     
     def add_write_response(self, path: str, code: int, success: bool, props: dict[str, Any] = {}):
-        response = WriteResponse(code, success, props)
-        matching = [t for t in self.tags if t.path == path]
-        if len(matching) != 1:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        tag = matching[0]
-        tag.add_response_type(response)
+        response = WriteResponse(code, success, props)
+        self.tags[path].add_response_type(response)
     
     def add_write_callback(self, path: str, callback: TagWriteCallback):
-        matching = [t for t in self.tags if t.path == path]
-        if len(matching) != 1:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        tag = matching[0]
-        tag.add_write_callback(callback)
+        self.tags[path].add_write_callback(callback)
     
     def add_props(self, path: str, props: dict[str, Any]):
-        matching = [t for t in self.tags if t.path == path]
-        if len(matching) != 1:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        tag = matching[0]
-        tag.add_props(props)
+        self.tags[path].add_props(props)
 
     def delete_tag(self, path: str):
-        tags = [t for t in self.tags if t.path == path]
-        if len(tags) != 1:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        self.tags.remove(tags[0])
+        del self.tags[path]
 
     def build_meta(self) -> Meta:
         print(f"building meta for {self.key}")
-        tags = []
-        for t in self.tags:
-            tag = Meta.Tag(path=t.path, type=t.type, properties=t.props, writable=t.writable, responses=t.responses)
-            tags.append(tag)
+        tags: list[Meta.Tag] = [t.to_proto() for t in self.tags.values()]
         meta = Meta(key=self.key, tags=tags, methods=[])
         return meta
 
@@ -104,6 +88,7 @@ class NodeSession:
 
         # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = self.startup()
+        self.tags: dict[str, Tag] = self.config.tags
 
     def __enter__(self):
         return self
@@ -196,20 +181,17 @@ class NodeSession:
         return [self.tag_bind(path) for path in paths]
 
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
-        tags = [t for t in self.meta.tags if t.path == path]
-        if len(tags) == 0:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        tag = tags[0]
-        bind = TagBind(self.ks, self._comm, Tag.from_proto_tag(tag), value, self.update_tag)
+        bind = TagBind(self.ks, self._comm, self.tags[path], value, self.update_tag)
         return bind
     
     def update_tag(self, path: str, value: Any):
         prefix = self.ks.prefix
         node_name = self.ks.name
-        tag = [tag for tag in self.meta.tags if tag.path == path]
-        if len(tag) == 0:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        tag = tag[0]
+        tag = self.tags[path]
         self._comm.update_tag(prefix, node_name, tag.path, tag.convert(value))
     
     def update_state(self, online: bool):
