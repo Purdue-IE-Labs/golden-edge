@@ -31,14 +31,20 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
 
-    def add_tag(self, path: str, type: int | type, props: dict[str, Any] = {}, writable: bool = False, responses: list[WriteResponse] = [], write_callback: TagWriteCallback = None):
-        tag = Tag(path, type, props, writable, responses, write_callback)
+    # TODO: change write_callback name? Other options: write_handler, on_write, handle_write, on_write_callback
+    def add_tag(self, path: str, type: int | type, props: dict[str, Any] = {}, writable: bool = False, responses: list[WriteResponse] = [], write_callback: TagWriteCallback = None) -> Tag:
+        tag = Tag(path, type, props, writable, responses, write_callback, self._on_delete_tag)
         matching = [t for t in self.tags if t.path == path]
         if len(matching) == 1:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
             self.tags.remove(matching[0])
         print(f"adding tag on key: {path}")
         self.tags.add(tag)
+        return tag
+    
+    def _on_delete_tag(self, path: str):
+        # TODO: delete tag from here
+        pass
     
     def add_write_responses(self, path: str, responses: list[WriteResponse]):
         matching = [t for t in self.tags if t.path == path]
@@ -48,7 +54,8 @@ class NodeConfig:
         for response in responses:
             tag.add_response_type(response)
     
-    def add_write_response(self, path: str, response: WriteResponse):
+    def add_write_response(self, path: str, code: int, success: bool, props: dict[str, Any] = {}):
+        response = WriteResponse(code, success, props)
         matching = [t for t in self.tags if t.path == path]
         if len(matching) != 1:
             raise TagLookupError(path, self.ks.name)
@@ -79,7 +86,7 @@ class NodeConfig:
         print(f"building meta for {self.key}")
         tags = []
         for t in self.tags:
-            tag = Meta.Tag(path=t.path, type=t.type, properties=t.props)
+            tag = Meta.Tag(path=t.path, type=t.type, properties=t.props, writable=t.writable, responses=t.responses)
             tags.append(tag)
         meta = Meta(key=self.key, tags=tags, methods=[])
         return meta
