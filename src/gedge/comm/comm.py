@@ -36,7 +36,8 @@ class Comm:
         return self.session.liveliness().get(key_expr).recv()
     
     def tag_queryable(self, ks: NodeKeySpace, path: str, on_write: Callable[[zenoh.Query], zenoh.Reply]):
-        self.session.declare_queryable(ks.tag_path(path), on_write)
+        print(f"tag queryable on path: {ks.tag_path(path, write=True)}")
+        self.session.declare_queryable(ks.tag_path(path, write=True), on_write)
     
     def query_tag(self, ks: NodeKeySpace, path: str, value: TagData, on_reply: Callable[[zenoh.Reply], None]):
         self.session.get(ks.tag_path(path), on_reply, payload=base64.b64encode(value.SerializeToString()))

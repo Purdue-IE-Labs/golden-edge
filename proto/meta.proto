@@ -19,6 +19,11 @@ message Meta {
         bool success = 12;
         map<string, Property> properties = 13;
     }
+
+    message WriteResponseData {
+        int32 code = 14;
+        optional string error = 15;
+    }
     
     // tags
         // name
