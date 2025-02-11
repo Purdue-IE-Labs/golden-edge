@@ -3,7 +3,7 @@ from types import GenericAlias
 from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property, Meta
 from gedge.comm.keys import NodeKeySpace
 
-TagWriteCallback: TypeAlias = Callable[[str, Any], int]
+TagWriteCallback: TypeAlias = Callable[[Any], int]
 
 class WriteResponse:
     def __init__(self, code: int, success: bool, props: dict[str, Any] = {}):

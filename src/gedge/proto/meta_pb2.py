@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from . import tag_data_pb2 as tag__data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nmeta.proto\x1a\x0etag_data.proto\"<\n\x08Property\x12\x17\n\x04type\x18\x07 \x01(\x0e\x32\t.DataType\x12\x17\n\x05value\x18\x08 \x01(\x0b\x32\x08.TagData\"\xf7\x03\n\x04Meta\x12\x15\n\x08tracking\x18\x07 \x01(\x08H\x00\x88\x01\x01\x12\x0b\n\x03key\x18\x08 \x01(\t\x12\x17\n\x04tags\x18\t \x03(\x0b\x32\t.Meta.Tag\x12\x1d\n\x07methods\x18\n \x03(\x0b\x32\x0c.Meta.Method\x1a\x08\n\x06Method\x1a\xa5\x01\n\rWriteResponse\x12\x0c\n\x04\x63ode\x18\x0b \x01(\x05\x12\x0f\n\x07success\x18\x0c \x01(\x08\x12\x37\n\nproperties\x18\r \x03(\x0b\x32#.Meta.WriteResponse.PropertiesEntry\x1a<\n\x0fPropertiesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0b\x32\t.Property:\x02\x38\x01\x1a\xd3\x01\n\x03Tag\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.DataType\x12-\n\nproperties\x18\x03 \x03(\x0b\x32\x19.Meta.Tag.PropertiesEntry\x12\x10\n\x08writable\x18\x04 \x01(\x08\x12&\n\tresponses\x18\x05 \x03(\x0b\x32\x13.Meta.WriteResponse\x1a<\n\x0fPropertiesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0b\x32\t.Property:\x02\x38\x01\x42\x0b\n\t_trackingb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nmeta.proto\x1a\x0etag_data.proto\"<\n\x08Property\x12\x17\n\x04type\x18\x07 \x01(\x0e\x32\t.DataType\x12\x17\n\x05value\x18\x08 \x01(\x0b\x32\x08.TagData\"\xb8\x04\n\x04Meta\x12\x15\n\x08tracking\x18\x07 \x01(\x08H\x00\x88\x01\x01\x12\x0b\n\x03key\x18\x08 \x01(\t\x12\x17\n\x04tags\x18\t \x03(\x0b\x32\t.Meta.Tag\x12\x1d\n\x07methods\x18\n \x03(\x0b\x32\x0c.Meta.Method\x1a\x08\n\x06Method\x1a\xa5\x01\n\rWriteResponse\x12\x0c\n\x04\x63ode\x18\x0b \x01(\x05\x12\x0f\n\x07success\x18\x0c \x01(\x08\x12\x37\n\nproperties\x18\r \x03(\x0b\x32#.Meta.WriteResponse.PropertiesEntry\x1a<\n\x0fPropertiesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0b\x32\t.Property:\x02\x38\x01\x1a?\n\x11WriteResponseData\x12\x0c\n\x04\x63ode\x18\x0e \x01(\x05\x12\x12\n\x05\x65rror\x18\x0f \x01(\tH\x00\x88\x01\x01\x42\x08\n\x06_error\x1a\xd3\x01\n\x03Tag\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.DataType\x12-\n\nproperties\x18\x03 \x03(\x0b\x32\x19.Meta.Tag.PropertiesEntry\x12\x10\n\x08writable\x18\x04 \x01(\x08\x12&\n\tresponses\x18\x05 \x03(\x0b\x32\x13.Meta.WriteResponse\x1a<\n\x0fPropertiesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0b\x32\t.Property:\x02\x38\x01\x42\x0b\n\t_trackingb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -39,15 +39,17 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_PROPERTY']._serialized_start=30
   _globals['_PROPERTY']._serialized_end=90
   _globals['_META']._serialized_start=93
-  _globals['_META']._serialized_end=596
+  _globals['_META']._serialized_end=661
   _globals['_META_METHOD']._serialized_start=193
   _globals['_META_METHOD']._serialized_end=201
   _globals['_META_WRITERESPONSE']._serialized_start=204
   _globals['_META_WRITERESPONSE']._serialized_end=369
   _globals['_META_WRITERESPONSE_PROPERTIESENTRY']._serialized_start=309
   _globals['_META_WRITERESPONSE_PROPERTIESENTRY']._serialized_end=369
-  _globals['_META_TAG']._serialized_start=372
-  _globals['_META_TAG']._serialized_end=583
+  _globals['_META_WRITERESPONSEDATA']._serialized_start=371
+  _globals['_META_WRITERESPONSEDATA']._serialized_end=434
+  _globals['_META_TAG']._serialized_start=437
+  _globals['_META_TAG']._serialized_end=648
   _globals['_META_TAG_PROPERTIESENTRY']._serialized_start=309
   _globals['_META_TAG_PROPERTIESENTRY']._serialized_end=369
 # @@protoc_insertion_point(module_scope)

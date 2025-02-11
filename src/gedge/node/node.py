@@ -1,3 +1,4 @@
+import base64
 from typing import Any, Set, TypeAlias, Callable
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import TagData, Meta, DataType, State, Property
@@ -8,12 +9,13 @@ from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
 import zenoh
 
-StateCallback: TypeAlias = Callable[[str, str, State], None]
-MetaCallback: TypeAlias = Callable[[str, str, Meta], None]
-TagDataCallback: TypeAlias = Callable[[str, str, Any], None]
+StateCallback: TypeAlias = Callable[[str, State], None]
+MetaCallback: TypeAlias = Callable[[str, Meta], None]
+TagDataCallback: TypeAlias = Callable[[str, Any], None]
 LivelinessCallback: TypeAlias = Callable[[str, bool], None]
 TagWriteCallback: TypeAlias = Callable[[str, Any], int]
 ZenohCallback = Callable[[zenoh.Sample], None]
+ZenohQueryCallback = Callable[[zenoh.Query], None]
 
 # TODO: eventually, should support JSON
 class NodeConfig:
@@ -42,17 +44,17 @@ class NodeConfig:
         return tag
     
     def add_write_responses(self, path: str, responses: list[WriteResponse]):
+        # TODO: broken function bc WriteResponse twice
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
         for response in responses:
-            tag.add_response_type(response)
+            tag.add_response_type(response.code, response.success, response.props)
     
     def add_write_response(self, path: str, code: int, success: bool, props: dict[str, Any] = {}):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        response = WriteResponse(code, success, props)
-        self.tags[path].add_response_type(response)
+        self.tags[path].add_response_type(code, success, props)
     
     def add_write_callback(self, path: str, callback: TagWriteCallback):
         if path not in self.tags:
@@ -68,26 +70,35 @@ class NodeConfig:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         del self.tags[path]
+    
+    def _verify_tags(self):
+        for path in self.tags:
+            tag = self.tags[path]
+            if tag.writable:
+                assert tag.write_callback is not None, f"Tag {path} declared as writable but no write handler"
+                assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
 
     def build_meta(self) -> Meta:
         print(f"building meta for {self.key}")
+        self._verify_tags()
         tags: list[Meta.Tag] = [t.to_proto() for t in self.tags.values()]
         meta = Meta(key=self.key, tags=tags, methods=[])
         return meta
 
     def connect(self):
-        comm = Comm()
-        return NodeSession(config=self, comm=comm)
+        meta = self.build_meta()
+        return NodeSession(config=self, meta=meta)
 
 class NodeSession:
-    def __init__(self, config: NodeConfig, comm: Comm):
-        self._comm = comm 
+    def __init__(self, config: NodeConfig, meta: Meta):
+        self._comm = Comm() 
         self.config = config
         self.ks = config.ks
         self.connections: list[RemoteConnection] = []
 
         # TODO: subscribe to our own meta to handle changes to config during session?
-        self.meta = self.startup()
+        self.meta = meta
+        self.startup()
         self.tags: dict[str, Tag] = self.config.tags
 
     def __enter__(self):
@@ -168,14 +179,34 @@ class NodeSession:
         for node in self.connections:
             self.disconnect_from_remote(node.key)
         self._comm.session.close()
+    
+    def _write_callback(self, path: str, callback: TagWriteCallback) -> ZenohQueryCallback:
+        print("registered write callback")
+        def _on_write(query: zenoh.Query) -> None:
+            try:
+                payload = base64.b64decode(query.payload.to_bytes())
+                data = TagData()
+                data.ParseFromString(payload)
+                data = Tag.from_tag_data(data, self.tags[path].type)
+                code = callback(str(query.key_expr), data)
+                if code not in [r.code for r in self.tags[path].responses]:
+                    raise Exception(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
+                response = Meta.WriteResponseData(code=code)
+            except Exception as e:
+                code = 500
+                response = Meta.WriteResponseData(code=code, error=str(e))
+            query.reply(query.key_expr, payload=response.SerializeToString())
+        return _on_write
 
     def startup(self):
         prefix, name = self.ks.prefix, self.ks.name
-        meta: Meta = self.config.build_meta()
-        self._comm.send_meta(prefix, name, meta)
+        self._comm.send_meta(prefix, name, self.meta)
         self.update_state(True)
         self.node_liveliness = self._comm.liveliness_token(self.ks.liveliness_key_prefix)
-        return meta
+        for path in self.config.tags:
+            tag = self.config.tags[path]
+            if not tag.writable: continue
+            self._comm.tag_queryable(self.ks, path, self._write_callback(path, tag.write_callback))
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
