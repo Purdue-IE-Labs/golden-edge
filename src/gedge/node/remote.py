@@ -32,6 +32,8 @@ class RemoteConnection:
         self.ks = NodeKeySpace.from_user_key(self.key)
         self.on_close = on_close
         self.meta = self._comm.pull_meta_message(self.ks)
+        tags: list[Tag] = [Tag.from_proto(t) for t in self.meta.tags]
+        self.tags = {t.path: t for t in tags}
         print(f"connecting to node {self.ks.name}")
 
     def __enter__(self):
@@ -119,18 +121,16 @@ class RemoteConnection:
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
 
-    def tag_bind(self, path: str, value: Any = None) -> TagBind:
-        tags = [t for t in self.meta.tags if t.path == path]
-        if len(tags) == 0:
+    def tag_bind(self, path: str, on_write_response, value: Any = None) -> TagBind:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        tag = tags[0]
-        bind = TagBind(self.ks, self._comm, Tag.from_proto_tag(tag), value, self.write_tag)
+        tag = self.tags[path]
+        bind = TagBind(self.ks, self._comm, tag, value, self.write_tag)
         return bind
 
     def write_tag(self, path: str, value: Any):
-        tag = [tag for tag in self.meta.tags if tag.path == path]
-        if len(tag) == 0:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        tag = Tag.from_proto_tag(tag[0])
+        tag = self.tags[path]
         # TODO: writes will be a little more involved than this but for now we just write to /TAG/WRITES
         self._comm.write_tag(self.ks, tag.path, tag.convert(value))

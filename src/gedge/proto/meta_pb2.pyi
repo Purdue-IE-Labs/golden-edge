@@ -35,6 +35,13 @@ class Meta(_message.Message):
         success: bool
         properties: _containers.MessageMap[str, Property]
         def __init__(self, code: _Optional[int] = ..., success: bool = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
+    class WriteResponseData(_message.Message):
+        __slots__ = ("code", "error")
+        CODE_FIELD_NUMBER: _ClassVar[int]
+        ERROR_FIELD_NUMBER: _ClassVar[int]
+        code: int
+        error: str
+        def __init__(self, code: _Optional[int] = ..., error: _Optional[str] = ...) -> None: ...
     class Tag(_message.Message):
         __slots__ = ("path", "type", "properties", "writable", "responses")
         class PropertiesEntry(_message.Message):
