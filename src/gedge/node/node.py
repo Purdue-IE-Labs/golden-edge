@@ -42,13 +42,12 @@ class NodeConfig:
         self.tags[path] = tag
         return tag
     
-    def add_write_responses(self, path: str, responses: list[WriteResponse]):
-        # TODO: broken function bc WriteResponse twice
+    def add_write_responses(self, path: str, responses: list[tuple[int, bool, dict[str, Any]]]):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        for response in responses:
-            tag.add_response_type(response.code, response.success, response.props)
+        for code, success, props in responses:
+            tag.add_response_type(code, success, props)
     
     def add_write_response(self, path: str, code: int, success: bool, props: dict[str, Any] = {}):
         if path not in self.tags:
@@ -131,7 +130,6 @@ class NodeSession:
     # Meanwhile, nodes_on_network(...) accepts just a <key_prefix>, which gets expanded to
     # <key_prefix>/NODE/*/META
     def node_on_network(self, key: str) -> Meta:
-        # TODO: should we return if it's online?
         return self._pull_meta_message(key)
     
     def nodes_on_network(self, key_prefix: str, only_online: bool = False) -> list[Meta]:
