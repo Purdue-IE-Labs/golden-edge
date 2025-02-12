@@ -1,5 +1,5 @@
-from typing import Any, Set, TypeAlias, Callable
-from gedge.proto import TagData, Meta, DataType, State, Property
+from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable
+from gedge.proto import TagData, Meta, DataType, State
 from gedge.edge.error import SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
@@ -7,7 +7,6 @@ from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
 from collections import defaultdict
 import zenoh
-import base64
 
 StateCallback: TypeAlias = Callable[[str, State], None]
 MetaCallback: TypeAlias = Callable[[str, Meta], None]
@@ -32,6 +31,7 @@ class RemoteConnection:
         self.ks = NodeKeySpace.from_user_key(self.key)
         self.on_close = on_close
         self.meta = self._comm.pull_meta_message(self.ks)
+        print(self.meta)
         tags: list[Tag] = [Tag.from_proto(t) for t in self.meta.tags]
         self.tags = {t.path: t for t in tags}
         print(f"connecting to node {self.ks.name}")
@@ -45,10 +45,7 @@ class RemoteConnection:
 
     def _on_tag_data(self, meta: Meta, on_tag_data: TagDataCallback) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
-            payload = base64.b64decode(sample.payload.to_bytes())
-            tag_data = TagData()
-            tag_data.ParseFromString(payload)
-
+            tag_data: TagData = self._comm.deserialize(TagData(), sample.payload.to_bytes())
             tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.path)]
             if len(tag_config) == 0:
                 path, node = NodeKeySpace.tag_path_from_key(str(sample.key_expr)), NodeKeySpace.name_from_key(str(sample.key_expr))
@@ -60,17 +57,13 @@ class RemoteConnection:
 
     def _on_state(self, on_state: StateCallback) -> ZenohCallback:
         def _on_state(sample: zenoh.Sample):
-            payload = base64.b64decode(sample.payload.to_bytes())
-            state = State()
-            state.ParseFromString(payload)
+            state: State = self._comm.deserialize(State(), sample.payload.to_bytes())
             on_state(str(sample.key_expr), state)
         return _on_state
 
     def _on_meta(self, on_meta: MetaCallback) -> ZenohCallback:
         def _on_meta(sample: zenoh.Sample):
-            payload = base64.b64decode(sample.payload.to_bytes())
-            meta = Meta()
-            meta.ParseFromString(payload)
+            meta: Meta = self._comm.deserialize(Meta(), sample.payload.to_bytes())
             on_meta(sample.key_expr, meta)
         return _on_meta
     
@@ -121,16 +114,22 @@ class RemoteConnection:
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
 
-    def tag_bind(self, path: str, on_write_response, value: Any = None) -> TagBind:
+    def tag_bind(self, path: str, value: Any = None) -> TagBind:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
         bind = TagBind(self.ks, self._comm, tag, value, self.write_tag)
         return bind
 
-    def write_tag(self, path: str, value: Any):
+    def _write_tag(self, path: str, value: Any) -> tuple[int, str]:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        # TODO: writes will be a little more involved than this but for now we just write to /TAG/WRITES
-        self._comm.write_tag(self.ks, tag.path, tag.convert(value))
+        response = self._comm.write_tag(self.ks, tag.path, tag.convert(value))
+        return response.code, response.error
+
+    def write_tag(self, path: str, value: Any) -> tuple[int, str]:
+        return self._write_tag(path, value)
+
+    async def write_tag_async(self, path: str, value: Any) -> tuple[int, str]:
+        return self._write_tag(path, value)

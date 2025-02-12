@@ -2,10 +2,12 @@ import base64
 import zenoh
 from contextlib import contextmanager
 from gedge.edge.error import NodeLookupError
-from gedge.proto import Meta, TagData, DataType, State
+from gedge.proto import Meta, TagData, DataType, State, Prop, WriteResponseData
 from typing import Any, Callable, List
 from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace
+
+ProtoMessage = Meta | TagData | WriteResponseData | State
 
 # handle Zenoh communications
 # The user will not interact with this item
@@ -39,15 +41,22 @@ class Comm:
         print(f"tag queryable on path: {ks.tag_path(path, write=True)}")
         self.session.declare_queryable(ks.tag_path(path, write=True), on_write)
     
-    def query_tag(self, ks: NodeKeySpace, path: str, value: TagData, on_reply: Callable[[zenoh.Reply], None]):
-        self.session.get(ks.tag_path(path), on_reply, payload=base64.b64encode(value.SerializeToString()))
+    def query_tag(self, ks: NodeKeySpace, path: str, value: TagData) -> zenoh.Reply:
+        b = self.serialize(value)
+        return self.session.get(ks.tag_path(path, write=True), payload=b).recv()
+    
+    def deserialize(self, proto: ProtoMessage, payload: bytes) -> ProtoMessage:
+        b = base64.b64decode(payload)
+        proto.ParseFromString(b)
+        return proto
+    
+    def serialize(self, proto: ProtoMessage) -> bytes:
+        b = proto.SerializeToString()
+        b = base64.b64encode(b)
+        return b
 
     def _send_protobuf(self, key_expr: str, value: Meta | State | TagData):
-        b = value.SerializeToString()
-        self._put(key_expr, b)
-
-    def _put(self, key_expr: str, payload: bytes):
-        b = base64.b64encode(payload)
+        b = self.serialize(value)
         self.session.put(key_expr, b)
 
     def send_meta(self, key_prefix: str, name: str, meta: Meta):
@@ -60,10 +69,17 @@ class Comm:
         print(f"updating tag on key expression: {key} with value {value}")
         self._send_protobuf(key, value)
 
-    def write_tag(self, ks: NodeKeySpace, path: str, value: TagData):
+    def write_tag(self, ks: NodeKeySpace, path: str, value: TagData) -> WriteResponseData:
         key_expr = ks.tag_path(path, write=True)
         print(f"writing tag on key expression: {key_expr}")
-        self._send_protobuf(key_expr, value)
+        reply = self.query_tag(ks, path, value)
+        if reply.ok:
+            d = self.deserialize(WriteResponseData(), reply.result.payload.to_bytes())
+            print(f"returning {d}")
+            return d
+        else:
+            print("raising exception")
+            raise Exception("reply super not ok")
 
     def send_state(self, key_prefix: str, name: str, state: State):
         key = keys.state_key_prefix(key_prefix, name)
@@ -79,17 +95,15 @@ class Comm:
                 continue
             result = r.result
 
-            b = base64.b64decode(result.payload.to_bytes())
             try:
-                meta = Meta()
-                meta.ParseFromString(b)
-                is_online = self.is_online(key_prefix, meta.name)
+                meta: Meta = self.deserialize(Meta(), result.payload.to_bytes())
+                ks = NodeKeySpace.from_user_key(meta.key)
+                is_online = self.is_online(key_prefix, ks.name)
                 if only_online and not is_online:
                     continue
                 messages.append(meta)
             except Exception as e:
                 print(f"couldn't decode {e}")
-                print(b)
         return messages
 
     def pull_meta_message(self, ks: NodeKeySpace) -> Meta:
@@ -101,9 +115,7 @@ class Comm:
         if not reply.ok:
             raise NodeLookupError(ks.user_key)
         
-        b = base64.b64decode(reply.result.payload.to_bytes())
-        meta = Meta()
-        meta.ParseFromString(b)
+        meta = self.deserialize(Meta(), reply.result.payload.to_bytes())
         return meta
             
     def is_online(self, ks: NodeKeySpace) -> bool:
