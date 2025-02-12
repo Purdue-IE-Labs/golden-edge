@@ -16,7 +16,7 @@ class TagBind:
         self.is_valid: bool = True
         self.tag = tag
         self._comm = comm
-        self._subscriber = comm.session.declare_subscriber(ks.tag_path(self.path), self._on_value)
+        self._subscriber = comm.session.declare_subscriber(ks.tag_data_path(self.path), self._on_value)
 
     @property
     def value(self):
