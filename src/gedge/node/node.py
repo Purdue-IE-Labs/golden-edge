@@ -1,7 +1,6 @@
-import base64
 from typing import Any, Set, TypeAlias, Callable
 from gedge.node.remote import RemoteConfig, RemoteConnection
-from gedge.proto import TagData, Meta, DataType, State, Property
+from gedge.proto import TagData, Meta, DataType, State, WriteResponseData
 from gedge.edge.error import SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag, WriteResponse
@@ -184,18 +183,17 @@ class NodeSession:
         print("registered write callback")
         def _on_write(query: zenoh.Query) -> None:
             try:
-                payload = base64.b64decode(query.payload.to_bytes())
-                data = TagData()
-                data.ParseFromString(payload)
+                data: TagData = self._comm.deserialize(TagData(), query.payload.to_bytes())
                 data = Tag.from_tag_data(data, self.tags[path].type)
                 code = callback(str(query.key_expr), data)
                 if code not in [r.code for r in self.tags[path].responses]:
                     raise Exception(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
-                response = Meta.WriteResponseData(code=code)
+                response = WriteResponseData(code=code)
             except Exception as e:
                 code = 500
-                response = Meta.WriteResponseData(code=code, error=str(e))
-            query.reply(query.key_expr, payload=response.SerializeToString())
+                response = WriteResponseData(code=code, error=str(e))
+            b = self._comm.serialize(response)
+            query.reply(query.key_expr, payload=b)
         return _on_write
 
     def startup(self):

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "tag_data.proto";
 
-message Property {
+message Prop {
     DataType type = 7;
     TagData value = 8;
 }
@@ -17,22 +17,17 @@ message Meta {
     message WriteResponse {
         int32 code = 11;
         bool success = 12;
-        map<string, Property> properties = 13;
-    }
-
-    message WriteResponseData {
-        int32 code = 14;
-        optional string error = 15;
+        map<string, Prop> props = 13;
     }
     
     // tags
         // name
         // datatypes
-        // properties
+        // prop
     message Tag {
         string path = 1;
         DataType type = 2;
-        map<string, Property> properties = 3;
+        map<string, Prop> props = 3;
 
         bool writable = 4;
         repeated WriteResponse responses = 5;

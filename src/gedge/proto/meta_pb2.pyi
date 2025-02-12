@@ -6,7 +6,7 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class Property(_message.Message):
+class Prop(_message.Message):
     __slots__ = ("type", "value")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
@@ -20,48 +20,41 @@ class Meta(_message.Message):
         __slots__ = ()
         def __init__(self) -> None: ...
     class WriteResponse(_message.Message):
-        __slots__ = ("code", "success", "properties")
-        class PropertiesEntry(_message.Message):
+        __slots__ = ("code", "success", "props")
+        class PropsEntry(_message.Message):
             __slots__ = ("key", "value")
             KEY_FIELD_NUMBER: _ClassVar[int]
             VALUE_FIELD_NUMBER: _ClassVar[int]
             key: str
-            value: Property
-            def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Property, _Mapping]] = ...) -> None: ...
+            value: Prop
+            def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Prop, _Mapping]] = ...) -> None: ...
         CODE_FIELD_NUMBER: _ClassVar[int]
         SUCCESS_FIELD_NUMBER: _ClassVar[int]
-        PROPERTIES_FIELD_NUMBER: _ClassVar[int]
+        PROPS_FIELD_NUMBER: _ClassVar[int]
         code: int
         success: bool
-        properties: _containers.MessageMap[str, Property]
-        def __init__(self, code: _Optional[int] = ..., success: bool = ..., properties: _Optional[_Mapping[str, Property]] = ...) -> None: ...
-    class WriteResponseData(_message.Message):
-        __slots__ = ("code", "error")
-        CODE_FIELD_NUMBER: _ClassVar[int]
-        ERROR_FIELD_NUMBER: _ClassVar[int]
-        code: int
-        error: str
-        def __init__(self, code: _Optional[int] = ..., error: _Optional[str] = ...) -> None: ...
+        props: _containers.MessageMap[str, Prop]
+        def __init__(self, code: _Optional[int] = ..., success: bool = ..., props: _Optional[_Mapping[str, Prop]] = ...) -> None: ...
     class Tag(_message.Message):
-        __slots__ = ("path", "type", "properties", "writable", "responses")
-        class PropertiesEntry(_message.Message):
+        __slots__ = ("path", "type", "props", "writable", "responses")
+        class PropsEntry(_message.Message):
             __slots__ = ("key", "value")
             KEY_FIELD_NUMBER: _ClassVar[int]
             VALUE_FIELD_NUMBER: _ClassVar[int]
             key: str
-            value: Property
-            def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Property, _Mapping]] = ...) -> None: ...
+            value: Prop
+            def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Prop, _Mapping]] = ...) -> None: ...
         PATH_FIELD_NUMBER: _ClassVar[int]
         TYPE_FIELD_NUMBER: _ClassVar[int]
-        PROPERTIES_FIELD_NUMBER: _ClassVar[int]
+        PROPS_FIELD_NUMBER: _ClassVar[int]
         WRITABLE_FIELD_NUMBER: _ClassVar[int]
         RESPONSES_FIELD_NUMBER: _ClassVar[int]
         path: str
         type: _tag_data_pb2.DataType
-        properties: _containers.MessageMap[str, Property]
+        props: _containers.MessageMap[str, Prop]
         writable: bool
         responses: _containers.RepeatedCompositeFieldContainer[Meta.WriteResponse]
-        def __init__(self, path: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., properties: _Optional[_Mapping[str, Property]] = ..., writable: bool = ..., responses: _Optional[_Iterable[_Union[Meta.WriteResponse, _Mapping]]] = ...) -> None: ...
+        def __init__(self, path: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., props: _Optional[_Mapping[str, Prop]] = ..., writable: bool = ..., responses: _Optional[_Iterable[_Union[Meta.WriteResponse, _Mapping]]] = ...) -> None: ...
     TRACKING_FIELD_NUMBER: _ClassVar[int]
     KEY_FIELD_NUMBER: _ClassVar[int]
     TAGS_FIELD_NUMBER: _ClassVar[int]
