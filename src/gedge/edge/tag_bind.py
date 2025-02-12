@@ -1,4 +1,3 @@
-import base64
 from gedge.comm.comm import Comm
 from gedge.comm.keys import NodeKeySpace
 from gedge.edge.tag import Tag, TagData
@@ -16,6 +15,7 @@ class TagBind:
         self.last_received: datetime = datetime.now()
         self.is_valid: bool = True
         self.tag = tag
+        self._comm = comm
         self._subscriber = comm.session.declare_subscriber(ks.tag_path(self.path), self._on_value)
 
     @property
@@ -28,9 +28,7 @@ class TagBind:
         self._value = value
 
     def _on_value(self, sample: zenoh.Sample):
-        payload = base64.b64decode(sample.payload.to_bytes())
-        tag_data = TagData()
-        tag_data.ParseFromString(payload)
+        tag_data = self._comm.deserialize(TagData(), sample.payload.to_bytes())
         value = Tag.from_tag_data(tag_data, self.tag.type)
         self.last_received = datetime.now()
         self._value = value
