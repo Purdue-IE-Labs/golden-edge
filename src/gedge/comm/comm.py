@@ -1,9 +1,8 @@
 import base64
 import zenoh
-from contextlib import contextmanager
 from gedge.edge.error import NodeLookupError
-from gedge.proto import Meta, TagData, DataType, State, Prop, WriteResponseData
-from typing import Any, Callable, List
+from gedge.proto import Meta, TagData, State, WriteResponseData
+from typing import Callable
 from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace
 
@@ -38,12 +37,12 @@ class Comm:
         return self.session.liveliness().get(key_expr).recv()
     
     def tag_queryable(self, ks: NodeKeySpace, path: str, on_write: Callable[[zenoh.Query], zenoh.Reply]):
-        print(f"tag queryable on path: {ks.tag_path(path, write=True)}")
-        self.session.declare_queryable(ks.tag_path(path, write=True), on_write)
+        print(f"tag queryable on path: {ks.tag_write_path(path)}")
+        self.session.declare_queryable(ks.tag_write_path(path), on_write)
     
     def query_tag(self, ks: NodeKeySpace, path: str, value: TagData) -> zenoh.Reply:
         b = self.serialize(value)
-        return self.session.get(ks.tag_path(path, write=True), payload=b).recv()
+        return self.session.get(ks.tag_write_path(path), payload=b).recv()
     
     def deserialize(self, proto: ProtoMessage, payload: bytes) -> ProtoMessage:
         b = base64.b64decode(payload)
@@ -70,7 +69,7 @@ class Comm:
         self._send_protobuf(key, value)
 
     def write_tag(self, ks: NodeKeySpace, path: str, value: TagData) -> WriteResponseData:
-        key_expr = ks.tag_path(path, write=True)
+        key_expr = ks.tag_write_path(path)
         print(f"writing tag on key expression: {key_expr}")
         reply = self.query_tag(ks, path, value)
         if reply.ok:
