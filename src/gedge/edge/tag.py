@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, Union, TypeAlias
 from types import GenericAlias
-from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Property, Meta
+from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Prop, Meta
 from gedge.comm.keys import NodeKeySpace
 
 TagWriteCallback: TypeAlias = Callable[[Any], int]
@@ -9,17 +9,17 @@ class WriteResponse:
     def __init__(self, code: int, success: bool, props: dict[str, Any] = {}):
         self.code = code
         self.success = success
-        self.props: dict[str, Property] = {} 
+        self.props: dict[str, Prop] = {} 
         for name, value in props.items():
             property_type = Tag._intuit_property_type(value)
-            self.props[name] = Property(type=property_type, value=convert(value, property_type))
+            self.props[name] = Prop(type=property_type, value=convert(value, property_type))
     
     def to_proto(self) -> Meta.WriteResponse:
-        return Meta.WriteResponse(code=self.code, success=self.success, properties=self.props)
+        return Meta.WriteResponse(code=self.code, success=self.success, props=self.props)
 
     @classmethod
     def from_proto(cls, response: Meta.WriteResponse):
-        return cls(response.code, response.success, response.properties)
+        return cls(response.code, response.success, response.props)
 
 
 class Tag:
@@ -30,7 +30,7 @@ class Tag:
             type = Tag._convert_type(type)
         self.type: int = type
 
-        self.props: dict[str, Property] = {}
+        self.props: dict[str, Prop] = {}
         self.add_props(props)
         
         self.writable = writable
@@ -39,12 +39,12 @@ class Tag:
     
     def to_proto(self) -> Meta.Tag:
         responses = [r.to_proto() for r in self.responses]
-        return Meta.Tag(path=self.path, type=self.type, properties=self.props, writable=self.writable, responses=responses)
+        return Meta.Tag(path=self.path, type=self.type, props=self.props, writable=self.writable, responses=responses)
 
     @classmethod
     def from_proto(cls, tag: Meta.Tag):
-        t = Tag(tag.path, tag.type)
-        t.props = dict(tag.properties)
+        t = Tag(tag.path, tag.type, {}, tag.writable, tag.responses, None)
+        t.props = dict(tag.props)
         return t
     
     def add_response_type(self, code: int, success: bool, props: dict[str, Any] = {}):
@@ -62,7 +62,7 @@ class Tag:
     
     def add_prop(self, key: str, value: Any):
         property_type = Tag._intuit_property_type(value)
-        self.props[key] = Property(type=property_type, value=self.convert(value, property_type))
+        self.props[key] = Prop(type=property_type, value=self.convert(value, property_type))
 
     def convert(self, value: Any, type: int = None) -> TagData:
         if not type:
@@ -166,13 +166,13 @@ def convert(value: Any, type: int) -> TagData:
 
 if __name__ == "__main__":
     print("list int")
-    t = Tag("my_tag", list[int], properties={"joe": "buck"})
+    t = Tag("my_tag", list[int], props={"joe": "buck"})
     print(t.type)
     print(f"\nDatatype.LIST_BOOL")
-    t = Tag("my_tag", DataType.LIST_BOOL, properties={"joe": "buck"})
+    t = Tag("my_tag", DataType.LIST_BOOL, props={"joe": "buck"})
     print(t.type)
     print(f"\nint")
-    t = Tag("my_tag", int, properties={"joe": "buck"})
+    t = Tag("my_tag", int, props={"joe": "buck"})
     print(t.type)
     t = Tag("my_tag", list[float])
     t = Tag("my_tag", type=list[str])
