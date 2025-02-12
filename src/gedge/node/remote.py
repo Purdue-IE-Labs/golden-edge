@@ -88,7 +88,7 @@ class RemoteConnection:
             raise TagLookupError(path, self.ks.name)
 
         self.config.read_write_tags.append(path)
-        key_expr = self.ks.tag_path(path)
+        key_expr = self.ks.tag_data_path(path)
         print(f"tag data key expr: {key_expr}")
         subscriber = self._comm.subscriber(key_expr, self._on_tag_data(self.meta, on_tag_data))
         self._subscriptions.append(subscriber)

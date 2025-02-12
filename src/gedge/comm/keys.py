@@ -110,8 +110,9 @@ class NodeKeySpace:
         self.tag_data_key_prefix = tag_data_key_prefix(prefix, name)
         self.tag_write_key_prefix = tag_write_key_prefix(prefix, name)
         self.liveliness_key_prefix = liveliness_key_prefix(prefix, name)
-
-    def tag_path(self, path: str, write: bool = False):
-        if write:
-            return tag_write_key(self.prefix, self.name, path)
+    
+    def tag_data_path(self, path: str):
         return tag_data_key(self.prefix, self.name, path)
+    
+    def tag_write_path(self, path: str):
+        return tag_write_key(self.prefix, self.name, path)
