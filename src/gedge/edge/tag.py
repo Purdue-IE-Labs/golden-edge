@@ -3,7 +3,7 @@ from types import GenericAlias
 from gedge.proto import TagData, DataType, ListInt, ListBool, ListFloat, ListLong, ListString, Prop, Meta
 from gedge.comm.keys import NodeKeySpace
 
-TagWriteCallback: TypeAlias = Callable[[Any], int]
+TagWriteHandler: TypeAlias = Callable[[Any], int]
 
 class WriteResponse:
     def __init__(self, code: int, success: bool, props: dict[str, Any] = {}):
@@ -23,7 +23,7 @@ class WriteResponse:
 
 
 class Tag:
-    def __init__(self, path: str, type: int | type, props: dict[str, Any], writable: bool, responses: list[WriteResponse], write_callback: TagWriteCallback):
+    def __init__(self, path: str, type: int | type, props: dict[str, Any], writable: bool, responses: list[WriteResponse], write_handler: TagWriteHandler):
         self.path = path
 
         if not isinstance(type, int):
@@ -33,13 +33,13 @@ class Tag:
         self.props: dict[str, Prop] = {}
         self.add_props(props)
         
-        self.writable = writable
+        self._writable = writable
         self.responses = responses
-        self.write_callback = write_callback
+        self.write_handler = write_handler
     
     def to_proto(self) -> Meta.Tag:
         responses = [r.to_proto() for r in self.responses]
-        return Meta.Tag(path=self.path, type=self.type, props=self.props, writable=self.writable, responses=responses)
+        return Meta.Tag(path=self.path, type=self.type, props=self.props, writable=self._writable, responses=responses)
 
     @classmethod
     def from_proto(cls, tag: Meta.Tag):
@@ -47,14 +47,21 @@ class Tag:
         t.props = dict(tag.props)
         return t
     
+    def writable(self, write_handler: TagWriteHandler = None, responses: list[tuple[int, bool, dict[str, Any]]] = []):
+        self._writable = True
+        self.write_handler = write_handler
+        for tup in responses:
+            self.add_response_type(tup[0], tup[1], tup[2])
+        return self
+    
     def add_response_type(self, code: int, success: bool, props: dict[str, Any] = {}):
         response = WriteResponse(code, success, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:
             raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")
         self.responses.append(response)
     
-    def add_write_callback(self, callback: TagWriteCallback):
-        self.write_callback = callback
+    def add_write_handler(self, handler: TagWriteHandler):
+        self.write_handler = handler
     
     def add_props(self, p: dict[str, Any]):
         for name, value in p.items():
