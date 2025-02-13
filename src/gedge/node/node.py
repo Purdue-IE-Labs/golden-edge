@@ -12,7 +12,7 @@ StateCallback: TypeAlias = Callable[[str, State], None]
 MetaCallback: TypeAlias = Callable[[str, Meta], None]
 TagDataCallback: TypeAlias = Callable[[str, Any], None]
 LivelinessCallback: TypeAlias = Callable[[str, bool], None]
-TagWriteCallback: TypeAlias = Callable[[str, Any], int]
+TagWriteHandler: TypeAlias = Callable[[str, Any], int]
 ZenohCallback = Callable[[zenoh.Sample], None]
 ZenohQueryCallback = Callable[[zenoh.Query], None]
 
@@ -32,9 +32,17 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
 
-    # TODO: change write_callback name? Other options: write_handler, on_write, handle_write, on_write_callback
-    def add_tag(self, path: str, type: int | type, props: dict[str, Any] = {}, writable: bool = False, responses: list[WriteResponse] = [], write_callback: TagWriteCallback = None) -> Tag:
-        tag = Tag(path, type, props, writable, responses, write_callback)
+    def add_tag(self, path: str, type: int | type, props: dict[str, Any] = {}) -> Tag:
+        tag = Tag(path, type, props, False, [], None)
+        if path in self.tags:
+            print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
+            del self.tags[path]
+        print(f"adding tag on key: {path}")
+        self.tags[path] = tag
+        return tag
+
+    def add_writable_tag(self, path: str, type: int | type, write_handler: TagWriteHandler, responses: list[tuple[int, bool, dict[str, Any]]], props: dict[str, Any] = {}) -> Tag:
+        tag = Tag(path, type, props, True, responses, write_handler)
         if path in self.tags:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
             del self.tags[path]
@@ -54,10 +62,10 @@ class NodeConfig:
             raise TagLookupError(path, self.ks.name)
         self.tags[path].add_response_type(code, success, props)
     
-    def add_write_callback(self, path: str, callback: TagWriteCallback):
+    def add_write_handler(self, path: str, callback: TagWriteHandler):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        self.tags[path].add_write_callback(callback)
+        self.tags[path].add_write_handler(callback)
     
     def add_props(self, path: str, props: dict[str, Any]):
         if path not in self.tags:
@@ -73,7 +81,7 @@ class NodeConfig:
         for path in self.tags:
             tag = self.tags[path]
             if tag.writable:
-                assert tag.write_callback is not None, f"Tag {path} declared as writable but no write handler"
+                assert tag.write_handler is not None, f"Tag {path} declared as writable but no write handler"
                 assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
 
     def build_meta(self) -> Meta:
@@ -177,7 +185,7 @@ class NodeSession:
             self.disconnect_from_remote(node.key)
         self._comm.session.close()
     
-    def _write_callback(self, path: str, callback: TagWriteCallback) -> ZenohQueryCallback:
+    def _write_handler(self, path: str, callback: TagWriteHandler) -> ZenohQueryCallback:
         print("registered write callback")
         def _on_write(query: zenoh.Query) -> None:
             try:
@@ -202,7 +210,7 @@ class NodeSession:
         for path in self.config.tags:
             tag = self.config.tags[path]
             if not tag.writable: continue
-            self._comm.tag_queryable(self.ks, path, self._write_callback(path, tag.write_callback))
+            self._comm.tag_queryable(self.ks, path, self._write_handler(path, tag.write_handler))
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
