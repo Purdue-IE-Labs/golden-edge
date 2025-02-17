@@ -1,20 +1,18 @@
 from typing import Any, Set, TypeAlias, Callable
+from gedge.edge.types import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagWriteHandler, Type, ZenohQueryCallback
+from gedge.node.query import Query
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import TagData, Meta, DataType, State, WriteResponseData
-from gedge.edge.error import SessionError, ConfigError, TagLookupError
+from gedge.edge.error import MethodLookupError, SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag, WriteResponse
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
+from gedge.node.method import Method, Response
+from gedge.edge.tag_data import from_tag_data
 import zenoh
 
-StateCallback: TypeAlias = Callable[[str, State], None]
-MetaCallback: TypeAlias = Callable[[str, Meta], None]
-TagDataCallback: TypeAlias = Callable[[str, Any], None]
-LivelinessCallback: TypeAlias = Callable[[str, bool], None]
-TagWriteHandler: TypeAlias = Callable[[str, Any], int]
-ZenohCallback = Callable[[zenoh.Sample], None]
-ZenohQueryCallback = Callable[[zenoh.Query], None]
+from gedge.proto.method_pb2 import MethodCall
 
 # TODO: eventually, should support JSON
 class NodeConfig:
@@ -22,6 +20,7 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
         self.tags: dict[str, Tag] = dict()
+        self.methods: dict[str, Method] = dict()
 
     @property
     def key(self):
@@ -77,6 +76,28 @@ class NodeConfig:
             raise TagLookupError(path, self.ks.name)
         del self.tags[path]
     
+    def add_method(self, path: str, handler: Callable[[Query], None], props: dict[str, Any] = {}):
+        method = Method(path, handler, props, {}, [])
+        self.methods[path] = method
+        return method
+    
+    def add_params(self, path: str, **kwargs):
+        if path not in self.methods:
+            raise MethodLookupError(path, self.ks.name)
+        method = self.methods[path]
+        method.add_params([(key, value) for key, value in kwargs.items()])
+    
+    def add_response(self, path: str, response: Response):
+        if path not in self.methods:
+            raise MethodLookupError(path, self.ks.name)
+        method = self.methods[path]
+        method.add_response(response)
+    
+    def delete_method(self, path: str):
+        if path not in self.methods:
+            raise MethodLookupError(path, self.ks.name)
+        del self.methods[path]
+    
     def _verify_tags(self):
         for path in self.tags:
             tag = self.tags[path]
@@ -88,7 +109,8 @@ class NodeConfig:
         print(f"building meta for {self.key}")
         self._verify_tags()
         tags: list[Meta.Tag] = [t.to_proto() for t in self.tags.values()]
-        meta = Meta(key=self.key, tags=tags, methods=[])
+        methods: list[Meta.Method] = [m.to_proto() for m in self.methods.values()]
+        meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods)
         return meta
 
     def connect(self):
@@ -106,6 +128,9 @@ class NodeSession:
         self.meta = meta
         self.startup()
         self.tags: dict[str, Tag] = self.config.tags
+        self.methods: dict[str, Method] = self.config.methods
+        print(self.config.methods)
+        self.responses: dict[str, dict[int, Response]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
 
     def __enter__(self):
         return self
@@ -201,6 +226,19 @@ class NodeSession:
             b = self._comm.serialize(response)
             query.reply(query.key_expr, payload=b)
         return _on_write
+    
+    def _method_call(self, path: str, handler: Callable[[Query], None]) -> Callable[[zenoh.Query], zenoh.Reply]:
+        method = self.config.methods[path]
+        def _method_call(query: zenoh.Query) -> zenoh.Reply:
+            m: MethodCall = self._comm.deserialize(MethodCall(), query.payload.to_bytes())
+            params: dict[str, Any] = {}
+            for key, value in m.parameters.items():
+                data_type = method.parameters[key]
+                params[key] = from_tag_data(value, data_type.type)
+            q = Query(self.ks, path, self._comm, query, query.parameters, method.responses)
+            q.parameters = params
+            handler(q)
+        return _method_call
 
     def startup(self):
         prefix, name = self.ks.prefix, self.ks.name
@@ -209,8 +247,11 @@ class NodeSession:
         self.node_liveliness = self._comm.liveliness_token(self.ks.liveliness_key_prefix)
         for path in self.config.tags:
             tag = self.config.tags[path]
-            if not tag.writable: continue
+            if not tag._writable: continue
             self._comm.tag_queryable(self.ks, path, self._write_handler(path, tag.write_handler))
+        for path in self.config.methods:
+            method = self.config.methods[path]
+            self._comm.method_queryable(self.ks, path, self._method_call(path, method.handler))
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]

@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+import "tag_data.proto";
+import "prop.proto";
+
+// Config
+message Method {
+    string path = 1;
+    map<string, Prop> props = 2;
+    map<string, DataType> parameters = 3;
+    repeated Response responses = 4;
+}
+
+message Response {
+    int32 code = 1;
+    bool success = 2;
+    map<string, Prop> props = 3;
+    map<string, DataType> body = 4;
+    bool final = 5;
+}
+
+// Session
+message MethodCall {
+    map<string, TagData> parameters = 1;
+}
+
+message ResponseData {
+    int32 code = 1;
+    optional string error = 2;
+    map<string, TagData> body = 3;
+}
+
+// message ParameterData {
+//     string name = 1;
+//     TagData data = 2;
+// }
+
+// message BodyData {
+//     TagData data = 1;
+// }

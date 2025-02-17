@@ -1,19 +1,10 @@
 syntax = "proto3";
 
 import "tag_data.proto";
-
-message Prop {
-    DataType type = 7;
-    TagData value = 8;
-}
+import "method.proto";
+import "prop.proto";
 
 message Meta {
-    // methods
-        // parameters
-        // return values
-    message Method {
-    }
-
     message WriteResponse {
         int32 code = 11;
         bool success = 12;
