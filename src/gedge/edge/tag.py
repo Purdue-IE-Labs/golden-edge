@@ -2,7 +2,6 @@ from typing import Any, Callable, Dict, Union, TypeAlias
 from types import GenericAlias
 from gedge.edge.data_type import DataType
 from gedge.edge.types import TagWriteHandler
-from gedge.proto import TagData, ListInt, ListBool, ListFloat, ListLong, ListString, Meta
 from gedge import proto
 from gedge.edge.prop import Prop, Props
 from gedge.comm.keys import NodeKeySpace
@@ -13,11 +12,11 @@ class WriteResponse:
         self.success = success
         self.props: Props = Props.from_value(props)
     
-    def to_proto(self) -> Meta.WriteResponse:
-        return Meta.WriteResponse(code=self.code, success=self.success, props=self.props.to_proto())
+    def to_proto(self) -> proto.WriteResponse:
+        return proto.WriteResponse(code=self.code, success=self.success, props=self.props.to_proto())
 
     @classmethod
-    def from_proto(cls, response: Meta.WriteResponse):
+    def from_proto(cls, response: proto.WriteResponse):
         return WriteResponse(response.code, response.success, Props.from_proto(response.props))
 
 
@@ -30,12 +29,12 @@ class Tag:
         self.responses = responses
         self.write_handler = write_handler
     
-    def to_proto(self) -> Meta.Tag:
+    def to_proto(self) -> proto.Tag:
         responses = [r.to_proto() for r in self.responses]
-        return Meta.Tag(path=self.path, type=self.type.to_proto(), props=self.props.to_proto(), writable=self._writable, responses=responses)
+        return proto.Tag(path=self.path, type=self.type.to_proto(), props=self.props.to_proto(), writable=self._writable, responses=responses)
 
     @classmethod
-    def from_proto(cls, tag: Meta.Tag):
+    def from_proto(cls, tag: proto.Tag):
         t = Tag(tag.path, tag.type, {}, tag.writable, tag.responses, None)
         t.props = dict(tag.props)
         return t
@@ -63,13 +62,13 @@ class Tag:
     def add_prop(self, key: str, value: Any):
         self.props.add_prop(key, value)
 
-    def convert(self, value: Any, type: int = None) -> TagData:
+    def convert(self, value: Any, type: int = None) -> proto.TagData:
         if not type:
            type = self.type
         return convert(value, type)
 
     @staticmethod
-    def from_tag_data(tag_data: TagData, type: int) -> Any:
+    def from_tag_data(tag_data: proto.TagData, type: int) -> Any:
         match type:
             case proto.DataType.INT:
                 return int(tag_data.int_data)
@@ -93,72 +92,29 @@ class Tag:
                 return list(tag_data.list_bool_data.list)
         raise ValueError(f"Cannot convert tag to type {type}")
 
-
-    @staticmethod
-    def _convert_type(type: Any) -> DataType:
-        """
-        Note: Python does not support the notion of a "long" data type.
-        In fact, there are several data types that may be supported 
-        in our protocol that are not recognized in Python
-        Thus, users can also pass in a DataType object directly, which 
-        has all the types allowed by our protocol. As an API convenience,
-        we allow the user to use built-in Python types.
-        """
-        if type == int:
-            return DataType.INT
-        elif type == float:
-            return DataType.FLOAT
-        elif type == str:
-            return DataType.STRING
-        elif type == bool:
-            return DataType.BOOL
-        elif type == list[int]:
-            return DataType.LIST_INT
-        elif type == list[float]:
-            return DataType.LIST_FLOAT
-        elif type == list[str]:
-            return DataType.LIST_STRING
-        elif type == list[bool]:
-            return DataType.LIST_BOOL
-        else:
-            raise ValueError(f"Illegal type {type} for tag")
-        
-    @staticmethod
-    def _intuit_property_type(value: Any) -> int:
-        if isinstance(value, str):
-            return DataType.STRING
-        elif isinstance(value, int):
-            return DataType.INT
-        elif isinstance(value, float):
-            return DataType.FLOAT
-        elif isinstance(value, bool):
-            return DataType.BOOL
-        else:
-            raise ValueError("Illegal type for property. Allowed properties are str, int, float, bool")
-
-def convert(value: Any, type: int) -> TagData:
+def convert(value: Any, type: int) -> proto.TagData:
     # Use the type of a TagData to convert to a TagData from a python type
-    tag_data = TagData()
+    tag_data = proto.TagData()
     match type:
-        case DataType.INT:
+        case proto.DataType.INT:
             tag_data.int_data = int(value)
-        case DataType.LONG:
+        case proto.DataType.LONG:
             tag_data.long_data = int(value)
-        case DataType.FLOAT:
+        case proto.DataType.FLOAT:
             tag_data.float_data = float(value)
-        case DataType.STRING:
+        case proto.DataType.STRING:
             tag_data.string_data = str(value)
-        case DataType.BOOL:
+        case proto.DataType.BOOL:
             tag_data.bool_data = bool(value)
-        case DataType.LIST_INT:
+        case proto.DataType.LIST_INT:
             tag_data.list_int_data.list.extend(list([int(x) for x in value]))
-        case DataType.LIST_LONG:
+        case proto.DataType.LIST_LONG:
             tag_data.list_long_data.list.extend(list([int(x) for x in value]))
-        case DataType.LIST_FLOAT:
+        case proto.DataType.LIST_FLOAT:
             tag_data.list_float_data.list.extend(list([float(x) for x in value]))
-        case DataType.LIST_STRING:
+        case proto.DataType.LIST_STRING:
             tag_data.list_string_data.list.extend(list([str(x) for x in value]))
-        case DataType.LIST_BOOL:
+        case proto.DataType.LIST_BOOL:
             tag_data.list_bool_data.list.extend(list([bool(x) for x in value]))
         case _:
             raise ValueError(f"Unknown tag type {type}")
@@ -169,12 +125,12 @@ if __name__ == "__main__":
     t = Tag("my_tag", list[int], props={"joe": "buck"})
     print(t.type)
     print(f"\nDatatype.LIST_BOOL")
-    t = Tag("my_tag", DataType.LIST_BOOL, props={"joe": "buck"})
+    t = Tag("my_tag", proto.DataType.LIST_BOOL, props={"joe": "buck"})
     print(t.type)
     print(f"\nint")
     t = Tag("my_tag", int, props={"joe": "buck"})
     print(t.type)
     t = Tag("my_tag", list[float])
     t = Tag("my_tag", type=list[str])
-    t = Tag("my_tag", DataType.LIST_LONG)
+    t = Tag("my_tag", proto.DataType.LIST_LONG)
     print(t.type)

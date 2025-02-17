@@ -1,6 +1,7 @@
 from gedge.comm.comm import Comm
 from gedge.comm.keys import NodeKeySpace
-from gedge.edge.tag import Tag, TagData
+from gedge.edge.tag import Tag
+from gedge import proto
 from typing import Any, Callable
 from datetime import datetime
 import zenoh
@@ -28,7 +29,7 @@ class TagBind:
         self._value = value
 
     def _on_value(self, sample: zenoh.Sample):
-        tag_data = self._comm.deserialize(TagData(), sample.payload.to_bytes())
+        tag_data = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes())
         value = Tag.from_tag_data(tag_data, self.tag.type)
         self.last_received = datetime.now()
         self._value = value

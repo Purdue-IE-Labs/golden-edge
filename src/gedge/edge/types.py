@@ -1,6 +1,6 @@
 from typing import Any, TypeAlias, Callable
 import zenoh
-from gedge.proto import State, Meta
+from gedge import proto
 
 # specifies that we expect the user to pass a type itself (or a DataType instance)
 # example: int
@@ -12,8 +12,8 @@ TagValue = Any
 TagWriteHandler: TypeAlias = Callable[[TagValue], int]
 
 KeyExpr = str
-StateCallback: TypeAlias = Callable[[KeyExpr, State], None]
-MetaCallback: TypeAlias = Callable[[KeyExpr, Meta], None]
+StateCallback: TypeAlias = Callable[[KeyExpr, proto.State], None]
+MetaCallback: TypeAlias = Callable[[KeyExpr, proto.Meta], None]
 TagDataCallback: TypeAlias = Callable[[KeyExpr, TagValue], None]
 LivelinessCallback: TypeAlias = Callable[[KeyExpr, bool], None]
 ZenohCallback = Callable[[zenoh.Sample], None]

@@ -7,9 +7,7 @@ class DataType:
         if isinstance(type, DataType):
             type = type.type
         elif not isinstance(type, int):
-            # print(f"type {type} not of instance int")
             type = self.from_py_type(type)
-        # print(f"type: {type}")
 
         self.type: int = type
     
