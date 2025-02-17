@@ -1,24 +1,16 @@
 from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable
 from gedge.edge.tag_data import TagData, from_tag_data
 from gedge.node.method import Method
-from gedge.proto import Meta, DataType, State, ResponseData
+from gedge.node.response import Response
 from gedge import proto
 from gedge.edge.error import MethodLookupError, SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
+from gedge.edge.types import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback
 from collections import defaultdict
 import zenoh
-
-from gedge.proto.method_pb2 import Response
-
-StateCallback: TypeAlias = Callable[[str, State], None]
-MetaCallback: TypeAlias = Callable[[str, Meta], None]
-TagDataCallback: TypeAlias = Callable[[str, Any], None]
-LivelinessCallback: TypeAlias = Callable[[str, bool], None]
-Callbacks: TypeAlias = tuple[StateCallback, MetaCallback, TagDataCallback]
-ZenohCallback = Callable[[zenoh.Sample], None]
 
 class RemoteConfig:
     def __init__(self, key: str, read_tags: list[str] = [], read_write_tags: list[str] = [], method_calls: list[str] = []):
@@ -50,7 +42,7 @@ class RemoteConnection:
         self.close()
         self._comm.__exit__(*exc)
 
-    def _on_tag_data(self, meta: Meta, on_tag_data: TagDataCallback) -> ZenohCallback:
+    def _on_tag_data(self, meta: proto.Meta, on_tag_data: TagDataCallback) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
             tag_data: proto.TagData = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes())
             tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.path)]
@@ -64,13 +56,13 @@ class RemoteConnection:
 
     def _on_state(self, on_state: StateCallback) -> ZenohCallback:
         def _on_state(sample: zenoh.Sample):
-            state: State = self._comm.deserialize(State(), sample.payload.to_bytes())
+            state: proto.State = self._comm.deserialize(proto.State(), sample.payload.to_bytes())
             on_state(str(sample.key_expr), state)
         return _on_state
 
     def _on_meta(self, on_meta: MetaCallback) -> ZenohCallback:
         def _on_meta(sample: zenoh.Sample):
-            meta: Meta = self._comm.deserialize(Meta(), sample.payload.to_bytes())
+            meta: proto.Meta = self._comm.deserialize(proto.Meta(), sample.payload.to_bytes())
             on_meta(sample.key_expr, meta)
         return _on_meta
     
@@ -146,7 +138,7 @@ class RemoteConnection:
             if not reply.ok:
                 print("warning: reply super not ok")
                 return
-            r: ResponseData = self._comm.deserialize(ResponseData(), reply.result.payload.to_bytes())
+            r: proto.ResponseData = self._comm.deserialize(proto.ResponseData(), reply.result.payload.to_bytes())
             body = {}
             for key, value in r.body.items():
                 response = self.responses[path][r.code]
@@ -156,13 +148,13 @@ class RemoteConnection:
         return _on_reply
     
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
-    def call_method(self, path: str, on_reply: Callable[[int, str, dict[str, Any]], None], **kwargs) -> tuple[int, str, dict[str, Any]]:
+    def call_method(self, path: str, on_reply: Callable[[int, dict[str, Any], str], None], **kwargs) -> tuple[int, str, dict[str, Any]]:
         if path not in self.methods:
             print(self.methods)
             raise MethodLookupError(path, self.ks.name)
         
         method = self.methods[path]
-        params: dict[str, TagData] = {}
+        params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
             data_type = method.parameters[key]
             params[key] = TagData.from_value(value, data_type.type).to_proto()

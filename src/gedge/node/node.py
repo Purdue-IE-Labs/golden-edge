@@ -1,18 +1,16 @@
-from typing import Any, Set, TypeAlias, Callable
-from gedge.edge.types import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagWriteHandler, Type, ZenohQueryCallback
+from typing import Any, Callable
+from gedge.edge.types import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagWriteHandler, ZenohQueryCallback
 from gedge.node.query import Query
 from gedge.node.remote import RemoteConfig, RemoteConnection
-from gedge.proto import TagData, Meta, DataType, State, WriteResponseData
-from gedge.edge.error import MethodLookupError, SessionError, ConfigError, TagLookupError
+from gedge.proto import TagData, Meta, State, WriteResponseData, MethodCall
+from gedge.edge.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
-from gedge.edge.tag import Tag, WriteResponse
+from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
 from gedge.node.method import Method, Response
 from gedge.edge.tag_data import from_tag_data
 import zenoh
-
-from gedge.proto.method_pb2 import MethodCall
 
 # TODO: eventually, should support JSON
 class NodeConfig:
