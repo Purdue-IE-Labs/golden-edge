@@ -22,30 +22,17 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from . import tag_data_pb2 as tag__data__pb2
 from . import method_pb2 as method__pb2
-from . import prop_pb2 as prop__pb2
+from . import tag_pb2 as tag__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nmeta.proto\x1a\x0etag_data.proto\x1a\x0cmethod.proto\x1a\nprop.proto\"\xc2\x03\n\x04Meta\x12\x15\n\x08tracking\x18\x07 \x01(\x08H\x00\x88\x01\x01\x12\x0b\n\x03key\x18\x08 \x01(\t\x12\x17\n\x04tags\x18\t \x03(\x0b\x32\t.Meta.Tag\x12\x18\n\x07methods\x18\n \x03(\x0b\x32\x07.Method\x1a\x92\x01\n\rWriteResponse\x12\x0c\n\x04\x63ode\x18\x0b \x01(\x05\x12\x0f\n\x07success\x18\x0c \x01(\x08\x12-\n\x05props\x18\r \x03(\x0b\x32\x1e.Meta.WriteResponse.PropsEntry\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\x1a\xc0\x01\n\x03Tag\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.DataType\x12#\n\x05props\x18\x03 \x03(\x0b\x32\x14.Meta.Tag.PropsEntry\x12\x10\n\x08writable\x18\x04 \x01(\x08\x12&\n\tresponses\x18\x05 \x03(\x0b\x32\x13.Meta.WriteResponse\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\x42\x0b\n\t_trackingb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nmeta.proto\x1a\x0cmethod.proto\x1a\ttag.proto\"e\n\x04Meta\x12\x15\n\x08tracking\x18\x07 \x01(\x08H\x00\x88\x01\x01\x12\x0b\n\x03key\x18\x08 \x01(\t\x12\x12\n\x04tags\x18\t \x03(\x0b\x32\x04.Tag\x12\x18\n\x07methods\x18\n \x03(\x0b\x32\x07.MethodB\x0b\n\t_trackingb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'meta_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_META_WRITERESPONSE_PROPSENTRY']._loaded_options = None
-  _globals['_META_WRITERESPONSE_PROPSENTRY']._serialized_options = b'8\001'
-  _globals['_META_TAG_PROPSENTRY']._loaded_options = None
-  _globals['_META_TAG_PROPSENTRY']._serialized_options = b'8\001'
-  _globals['_META']._serialized_start=57
-  _globals['_META']._serialized_end=507
-  _globals['_META_WRITERESPONSE']._serialized_start=153
-  _globals['_META_WRITERESPONSE']._serialized_end=299
-  _globals['_META_WRITERESPONSE_PROPSENTRY']._serialized_start=248
-  _globals['_META_WRITERESPONSE_PROPSENTRY']._serialized_end=299
-  _globals['_META_TAG']._serialized_start=302
-  _globals['_META_TAG']._serialized_end=494
-  _globals['_META_TAG_PROPSENTRY']._serialized_start=248
-  _globals['_META_TAG_PROPSENTRY']._serialized_end=299
+  _globals['_META']._serialized_start=39
+  _globals['_META']._serialized_end=140
 # @@protoc_insertion_point(module_scope)
