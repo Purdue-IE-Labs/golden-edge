@@ -1,12 +1,17 @@
 from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable
-from gedge.proto import TagData, Meta, DataType, State
-from gedge.edge.error import SessionError, ConfigError, TagLookupError
+from gedge.edge.tag_data import TagData, from_tag_data
+from gedge.node.method import Method
+from gedge.proto import Meta, DataType, State, ResponseData
+from gedge import proto
+from gedge.edge.error import MethodLookupError, SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
 from collections import defaultdict
 import zenoh
+
+from gedge.proto.method_pb2 import Response
 
 StateCallback: TypeAlias = Callable[[str, State], None]
 MetaCallback: TypeAlias = Callable[[str, Meta], None]
@@ -31,9 +36,11 @@ class RemoteConnection:
         self.ks = NodeKeySpace.from_user_key(self.key)
         self.on_close = on_close
         self.meta = self._comm.pull_meta_message(self.ks)
-        print(self.meta)
         tags: list[Tag] = [Tag.from_proto(t) for t in self.meta.tags]
         self.tags = {t.path: t for t in tags}
+        methods: list[Method] = [Method.from_proto(m) for m in self.meta.methods]
+        self.methods = {m.path: m for m in methods}
+        self.responses: dict[str, dict[int, Response]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         print(f"connecting to node {self.ks.name}")
 
     def __enter__(self):
@@ -45,7 +52,7 @@ class RemoteConnection:
 
     def _on_tag_data(self, meta: Meta, on_tag_data: TagDataCallback) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
-            tag_data: TagData = self._comm.deserialize(TagData(), sample.payload.to_bytes())
+            tag_data: proto.TagData = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes())
             tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.path)]
             if len(tag_config) == 0:
                 path, node = NodeKeySpace.tag_path_from_key(str(sample.key_expr)), NodeKeySpace.name_from_key(str(sample.key_expr))
@@ -133,3 +140,38 @@ class RemoteConnection:
 
     async def write_tag_async(self, path: str, value: Any) -> tuple[int, str]:
         return self._write_tag(path, value)
+    
+    def _on_reply(self, path: str, on_reply: Callable[[int, str, dict[str, Any]], None]) -> Callable[[zenoh.Reply], None]:
+        def _on_reply(reply: zenoh.Reply) -> None:
+            if not reply.ok:
+                print("warning: reply super not ok")
+                return
+            r: ResponseData = self._comm.deserialize(ResponseData(), reply.result.payload.to_bytes())
+            body = {}
+            for key, value in r.body.items():
+                response = self.responses[path][r.code]
+                data_type = response.body[key]
+                body[key] = from_tag_data(value, data_type)
+            on_reply(r.code, r.error, body)
+        return _on_reply
+    
+    # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
+    def call_method(self, path: str, on_reply: Callable[[int, str, dict[str, Any]], None], **kwargs) -> tuple[int, str, dict[str, Any]]:
+        if path not in self.methods:
+            print(self.methods)
+            raise MethodLookupError(path, self.ks.name)
+        
+        method = self.methods[path]
+        params: dict[str, TagData] = {}
+        for key, value in kwargs.items():
+            data_type = method.parameters[key]
+            params[key] = TagData.from_value(value, data_type.type).to_proto()
+
+        self._comm.call_method(self.ks, path, params, self._on_reply(path, on_reply))
+        body = {}
+        # for key, value in response.body.items():
+        #     r = [r for r in self.methods[path].responses if r.code == response.code][0]
+        #     type = [b.type for b in r.body if b.name == key][0]
+        #     val = Tag.from_tag_data(value.data, type)
+        #     body[key] = val
+        # return response.code, response.error, body

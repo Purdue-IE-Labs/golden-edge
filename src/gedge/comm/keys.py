@@ -6,6 +6,7 @@ TAGS = "TAGS"
 DATA = "DATA"
 WRITE = "WRITE"
 STATE = "STATE"
+METHODS = "METHODS"
 
 def key_join(*components: list[str]):
     return "/".join(components)
@@ -30,6 +31,9 @@ def tag_write_key(prefix: str, name: str, key: str):
 
 def state_key_prefix(prefix: str, name: str):
     return key_join(node_key_prefix(prefix, name), STATE)
+
+def method_key_perfix(prefix: str, name: str):
+    return key_join(node_key_prefix(prefix, name), METHODS)
 
 def liveliness_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name)
@@ -110,9 +114,14 @@ class NodeKeySpace:
         self.tag_data_key_prefix = tag_data_key_prefix(prefix, name)
         self.tag_write_key_prefix = tag_write_key_prefix(prefix, name)
         self.liveliness_key_prefix = liveliness_key_prefix(prefix, name)
+        self.method_key_prefix = method_key_perfix(prefix, name)
     
     def tag_data_path(self, path: str):
         return tag_data_key(self.prefix, self.name, path)
     
     def tag_write_path(self, path: str):
         return tag_write_key(self.prefix, self.name, path)
+    
+    def method_path(self, path: str):
+        return key_join(self.method_key_prefix, path)
+        
