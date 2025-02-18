@@ -2,26 +2,57 @@ from gedge import proto
 from gedge.edge.data_type import DataType
 from typing import Any, Self
 
-from gedge.edge.types import Type
+from gedge.edge.gtypes import TagValue, Type
 
 class TagData:
-    def __init__(self, type: int, value: proto.TagData):
-        self.type = DataType(type)
-        self.value: proto.TagData = value
+    def __init__(self, proto_: proto.TagData, type: DataType):
+        self.type = type
+        self.proto: proto.TagData = proto_
+        self.value = self.to_py()
     
     def to_proto(self) -> proto.TagData:
+        return self.proto
+        
+    def to_py(self) -> TagValue:
         return self.value
     
     @classmethod
-    def from_proto(cls, proto: proto.TagData, type: Type) -> Self:
-        value = from_tag_data(proto, type)
-        return TagData(type, value)
+    def from_proto(cls, proto: proto.TagData, type: DataType) -> Self:
+        return TagData(proto, type)
     
     @classmethod
-    def from_value(cls, value: Any, type: Type) -> Self:
-        type: DataType = DataType(type)
-        value = convert(value, type.type)
-        return TagData(type, value)
+    def from_value(cls, value: TagValue, type: DataType) -> Self:
+        proto = cls.py_to_proto(value, type)
+        return TagData(proto, type)
+    
+    @classmethod
+    def py_to_proto(cls, value: TagValue, type: DataType) -> proto.TagData:
+        tag_data = proto.TagData()
+        match type:
+            case DataType.INT:
+                tag_data.int_data = int(value)
+            case DataType.LONG:
+                tag_data.long_data = int(value)
+            case DataType.FLOAT:
+                tag_data.float_data = float(value)
+            case DataType.STRING:
+                tag_data.string_data = str(value)
+            case DataType.BOOL:
+                tag_data.bool_data = bool(value)
+            case DataType.LIST_INT:
+                tag_data.list_int_data.list.extend(list([int(x) for x in value]))
+            case DataType.LIST_LONG:
+                tag_data.list_long_data.list.extend(list([int(x) for x in value]))
+            case DataType.LIST_FLOAT:
+                tag_data.list_float_data.list.extend(list([float(x) for x in value]))
+            case DataType.LIST_STRING:
+                tag_data.list_string_data.list.extend(list([str(x) for x in value]))
+            case DataType.LIST_BOOL:
+                tag_data.list_bool_data.list.extend(list([bool(x) for x in value]))
+            case _:
+                raise ValueError(f"Unknown tag type {type}")
+        return tag_data
+    
 
 
 def from_tag_data(tag_data: proto.TagData, type: int) -> Any:

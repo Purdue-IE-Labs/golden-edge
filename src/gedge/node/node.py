@@ -1,15 +1,16 @@
-from typing import Any, Callable
-from gedge.edge.types import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagWriteHandler, ZenohQueryCallback
+from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagWriteHandler, Type, ZenohQueryCallback, Any
+from gedge.edge.prop import Props
 from gedge.node.query import Query
 from gedge.node.remote import RemoteConfig, RemoteConnection
-from gedge.proto import TagData, Meta, State, WriteResponseData, MethodCall
+from gedge.proto import Meta, State, WriteResponseData, MethodCall
+from gedge import proto
 from gedge.edge.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
 from gedge.node.method import Method, Response
-from gedge.edge.tag_data import from_tag_data
+from gedge.edge.tag_data import TagData, from_tag_data
 import zenoh
 
 # TODO: eventually, should support JSON
@@ -29,7 +30,7 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
 
-    def add_tag(self, path: str, type: int | type, props: dict[str, Any] = {}) -> Tag:
+    def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
         tag = Tag(path, type, props, False, [], None)
         if path in self.tags:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
@@ -38,7 +39,7 @@ class NodeConfig:
         self.tags[path] = tag
         return tag
 
-    def add_writable_tag(self, path: str, type: int | type, write_handler: TagWriteHandler, responses: list[tuple[int, bool, dict[str, Any]]], props: dict[str, Any] = {}) -> Tag:
+    def add_writable_tag(self, path: str, type: Type, write_handler: TagWriteHandler, responses: list[tuple[int, bool, dict[str, Any]]], props: dict[str, Any] = {}) -> Tag:
         tag = Tag(path, type, props, True, responses, write_handler)
         if path in self.tags:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
@@ -74,8 +75,8 @@ class NodeConfig:
             raise TagLookupError(path, self.ks.name)
         del self.tags[path]
     
-    def add_method(self, path: str, handler: Callable[[Query], None], props: dict[str, Any] = {}):
-        method = Method(path, handler, props, {}, [])
+    def add_method(self, path: str, handler, props: dict[str, Any] = {}):
+        method = Method(path, handler, Props.from_value(props), {}, [])
         self.methods[path] = method
         return method
     
@@ -106,8 +107,8 @@ class NodeConfig:
     def build_meta(self) -> Meta:
         print(f"building meta for {self.key}")
         self._verify_tags()
-        tags: list[Meta.Tag] = [t.to_proto() for t in self.tags.values()]
-        methods: list[Meta.Method] = [m.to_proto() for m in self.methods.values()]
+        tags: list[proto.Tag] = [t.to_proto() for t in self.tags.values()]
+        methods: list[proto.Method] = [m.to_proto() for m in self.methods.values()]
         meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods)
         return meta
 
@@ -212,8 +213,8 @@ class NodeSession:
         print("registered write callback")
         def _on_write(query: zenoh.Query) -> None:
             try:
-                data: TagData = self._comm.deserialize(TagData(), query.payload.to_bytes())
-                data = Tag.from_tag_data(data, self.tags[path].type)
+                data: proto.TagData = self._comm.deserialize(proto.TagData(), query.payload.to_bytes())
+                data: TagData = TagData.from_proto(data, self.tags[path].type).to_py()
                 code = callback(str(query.key_expr), data)
                 if code not in [r.code for r in self.tags[path].responses]:
                     raise Exception(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
@@ -225,14 +226,14 @@ class NodeSession:
             query.reply(query.key_expr, payload=b)
         return _on_write
     
-    def _method_call(self, path: str, handler: Callable[[Query], None]) -> Callable[[zenoh.Query], zenoh.Reply]:
+    def _method_call(self, path: str, handler):
         method = self.config.methods[path]
         def _method_call(query: zenoh.Query) -> zenoh.Reply:
             m: MethodCall = self._comm.deserialize(MethodCall(), query.payload.to_bytes())
             params: dict[str, Any] = {}
             for key, value in m.parameters.items():
                 data_type = method.parameters[key]
-                params[key] = from_tag_data(value, data_type.type)
+                params[key] = from_tag_data(value, data_type.value)
             q = Query(self.ks, path, self._comm, query, query.parameters, method.responses)
             q.parameters = params
             handler(q)

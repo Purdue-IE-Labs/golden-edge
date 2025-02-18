@@ -8,7 +8,7 @@ from gedge.comm.comm import Comm
 from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
-from gedge.edge.types import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback
+from gedge.edge.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback, ZenohReplyCallback
 from collections import defaultdict
 import zenoh
 
@@ -133,7 +133,7 @@ class RemoteConnection:
     async def write_tag_async(self, path: str, value: Any) -> tuple[int, str]:
         return self._write_tag(path, value)
     
-    def _on_reply(self, path: str, on_reply: Callable[[int, str, dict[str, Any]], None]) -> Callable[[zenoh.Reply], None]:
+    def _on_reply(self, path: str, on_reply: Callable[[int, str, dict[str, Any]], None]) -> ZenohReplyCallback:
         def _on_reply(reply: zenoh.Reply) -> None:
             if not reply.ok:
                 print("warning: reply super not ok")
@@ -157,7 +157,7 @@ class RemoteConnection:
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
             data_type = method.parameters[key]
-            params[key] = TagData.from_value(value, data_type.type).to_proto()
+            params[key] = TagData.py_to_proto(value, data_type)
 
         self._comm.call_method(self.ks, path, params, self._on_reply(path, on_reply))
         body = {}
