@@ -1,3 +1,4 @@
+from gedge.edge.data_type import DataType
 from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagWriteHandler, Type, ZenohQueryCallback, Any
 from gedge.edge.prop import Props
 from gedge.node.query import Query
@@ -31,7 +32,7 @@ class NodeConfig:
         self.ks = NodeKeySpace.from_user_key(key)
 
     def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
-        tag = Tag(path, type, props, False, [], None)
+        tag = Tag(path, DataType.from_type(type), Props.from_value(props), False, [], None)
         if path in self.tags:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
             del self.tags[path]
@@ -40,7 +41,7 @@ class NodeConfig:
         return tag
 
     def add_writable_tag(self, path: str, type: Type, write_handler: TagWriteHandler, responses: list[tuple[int, bool, dict[str, Any]]], props: dict[str, Any] = {}) -> Tag:
-        tag = Tag(path, type, props, True, responses, write_handler)
+        tag = Tag(path, DataType.from_type(type), Props.from_value(props), True, responses, write_handler)
         if path in self.tags:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
             del self.tags[path]
@@ -53,12 +54,12 @@ class NodeConfig:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
         for code, success, props in responses:
-            tag.add_response_type(code, success, props)
+            tag.add_write_response(code, success, props)
     
     def add_write_response(self, path: str, code: int, success: bool, props: dict[str, Any] = {}):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        self.tags[path].add_response_type(code, success, props)
+        self.tags[path].add_write_response(code, success, props)
     
     def add_write_handler(self, path: str, callback: TagWriteHandler):
         if path not in self.tags:
@@ -100,7 +101,7 @@ class NodeConfig:
     def _verify_tags(self):
         for path in self.tags:
             tag = self.tags[path]
-            if tag.writable:
+            if tag._writable:
                 assert tag.write_handler is not None, f"Tag {path} declared as writable but no write handler"
                 assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
 
@@ -267,7 +268,7 @@ class NodeSession:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        self._comm.update_tag(prefix, node_name, tag.path, tag.convert(value))
+        self._comm.update_tag(prefix, node_name, tag.path, TagData.py_to_proto(value, tag.type))
     
     def update_state(self, online: bool):
         self._comm.send_state(self.ks.prefix, self.ks.name, State(online=online))
