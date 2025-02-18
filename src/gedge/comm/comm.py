@@ -2,9 +2,9 @@ import base64
 import zenoh
 from gedge.edge.error import NodeLookupError
 from gedge import proto
-from typing import Callable
 from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace
+from gedge.edge.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
 ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodCall
 
@@ -26,17 +26,17 @@ class Comm:
     def liveliness_token(self, key_expr: str) -> zenoh.LivelinessToken:
         return self.session.liveliness().declare_token(key_expr)
 
-    def liveliness_subscriber(self, key_expr: str, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
+    def liveliness_subscriber(self, key_expr: str, handler: ZenohCallback) -> zenoh.Subscriber:
         return self.session.liveliness().declare_subscriber(key_expr, handler)
 
-    def subscriber(self, key_expr: str, handler: Callable[[zenoh.Sample], None]) -> zenoh.Subscriber:
+    def subscriber(self, key_expr: str, handler: ZenohCallback) -> zenoh.Subscriber:
         print(f"adding subscriber on key: {key_expr}")
         return self.session.declare_subscriber(key_expr, handler)
 
     def query_liveliness(self, key_expr: str) -> zenoh.Reply:
         return self.session.liveliness().get(key_expr).recv()
     
-    def tag_queryable(self, ks: NodeKeySpace, path: str, on_write: Callable[[zenoh.Query], zenoh.Reply]) -> zenoh.Queryable:
+    def tag_queryable(self, ks: NodeKeySpace, path: str, on_write: ZenohQueryCallback) -> zenoh.Queryable:
         print(f"tag queryable on path: {ks.tag_write_path(path)}")
         return self.session.declare_queryable(ks.tag_write_path(path), on_write)
     
@@ -44,11 +44,11 @@ class Comm:
         b = self.serialize(value)
         return self.session.get(ks.tag_write_path(path), payload=b).recv()
     
-    def method_queryable(self, ks: NodeKeySpace, path: str, on_call: Callable[[zenoh.Query], zenoh.Reply]) -> zenoh.Queryable:
+    def method_queryable(self, ks: NodeKeySpace, path: str, on_call: ZenohQueryCallback) -> zenoh.Queryable:
         print(f"method queryable on path: {ks.method_path(path)}")
         return self.session.declare_queryable(ks.method_path(path), on_call)
     
-    def query_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: Callable[[zenoh.Reply], None]) -> None:
+    def query_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: ZenohReplyCallback) -> None:
         b = self.serialize(proto.MethodCall(parameters=params))
         self.session.get(ks.method_path(path), payload=b, handler=on_reply)
     
@@ -88,7 +88,7 @@ class Comm:
             print("raising exception")
             raise Exception("reply super not ok")
     
-    def call_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: Callable[[zenoh.Reply], None]) -> None:
+    def call_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: ZenohReplyCallback) -> None:
         key_expr = ks.method_path(path)
         print(f"calling method on key expression: {key_expr}")
         self.query_method(ks, path, params, on_reply)
