@@ -1,7 +1,9 @@
+import math
 from pymodbus.client import ModbusTcpClient
 import gedge
 import struct
 import time
+import sys
 
 def pull_joint_pos():
     def decode_registers_to_deg(registers: list[int]) -> list[float]:
@@ -25,12 +27,23 @@ if __name__ == "__main__":
     client = ModbusTcpClient(host)
     if not client.connect():
         raise ConnectionError(f"Unable to connect to Modbus server at {host}")
+    
+    print("ZENOH DAISY TELEMETRY DEMO\n")
+    # Hide cursor
+    print('\033[?25l', end="")
 
     config = gedge.NodeConfig('BuildAtScale/Robots/Arms')
     config.add_tag("tm12/joint_pos", list[float], props={'eng_units': 'deg'})
-    config.add_tag("project/is_running", bool, props={'Description': 'True if a project is running, false if not'})
+    # config.add_tag("project/is_running", bool, props={'Description': 'True if a project is running, false if not'})
     with gedge.connect(config) as session:
+        print("Publishing data from BuildAtScale/Robots/Arms...\n")
+        joint_names = [f"J{i}" for i in range(1,7)]
+        joint_names = [f"{x:>8}" for x in joint_names]
+        print(f"              {joint_names[0]}{joint_names[1]}{joint_names[2]}{joint_names[3]}{joint_names[4]}{joint_names[5]}")
         while True:
             joint_pos = pull_joint_pos()
             session.update_tag("tm12/joint_pos", joint_pos)
-            time.sleep(1)
+            joint_pos = [f"{x:8.2f}" for x in joint_pos]
+            sys.stdout.write(f"\rjoint values: {joint_pos[0]}{joint_pos[1]}{joint_pos[2]}{joint_pos[3]}{joint_pos[4]}{joint_pos[5]}")
+            sys.stdout.flush()
+            time.sleep(0.05)

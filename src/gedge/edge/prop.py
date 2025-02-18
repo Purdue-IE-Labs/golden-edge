@@ -15,7 +15,7 @@ class Prop:
     @classmethod
     def from_proto(cls, prop: proto.Prop) -> Self:
         type = DataType.from_proto(prop.type)
-        value = TagData.from_proto(prop.value)
+        value = TagData.from_proto(prop.value, type)
         return Prop(type, value)
     
     @classmethod

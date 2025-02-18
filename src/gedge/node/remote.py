@@ -1,4 +1,5 @@
 from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable
+from gedge.edge.data_type import DataType
 from gedge.edge.tag_data import TagData, from_tag_data
 from gedge.node.method import Method
 from gedge.node.response import Response
@@ -33,7 +34,7 @@ class RemoteConnection:
         methods: list[Method] = [Method.from_proto(m) for m in self.meta.methods]
         self.methods = {m.path: m for m in methods}
         self.responses: dict[str, dict[int, Response]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
-        print(f"connecting to node {self.ks.name}")
+        # print(f"connecting to node {self.ks.name}")
 
     def __enter__(self):
         return self
@@ -50,7 +51,7 @@ class RemoteConnection:
                 path, node = NodeKeySpace.tag_path_from_key(str(sample.key_expr)), NodeKeySpace.name_from_key(str(sample.key_expr))
                 raise TagLookupError(path, node)
             tag_config = tag_config[0]
-            value = Tag.from_tag_data(tag_data, tag_config.type)
+            value = TagData.proto_to_py(tag_data, DataType.from_proto(tag_config.type))
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
 
@@ -88,25 +89,25 @@ class RemoteConnection:
 
         self.config.read_write_tags.append(path)
         key_expr = self.ks.tag_data_path(path)
-        print(f"tag data key expr: {key_expr}")
+        # print(f"tag data key expr: {key_expr}")
         subscriber = self._comm.subscriber(key_expr, self._on_tag_data(self.meta, on_tag_data))
         self._subscriptions.append(subscriber)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
         _on_state = self._on_state(on_state)
-        print(f"state key expr: {self.ks.state_key_prefix}")
+        # print(f"state key expr: {self.ks.state_key_prefix}")
         subscriber = self._comm.subscriber(self.ks.state_key_prefix, _on_state)
         self._subscriptions.append(subscriber)
 
     def add_meta_callback(self, on_meta: MetaCallback) -> None:
         _on_meta = self._on_meta(on_meta)
-        print(f"meta key expr: {self.ks.meta_key_prefix}")
+        # print(f"meta key expr: {self.ks.meta_key_prefix}")
         subscriber = self._comm.subscriber(self.ks.meta_key_prefix, _on_meta)
         self._subscriptions.append(subscriber)
 
     def add_liveliness_callback(self, on_liveliness_change: LivelinessCallback) -> None:
         _on_liveliness = self._on_liveliness(on_liveliness_change)
-        print(f"liveliness key expr: {self.ks.liveliness_key_prefix}")
+        # print(f"liveliness key expr: {self.ks.liveliness_key_prefix}")
         subscriber = self._comm.liveliness_subscriber(self.ks.liveliness_key_prefix, _on_liveliness)
         self._subscriptions.append(subscriber)
 
@@ -150,7 +151,7 @@ class RemoteConnection:
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
     def call_method(self, path: str, on_reply: Callable[[int, dict[str, Any], str], None], **kwargs) -> tuple[int, str, dict[str, Any]]:
         if path not in self.methods:
-            print(self.methods)
+            # print(self.methods)
             raise MethodLookupError(path, self.ks.name)
         
         method = self.methods[path]
