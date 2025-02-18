@@ -30,14 +30,14 @@ class Comm:
         return self.session.liveliness().declare_subscriber(key_expr, handler)
 
     def subscriber(self, key_expr: str, handler: ZenohCallback) -> zenoh.Subscriber:
-        print(f"adding subscriber on key: {key_expr}")
+        # print(f"adding subscriber on key: {key_expr}")
         return self.session.declare_subscriber(key_expr, handler)
 
     def query_liveliness(self, key_expr: str) -> zenoh.Reply:
         return self.session.liveliness().get(key_expr).recv()
     
     def tag_queryable(self, ks: NodeKeySpace, path: str, on_write: ZenohQueryCallback) -> zenoh.Queryable:
-        print(f"tag queryable on path: {ks.tag_write_path(path)}")
+        # print(f"tag queryable on path: {ks.tag_write_path(path)}")
         return self.session.declare_queryable(ks.tag_write_path(path), on_write)
     
     def query_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> zenoh.Reply:
@@ -45,7 +45,7 @@ class Comm:
         return self.session.get(ks.tag_write_path(path), payload=b).recv()
     
     def method_queryable(self, ks: NodeKeySpace, path: str, on_call: ZenohQueryCallback) -> zenoh.Queryable:
-        print(f"method queryable on path: {ks.method_path(path)}")
+        # print(f"method queryable on path: {ks.method_path(path)}")
         return self.session.declare_queryable(ks.method_path(path), on_call)
     
     def query_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: ZenohReplyCallback) -> None:
@@ -68,17 +68,17 @@ class Comm:
 
     def send_meta(self, key_prefix: str, name: str, meta: proto.Meta):
         key = keys.meta_key_prefix(key_prefix, name)
-        print(f"sending meta on key expression: {key}")
+        # print(f"sending meta on key expression: {key}")
         self._send_protobuf(key, meta)
     
     def update_tag(self, key_prefix: str, name: str, key: str, value: proto.TagData):
         key = keys.tag_data_key(key_prefix, name, key)
-        print(f"updating tag on key expression: {key} with value {value}")
+        # print(f"updating tag on key expression: {key} with value {value}")
         self._send_protobuf(key, value)
 
     def write_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> proto.WriteResponseData:
         key_expr = ks.tag_write_path(path)
-        print(f"writing tag on key expression: {key_expr}")
+        # print(f"writing tag on key expression: {key_expr}")
         reply = self.query_tag(ks, path, value)
         if reply.ok:
             d = self.deserialize(proto.WriteResponseData(), reply.result.payload.to_bytes())
@@ -102,7 +102,7 @@ class Comm:
 
     def send_state(self, key_prefix: str, name: str, state: proto.State):
         key = keys.state_key_prefix(key_prefix, name)
-        print(f"sending state on key expression: {key}")
+        # print(f"sending state on key expression: {key}")
         self._send_protobuf(key, state)
 
     def pull_meta_messages(self, key_prefix: str, only_online: bool = False) -> list[proto.Meta]:
@@ -126,7 +126,7 @@ class Comm:
         return messages
 
     def pull_meta_message(self, ks: NodeKeySpace) -> proto.Meta:
-        print(f"searching on key expr: {ks.user_key}")
+        # print(f"searching on key expr: {ks.user_key}")
         try:
             reply = self.session.get(ks.meta_key_prefix).recv()
         except:
