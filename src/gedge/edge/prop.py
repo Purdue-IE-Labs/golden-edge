@@ -10,7 +10,7 @@ class Prop:
         self.value = value
     
     def to_proto(self) -> proto.Prop:
-        return proto.Prop(type=self.type.to_proto(), value=self.value) 
+        return proto.Prop(type=self.type.to_proto(), value=self.value.to_proto()) 
     
     @classmethod
     def from_proto(cls, prop: proto.Prop) -> Self:

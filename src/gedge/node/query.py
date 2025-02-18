@@ -22,7 +22,7 @@ class Query:
         for key, value in body.items():
             response = [i for i in self._responses if i.code == code][0]
             data_type = response.body[key]
-            new_body[key] = convert(value, data_type.type)
+            new_body[key] = TagData.py_to_proto(value, data_type)
         r = proto.ResponseData(code=code, error=error, body=new_body)
         b = self._comm.serialize(r)
         self._query.reply(key_expr=self._ks.method_path(self.path), payload=b)
