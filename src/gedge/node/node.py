@@ -36,7 +36,7 @@ class NodeConfig:
         if path in self.tags:
             print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
             del self.tags[path]
-        print(f"adding tag on key: {path}")
+        # print(f"adding tag on key: {path}")
         self.tags[path] = tag
         return tag
 
@@ -106,7 +106,7 @@ class NodeConfig:
                 assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
 
     def build_meta(self) -> Meta:
-        print(f"building meta for {self.key}")
+        # print(f"building meta for {self.key}")
         self._verify_tags()
         tags: list[proto.Tag] = [t.to_proto() for t in self.tags.values()]
         methods: list[proto.Method] = [m.to_proto() for m in self.methods.values()]
@@ -129,7 +129,7 @@ class NodeSession:
         self.startup()
         self.tags: dict[str, Tag] = self.config.tags
         self.methods: dict[str, Method] = self.config.methods
-        print(self.config.methods)
+        # print(self.config.methods)
         self.responses: dict[str, dict[int, Response]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
 
     def __enter__(self):
