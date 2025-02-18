@@ -6,6 +6,8 @@ from typing import Any, Callable
 from datetime import datetime
 import zenoh
 
+from gedge.edge.tag_data import TagData
+
 class TagBind:
     def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any], None]):
         self.path = tag.path
@@ -30,9 +32,9 @@ class TagBind:
 
     def _on_value(self, sample: zenoh.Sample):
         tag_data = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes())
-        value = Tag.from_tag_data(tag_data, self.tag.type)
+        value = TagData.from_proto(tag_data, self.tag.type).to_py()
         self.last_received = datetime.now()
-        self._value = value
+        self.value = value
 
     def close(self):
         self.is_valid = False

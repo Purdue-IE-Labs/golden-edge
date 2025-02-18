@@ -1,35 +1,39 @@
 from gedge import proto
 from typing import Any, Self
+from gedge.edge.data_type import DataType
+from gedge.edge.gtypes import TagValue
+from gedge.edge.tag_data import TagData
 
 class Prop:
-    def __init__(self, type: int, value: proto.TagData):
+    def __init__(self, type: DataType, value: TagData):
         self.type = type
         self.value = value
     
     def to_proto(self) -> proto.Prop:
-        return proto.Prop(self.type, self.value) 
+        return proto.Prop(type=self.type.to_proto(), value=self.value) 
     
     @classmethod
-    def from_proto(self, prop: proto.Prop) -> Self:
-        type = prop.type
-        value = prop.value
+    def from_proto(cls, prop: proto.Prop) -> Self:
+        type = DataType.from_proto(prop.type)
+        value = TagData.from_proto(prop.value)
         return Prop(type, value)
     
     @classmethod
-    def from_value(cls, value: Any) -> Self:
+    def from_value(cls, value: TagValue) -> Self:
         type = cls.intuit_type(value)
+        value = TagData.from_value(value, type)
         return Prop(type, value)
     
     @staticmethod
-    def intuit_type(value: Any) -> int:
+    def intuit_type(value: Any) -> DataType:
         if isinstance(value, str):
-            return proto.DataType.STRING
+            return DataType.STRING
         elif isinstance(value, int):
-            return proto.DataType.INT
+            return DataType.INT
         elif isinstance(value, float):
-            return proto.DataType.FLOAT
+            return DataType.FLOAT
         elif isinstance(value, bool):
-            return proto.DataType.BOOL
+            return DataType.BOOL
         else:
             raise ValueError(f"Illegal type for property. Allowed properties are str, int, float, bool. value is of type {type(value)}")
 

@@ -1,21 +1,22 @@
 from gedge.edge.data_type import DataType
-from gedge.edge.prop import Prop, Props
+from gedge.edge.prop import Props
 from gedge import proto
-from typing import Any, Callable, Self
-from gedge.edge.types import Type
+from typing import Any, Self
+from gedge.edge.gtypes import Type
 
 
 class Response:
-    def __init__(self, code: int, success: bool, props: dict[str, Any], body: dict[str, Type], final: bool):
+    def __init__(self, code: int, success: bool, props: Props, body: dict[str, DataType], final: bool):
         self.code = code
         self.success = success
-        self.props = Props.from_value(props)
-        self.body = {key:DataType(value) for key, value in body.items()}
+        self.props = props
+        self.body = body
         self.final = final
     
     def to_proto(self) -> proto.Response:
+        props = self.props.to_proto()
         body = {key:value.to_proto() for key, value in self.body.items()}
-        return proto.Response(code=self.code, success=self.success, props=self.props.to_proto(), body=body, final=self.final)
+        return proto.Response(code=self.code, success=self.success, props=props, body=body, final=self.final)
 
     @classmethod
     def from_proto(self, proto: proto.Response) -> Self:
@@ -34,10 +35,12 @@ class Response:
 
         I don't like the idea of the user interacting directly with the Protobuf message class because it's a little messy
         '''
-        return Response(proto.code, proto.success, proto.props)
+        props = Props.from_proto(proto.props)
+        body = {key:DataType.from_proto(value) for key, value in proto.body.items()}
+        return Response(proto.code, proto.success, props, body, proto.final)
     
     def add_prop(self, key: str, value: Any):
         self.props.add_prop(key, value)
     
     def add_body_item(self, key: str, value: Type):
-        self.body[key] = DataType(value)
+        self.body[key] = DataType.from_type(value)
