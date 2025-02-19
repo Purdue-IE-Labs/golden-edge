@@ -1,5 +1,6 @@
 import base64
 import zenoh
+import json
 from gedge.edge.error import NodeLookupError
 from gedge import proto
 from gedge.comm import keys
@@ -11,7 +12,10 @@ ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.Stat
 # handle Zenoh communications
 # The user will not interact with this item
 class Comm:
-    def __init__(self, config: zenoh.Config = zenoh.Config()):
+    def __init__(self):
+        # TODO: user should specify which router than want to connect to 
+        config = json.dumps({ "mode": "client" })
+        config = zenoh.Config.from_json5(config)
         self.config = config
         self.__enter__()
 
@@ -117,7 +121,27 @@ class Comm:
             try:
                 meta: proto.Meta = self.deserialize(proto.Meta(), result.payload.to_bytes())
                 ks = NodeKeySpace.from_user_key(meta.key)
-                is_online = self.is_online(key_prefix, ks.name)
+                is_online = self.is_online(ks)
+                if only_online and not is_online:
+                    continue
+                messages.append(meta)
+            except Exception as e:
+                print(f"couldn't decode {e}")
+        return messages
+    
+    def pull_all_meta_messages(self, only_online: bool = False):
+        res = self.session.get(f"**/NODE/*/META")
+        messages: list[proto.Meta] = []
+        for r in res:
+            r: zenoh.Reply
+            if not r.ok:
+                continue
+            result = r.result
+
+            try:
+                meta: proto.Meta = self.deserialize(proto.Meta(), result.payload.to_bytes())
+                ks = NodeKeySpace.from_user_key(meta.key)
+                is_online = self.is_online(ks)
                 if only_online and not is_online:
                     continue
                 messages.append(meta)
