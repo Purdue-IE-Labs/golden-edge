@@ -1,4 +1,5 @@
 {
+  // TODO: get influx access tokens out of this config
   metadata: {
     name: "zenoh router",
     location: "build at scale",
@@ -28,7 +29,7 @@
   //     enabled: false
   //   }
   // },
-  // mode: "peer",
+  mode: "router",
   connect: {
     endpoints: ["tcp/localhost:7447"],
   },
@@ -41,7 +42,7 @@
           url: "http://localhost:8086/api/v2/",
           private: {
             org_id: "ielabs",
-            token: "${INFLUXDB_TOKEN}"
+            token: "buLl_XsgWhqxHg4lzGHQnnUSz_sHZT2deY8L9fkNOV825w0uXimwLQ077QlgkQ52ouad4UmQ80WhHSwb8ftESQ=="
           }
         }
       },

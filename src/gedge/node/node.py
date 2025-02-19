@@ -239,8 +239,14 @@ class NodeSession:
             q.parameters = params
             handler(q)
         return _method_call
+    
+    def _verify_node_collision(self):
+        # verify that key expression with this key prefix and name is not online
+        metas = self._comm.pull_all_meta_messages(only_online=True)
+        assert not any([x.key == self.ks.user_key for x in metas]), f"{[x.key for x in metas]} are online, and {self.ks.user_key} match!"
 
     def startup(self):
+        self._verify_node_collision()
         prefix, name = self.ks.prefix, self.ks.name
         self._comm.send_meta(prefix, name, self.meta)
         self.update_state(True)

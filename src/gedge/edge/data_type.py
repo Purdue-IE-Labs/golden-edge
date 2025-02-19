@@ -22,7 +22,7 @@ class DataType(Enum):
         return cls.from_py_type(type)
 
     @classmethod
-    def from_proto(cls, proto) -> Self:
+    def from_proto(cls, proto: proto.DataType) -> Self:
         return DataType(int(proto))
 
     def to_proto(self) -> int:
