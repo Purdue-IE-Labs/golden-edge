@@ -46,12 +46,18 @@ class NodeKeySpace:
     def __init__(self, prefix: str, name: str):
         self._prefix = prefix
         self._name = name
-        self._user_key = prefix + "/" + name
+        self._user_key = key_join(prefix, name)
         self._set_keys(self.prefix, self.name)
 
     @classmethod
     def from_user_key(cls, key: str):
         prefix, name = NodeKeySpace.split_user_key(key)
+        return cls(prefix, name)
+    
+    @classmethod
+    def from_internal_key(cls, key_expr: str):
+        prefix = NodeKeySpace.prefix_from_key(key_expr)
+        name = NodeKeySpace.name_from_key(key_expr)
         return cls(prefix, name)
 
     @staticmethod
@@ -66,6 +72,11 @@ class NodeKeySpace:
     def name_from_key(key_expr: str):
         components = key_expr.split("/")
         return components[components.index(NODE) + 1]
+
+    @staticmethod
+    def prefix_from_key(key_expr: str):
+        components = key_expr.split(NODE)
+        return components[0]
     
     @staticmethod
     def tag_path_from_key(key_expr: str):
@@ -77,7 +88,7 @@ class NodeKeySpace:
                 i = components.index(WRITE)
             except:
                 raise ValueError(f"No tag path found in {key_expr}")
-        return "/".join(components[(i + 1):])
+        return key_join(components[(i + 1):])
 
     @property
     def prefix(self):
