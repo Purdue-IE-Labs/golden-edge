@@ -14,7 +14,14 @@ ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.Stat
 class Comm:
     def __init__(self):
         # TODO: user should specify which router than want to connect to 
-        config = json.dumps({ "mode": "client" })
+        config = json.dumps({
+            "mode": "client",
+            "scouting": {
+                "multicast": {
+                    "enabled": True,
+                }
+            }
+        })
         config = zenoh.Config.from_json5(config)
         self.config = config
         self.__enter__()

@@ -1,4 +1,5 @@
 from gedge.edge.data_type import DataType
+from gedge.edge.gtypes import TagValue, Type
 from gedge.edge.prop import Props
 from gedge.node.query import Query
 from gedge import proto
@@ -28,14 +29,16 @@ class Method:
         responses = [Response.from_proto(r) for r in proto.responses]
         return Method(proto.path, None, props, parameters, responses)
 
-    def add_params(self, **kwargs):
+    def add_params(self, **kwargs: Type):
         for key, value in kwargs.items():
             self.parameters[key] = DataType.from_type(value)
-    
-    def add_responses(self, responses: list[Response]):
-        for r in responses:
-            self.add_response(r)
 
-    def add_response(self, response: Response): 
+    def add_response(self, code: int, success: bool, props: dict[str, TagValue] = {}, body: dict[str, Type] = {}, final: bool = False): 
+        props = Props.from_value(props)
+        body = {key:DataType.from_type(value) for key, value in body.items()}
+        response = Response(code, success, props, body, final)
         self.responses.append(response)
+        return response
 
+    def __repr__(self):
+        return f"Method(path={self.path}, props={self.props}, parameters={self.parameters}, responses={self.responses})"
