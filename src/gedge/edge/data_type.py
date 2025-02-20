@@ -60,6 +60,9 @@ class DataType(Enum):
         
         return DataType.from_proto(new_type)
 
+    def __repr__(self):
+        return self.name
+
 
 if __name__ == "__main__":
     res = DataType(proto.DataType.LIST_BOOL)
