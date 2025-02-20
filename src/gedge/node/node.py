@@ -11,7 +11,7 @@ from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
 from gedge.node.method import Method, Response
-from gedge.edge.tag_data import TagData, from_tag_data
+from gedge.edge.tag_data import TagData 
 import zenoh
 
 # TODO: eventually, should support JSON
@@ -122,7 +122,7 @@ class NodeSession:
         self._comm = Comm() 
         self.config = config
         self.ks = config.ks
-        self.connections: list[RemoteConnection] = []
+        self.connections: dict[str, RemoteConnection] = dict() # user key -> RemoteConnection
 
         # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = meta
@@ -144,8 +144,7 @@ class NodeSession:
         self._comm.session.close()
 
     def _on_remote_close(self, key: str):
-        connection = [c for c in self.connections if c.key == key][0]
-        self.connections.remove(connection)
+        del self.connections[key]
 
     def _pull_meta_message(self, key: str) -> Meta:
         ks = NodeKeySpace.from_user_key(key)
@@ -193,21 +192,20 @@ class NodeSession:
         for path in tag_data_callbacks:
             connection.add_tag_data_callback(path, tag_data_callbacks[path])
 
-        self.connections.append(connection)
+        self.connections[key] = connection
         
         return connection
 
     def disconnect_from_remote(self, key: str):
-        connection = [c for c in self.connections if c.key == key]
-        if len(connection) == 0:
+        if key not in self.connections:
             raise ValueError(f"Node {key} not connected to {self.ks.user_key}")
-        connection = connection[0]
+        connection = self.connections[key]
         connection.close()
-        self.connections.remove(connection)
+        del self.connections[key]
     
     def close(self):
-        for node in self.connections:
-            self.disconnect_from_remote(node.key)
+        for key in self.connections:
+            self.disconnect_from_remote(key)
         self._comm.session.close()
     
     def _write_handler(self, path: str, callback: TagWriteHandler) -> ZenohQueryCallback:
@@ -234,7 +232,7 @@ class NodeSession:
             params: dict[str, Any] = {}
             for key, value in m.parameters.items():
                 data_type = method.parameters[key]
-                params[key] = from_tag_data(value, data_type.value)
+                params[key] = TagData.proto_to_py(value, data_type)
             q = Query(self.ks, path, self._comm, query, query.parameters, method.responses)
             q.parameters = params
             handler(q)

@@ -4,7 +4,7 @@ import zenoh
 
 from gedge.comm.comm import Comm
 from gedge.comm.keys import NodeKeySpace
-from gedge.edge.tag_data import TagData, from_tag_data, convert
+from gedge.edge.tag_data import TagData
 from gedge.node.response import Response
 from gedge import proto
 
