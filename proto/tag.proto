@@ -3,13 +3,7 @@ syntax = "proto3";
 import "prop.proto";
 import "tag_data.proto";
 
-
-message WriteResponse {
-    int32 code = 11;
-    bool success = 12;
-    map<string, Prop> props = 13;
-}
-
+// Config
 message Tag {
     string path = 1;
     DataType type = 2;
@@ -17,4 +11,16 @@ message Tag {
 
     bool writable = 4;
     repeated WriteResponse responses = 5;
+}
+
+message WriteResponse {
+    int32 code = 1;
+    bool success = 2;
+    map<string, Prop> props = 3;
+}
+
+// Session
+message WriteResponseData {
+    int32 code = 1;
+    optional string error = 2;
 }

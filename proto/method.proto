@@ -26,15 +26,7 @@ message MethodCall {
 
 message ResponseData {
     int32 code = 1;
-    optional string error = 2;
-    map<string, TagData> body = 3;
+    map<string, TagData> body = 2;
+
+    optional string error = 3;
 }
-
-// message ParameterData {
-//     string name = 1;
-//     TagData data = 2;
-// }
-
-// message BodyData {
-//     TagData data = 1;
-// }
