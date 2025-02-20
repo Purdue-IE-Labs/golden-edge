@@ -1,6 +1,6 @@
 from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable
 from gedge.edge.data_type import DataType
-from gedge.edge.tag_data import TagData, from_tag_data
+from gedge.edge.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.response import Response
 from gedge import proto
@@ -10,7 +10,6 @@ from gedge.edge.tag import Tag
 from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
 from gedge.edge.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback, ZenohReplyCallback
-from collections import defaultdict
 import zenoh
 
 class RemoteConfig:
@@ -28,13 +27,17 @@ class RemoteConnection:
         self.key = self.config.key
         self.ks = NodeKeySpace.from_user_key(self.key)
         self.on_close = on_close
+
+        '''
+        TODO: perhaps we should subscribe to this node's meta message, in which case all the following utility variables (self.tags, self.methods, self.responses) 
+        would need to react to that (i.e. be properties)
+        '''
         self.meta = self._comm.pull_meta_message(self.ks)
         tags: list[Tag] = [Tag.from_proto(t) for t in self.meta.tags]
         self.tags = {t.path: t for t in tags}
         methods: list[Method] = [Method.from_proto(m) for m in self.meta.methods]
         self.methods = {m.path: m for m in methods}
         self.responses: dict[str, dict[int, Response]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
-        # print(f"connecting to node {self.ks.name}")
 
     def __enter__(self):
         return self
@@ -43,15 +46,15 @@ class RemoteConnection:
         self.close()
         self._comm.__exit__(*exc)
 
-    def _on_tag_data(self, meta: proto.Meta, on_tag_data: TagDataCallback) -> ZenohCallback:
+    def _on_tag_data(self, on_tag_data: TagDataCallback) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
             tag_data: proto.TagData = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes())
-            tag_config = [x for x in meta.tags if str(sample.key_expr).endswith(x.path)]
-            if len(tag_config) == 0:
-                path, node = NodeKeySpace.tag_path_from_key(str(sample.key_expr)), NodeKeySpace.name_from_key(str(sample.key_expr))
+            path: str = NodeKeySpace.tag_path_from_key(str(sample.key_expr))
+            if path not in self.tags:
+                node: str = NodeKeySpace.name_from_key(str(sample.key_expr))
                 raise TagLookupError(path, node)
-            tag_config = tag_config[0]
-            value = TagData.proto_to_py(tag_data, DataType.from_proto(tag_config.type))
+            tag_config = self.tags[path]
+            value = TagData.proto_to_py(tag_data, tag_config.type)
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
 
@@ -84,13 +87,13 @@ class RemoteConnection:
             self.on_close(self.key)
     
     def add_tag_data_callback(self, path: str, on_tag_data: TagDataCallback) -> None:
-        if len([tag for tag in self.meta.tags if tag.path == path]) == 0:
+        if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
 
         self.config.read_write_tags.append(path)
         key_expr = self.ks.tag_data_path(path)
         # print(f"tag data key expr: {key_expr}")
-        subscriber = self._comm.subscriber(key_expr, self._on_tag_data(self.meta, on_tag_data))
+        subscriber = self._comm.subscriber(key_expr, self._on_tag_data(on_tag_data))
         self._subscriptions.append(subscriber)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
@@ -125,7 +128,7 @@ class RemoteConnection:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        response = self._comm.write_tag(self.ks, tag.path, tag.convert(value))
+        response = self._comm.write_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
         return response.code, response.error
 
     def write_tag(self, path: str, value: Any) -> tuple[int, str]:
@@ -144,7 +147,7 @@ class RemoteConnection:
             for key, value in r.body.items():
                 response = self.responses[path][r.code]
                 data_type = response.body[key]
-                body[key] = from_tag_data(value, data_type)
+                body[key] = TagData.proto_to_py(value, data_type)
             on_reply(r.code, r.error, body)
         return _on_reply
     

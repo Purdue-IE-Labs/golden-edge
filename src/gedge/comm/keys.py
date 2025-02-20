@@ -88,7 +88,7 @@ class NodeKeySpace:
                 i = components.index(WRITE)
             except:
                 raise ValueError(f"No tag path found in {key_expr}")
-        return key_join(components[(i + 1):])
+        return key_join(*components[(i + 1):])
 
     @property
     def prefix(self):
