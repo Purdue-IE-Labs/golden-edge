@@ -36,6 +36,9 @@ class Prop:
             return DataType.BOOL
         else:
             raise ValueError(f"Illegal type for property. Allowed properties are str, int, float, bool. value is of type {type(value)}")
+    
+    def __repr__(self):
+        return f"{self.value}"
 
 
 class Props:
@@ -55,4 +58,7 @@ class Props:
     
     def add_prop(self, key: str, value: Any):
         self.props[key] = Prop.from_value(value)
+    
+    def __repr__(self):
+        return f"Props({self.props})"
     

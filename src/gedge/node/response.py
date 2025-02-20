@@ -34,6 +34,7 @@ class Response:
             which is just going into the historian 
 
         I don't like the idea of the user interacting directly with the Protobuf message class because it's a little messy
+        Current solution is for this class to only accept a Prop
         '''
         props = Props.from_proto(proto.props)
         body = {key:DataType.from_proto(value) for key, value in proto.body.items()}
@@ -42,5 +43,10 @@ class Response:
     def add_prop(self, key: str, value: Any):
         self.props.add_prop(key, value)
     
-    def add_body_item(self, key: str, value: Type):
-        self.body[key] = DataType.from_type(value)
+    def add_body(self, **kwargs: Type):
+        for key, value in kwargs.items():
+            self.body[key] = DataType.from_type(value)
+    
+    def __repr__(self):
+        return f"Response(code={self.code}, success={self.success}, final={self.final} body={self.body})"
+    
