@@ -75,7 +75,7 @@ class MethodCall(_message.Message):
     def __init__(self, parameters: _Optional[_Mapping[str, _tag_data_pb2.TagData]] = ...) -> None: ...
 
 class ResponseData(_message.Message):
-    __slots__ = ("code", "error", "body")
+    __slots__ = ("code", "body", "error")
     class BodyEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -84,9 +84,9 @@ class ResponseData(_message.Message):
         value: _tag_data_pb2.TagData
         def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_tag_data_pb2.TagData, _Mapping]] = ...) -> None: ...
     CODE_FIELD_NUMBER: _ClassVar[int]
-    ERROR_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
     code: int
-    error: str
     body: _containers.MessageMap[str, _tag_data_pb2.TagData]
-    def __init__(self, code: _Optional[int] = ..., error: _Optional[str] = ..., body: _Optional[_Mapping[str, _tag_data_pb2.TagData]] = ...) -> None: ...
+    error: str
+    def __init__(self, code: _Optional[int] = ..., body: _Optional[_Mapping[str, _tag_data_pb2.TagData]] = ..., error: _Optional[str] = ...) -> None: ...
