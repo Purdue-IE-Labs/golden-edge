@@ -245,10 +245,9 @@ class NodeSession:
 
     def startup(self):
         self._verify_node_collision()
-        prefix, name = self.ks.prefix, self.ks.name
-        self._comm.send_meta(prefix, name, self.meta)
+        self._comm.send_meta(self.ks, self.meta)
         self.update_state(True)
-        self.node_liveliness = self._comm.liveliness_token(self.ks.liveliness_key_prefix)
+        self.node_liveliness = self._comm.liveliness_token(self.ks)
         for path in self.config.tags:
             tag = self.config.tags[path]
             if not tag._writable: continue
@@ -275,4 +274,4 @@ class NodeSession:
         self._comm.update_tag(prefix, node_name, tag.path, TagData.py_to_proto(value, tag.type))
     
     def update_state(self, online: bool):
-        self._comm.send_state(self.ks.prefix, self.ks.name, State(online=online))
+        self._comm.send_state(self.ks, State(online=online))
