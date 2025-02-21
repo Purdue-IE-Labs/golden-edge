@@ -91,27 +91,23 @@ class RemoteConnection:
             raise TagLookupError(path, self.ks.name)
 
         self.config.read_write_tags.append(path)
-        key_expr = self.ks.tag_data_path(path)
-        # print(f"tag data key expr: {key_expr}")
-        subscriber = self._comm.subscriber(key_expr, self._on_tag_data(on_tag_data))
+        _on_tag_data = self._on_tag_data(on_tag_data)
+        subscriber = self._comm.tag_data_subscriber(self.ks, path, _on_tag_data)
         self._subscriptions.append(subscriber)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
         _on_state = self._on_state(on_state)
-        # print(f"state key expr: {self.ks.state_key_prefix}")
-        subscriber = self._comm.subscriber(self.ks.state_key_prefix, _on_state)
+        subscriber = self._comm.state_subscriber(self.ks, _on_state)
         self._subscriptions.append(subscriber)
 
     def add_meta_callback(self, on_meta: MetaCallback) -> None:
         _on_meta = self._on_meta(on_meta)
-        # print(f"meta key expr: {self.ks.meta_key_prefix}")
-        subscriber = self._comm.subscriber(self.ks.meta_key_prefix, _on_meta)
+        subscriber = self._comm.meta_subscriber(self.ks, _on_meta)
         self._subscriptions.append(subscriber)
 
     def add_liveliness_callback(self, on_liveliness_change: LivelinessCallback) -> None:
         _on_liveliness = self._on_liveliness(on_liveliness_change)
-        # print(f"liveliness key expr: {self.ks.liveliness_key_prefix}")
-        subscriber = self._comm.liveliness_subscriber(self.ks.liveliness_key_prefix, _on_liveliness)
+        subscriber = self._comm.liveliness_subscriber(self.ks, _on_liveliness)
         self._subscriptions.append(subscriber)
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
