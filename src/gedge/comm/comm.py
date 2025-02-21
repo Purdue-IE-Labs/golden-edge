@@ -118,7 +118,7 @@ class Comm:
         key_expr = ks.meta_key_prefix
         self._send_proto(key_expr, meta)
     
-    def pull_all_meta_messages(self, only_online: bool = False):
+    def pull_meta_messages(self, only_online: bool = False):
         res = self.session.get(keys.key_join("**", keys.NODE, "*", keys.META))
         messages: list[proto.Meta] = []
         for r in res:

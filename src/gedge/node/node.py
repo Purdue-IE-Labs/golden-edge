@@ -129,7 +129,6 @@ class NodeSession:
         self.startup()
         self.tags: dict[str, Tag] = self.config.tags
         self.methods: dict[str, Method] = self.config.methods
-        # print(self.config.methods)
         self.responses: dict[str, dict[int, Response]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
 
     def __enter__(self):
@@ -146,35 +145,25 @@ class NodeSession:
     def _on_remote_close(self, key: str):
         del self.connections[key]
 
-    def _pull_meta_message(self, key: str) -> Meta:
-        ks = NodeKeySpace.from_user_key(key)
-        return self._comm.pull_meta_message(ks)
-
-    def _pull_meta_messages(self, key_prefix: str, only_online: bool) -> list[Meta]:
-        return self._comm.pull_meta_messages(key_prefix, only_online)
-
     def is_online(self, key: str) -> bool:
         return self._comm.is_online(NodeKeySpace.from_user_key(key))
 
-    # Currently, node_on_network and nodes_on_network accept different types of keys
-    # node_on_network receives <key_prefix>/<node_name>, which gets expanded to 
-    # <key_prefix>/NODE/<node_name>/META
-    # Meanwhile, nodes_on_network(...) accepts just a <key_prefix>, which gets expanded to
-    # <key_prefix>/NODE/*/META
     def node_on_network(self, key: str) -> Meta:
-        return self._pull_meta_message(key)
+        ks = NodeKeySpace.from_user_key(key)
+        return self._comm.pull_meta_message(ks)
     
-    def nodes_on_network(self, key_prefix: str, only_online: bool = False) -> list[Meta]:
-        return self._pull_meta_messages(key_prefix, only_online)
+    def nodes_on_network(self, only_online: bool = False) -> list[Meta]:
+        metas = self._comm.pull_meta_messages(only_online)
+        return metas
 
-    def print_nodes_on_network(self, key_prefix: str, only_online: bool = False):
-        messages = self._pull_meta_messages(key_prefix, only_online=only_online)
-        if len(messages) == 0:
+    def print_nodes_on_network(self, only_online: bool = False):
+        metas = self.nodes_on_network(only_online)
+        if len(metas) == 0:
             print("No Nodes on Network!")
             return
         print("Nodes on Network:")
         i = 1
-        for meta in messages:
+        for meta in metas:
             _, _, name = meta.key.rpartition("/")
             print(f"{i}. {meta.key}: {"online" if self._comm.is_online(NodeKeySpace.from_user_key(meta.key), name) else "offline"}")
             print(f"{meta}\n")
@@ -240,7 +229,7 @@ class NodeSession:
     
     def _verify_node_collision(self):
         # verify that key expression with this key prefix and name is not online
-        metas = self._comm.pull_all_meta_messages(only_online=True)
+        metas = self._comm.pull_meta_messages(only_online=True)
         assert not any([x.key == self.ks.user_key for x in metas]), f"{[x.key for x in metas]} are online, and {self.ks.user_key} match!"
 
     def startup(self):
