@@ -16,11 +16,6 @@ class Comm:
         # TODO: user should specify which router than want to connect to 
         config = json.dumps({
             "mode": "client",
-            "scouting": {
-                "multicast": {
-                    "enabled": True,
-                }
-            }
         })
         config = zenoh.Config.from_json5(config)
         self.config = config
@@ -75,7 +70,7 @@ class Comm:
 
     def _send_protobuf(self, key_expr: str, value: proto.Meta | proto.State | proto.TagData):
         b = self.serialize(value)
-        self.session.put(key_expr, b)
+        self.session.put(key_expr, b, encoding="application/protobuf")
 
     def send_meta(self, key_prefix: str, name: str, meta: proto.Meta):
         key = keys.meta_key_prefix(key_prefix, name)
