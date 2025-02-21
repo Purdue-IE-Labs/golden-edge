@@ -89,6 +89,15 @@ class NodeKeySpace:
             except:
                 raise ValueError(f"No tag path found in {key_expr}")
         return key_join(*components[(i + 1):])
+    
+    @staticmethod
+    def method_path_from_key(key_expr: str):
+        components = key_expr.split("/")
+        try:
+            i = components.index(METHODS)
+        except:
+            raise ValueError(f"No method path found in {key_expr}")
+        return key_join(*components[(i + 1):])
 
     @property
     def prefix(self):
