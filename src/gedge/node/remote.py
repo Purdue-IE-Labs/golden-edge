@@ -12,6 +12,9 @@ from gedge.comm.keys import *
 from gedge.edge.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback, ZenohReplyCallback
 import zenoh
 
+import logging
+logger = logging.getLogger(__name__)
+
 class RemoteConfig:
     def __init__(self, key: str, read_tags: list[str] = [], read_write_tags: list[str] = [], method_calls: list[str] = []):
         self.key = key
@@ -55,28 +58,28 @@ class RemoteConnection:
                 raise TagLookupError(path, node)
             tag_config = self.tags[path]
             value = TagData.proto_to_py(tag_data, tag_config.type)
+            logger.info(f"Remote node {self.key} updating tag {path} with value {value}")
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
 
     def _on_state(self, on_state: StateCallback) -> ZenohCallback:
         def _on_state(sample: zenoh.Sample):
             state: proto.State = self._comm.deserialize(proto.State(), sample.payload.to_bytes())
+            logger.info(f"Remote node {self.key} publishing state message")
             on_state(str(sample.key_expr), state)
         return _on_state
 
     def _on_meta(self, on_meta: MetaCallback) -> ZenohCallback:
         def _on_meta(sample: zenoh.Sample):
             meta: proto.Meta = self._comm.deserialize(proto.Meta(), sample.payload.to_bytes())
+            logger.info(f"Remote node {self.key} publishing meta message")
             on_meta(sample.key_expr, meta)
         return _on_meta
     
     def _on_liveliness(self, on_liveliness_change: LivelinessCallback) -> ZenohCallback:
         def _on_liveliness(sample: zenoh.Sample):
-            if sample.kind == zenoh.SampleKind.PUT:
-                print(f"node {sample.key_expr} online")
-            elif sample.kind == zenoh.SampleKind.DELETE:
-                print(f"node {sample.key_expr} went offline")
             is_online = sample.kind == zenoh.SampleKind.PUT
+            logger.info(f"Liveliness of remote node {self.key} changed: {"online" if is_online else "offline"}")
             on_liveliness_change(sample.key_expr, is_online)
         return _on_liveliness
 
@@ -121,6 +124,7 @@ class RemoteConnection:
         return bind
 
     def _write_tag(self, path: str, value: Any) -> tuple[int, str]:
+        logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
@@ -148,9 +152,8 @@ class RemoteConnection:
         return _on_reply
     
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
-    def call_method(self, path: str, on_reply: Callable[[int, dict[str, Any], str], None], **kwargs) -> tuple[int, str, dict[str, Any]]:
+    def call_method(self, path: str, on_reply: Callable[[int, dict[str, Any], str], None], **kwargs) -> None:
         if path not in self.methods:
-            # print(self.methods)
             raise MethodLookupError(path, self.ks.name)
         
         method = self.methods[path]
@@ -159,11 +162,4 @@ class RemoteConnection:
             data_type = method.parameters[key]
             params[key] = TagData.py_to_proto(value, data_type)
 
-        self._comm.call_method(self.ks, path, params, self._on_reply(path, on_reply))
-        body = {}
-        # for key, value in response.body.items():
-        #     r = [r for r in self.methods[path].responses if r.code == response.code][0]
-        #     type = [b.type for b in r.body if b.name == key][0]
-        #     val = Tag.from_tag_data(value.data, type)
-        #     body[key] = val
-        # return response.code, response.error, body
+        self._comm.query_method(self.ks, path, params, self._on_reply(path, on_reply))
