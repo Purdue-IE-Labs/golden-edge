@@ -1,5 +1,5 @@
 from gedge.edge.data_type import DataType
-from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagWriteHandler, Type, ZenohQueryCallback, Any
+from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler, Type, ZenohQueryCallback, Any
 from gedge.edge.prop import Props
 from gedge.node.query import Query
 from gedge.node.remote import RemoteConfig, RemoteConnection
@@ -13,6 +13,10 @@ from gedge.comm.keys import *
 from gedge.node.method import Method, Response
 from gedge.edge.tag_data import TagData 
 import zenoh
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 # TODO: eventually, should support JSON
 class NodeConfig:
@@ -30,24 +34,22 @@ class NodeConfig:
     def key(self, key: str):
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
-
-    def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
+    
+    def _add_readable_tag(self, path: str, type: Type, props: dict[str, TagValue] = {}):
         tag = Tag(path, DataType.from_type(type), Props.from_value(props), False, [], None)
         if path in self.tags:
-            print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
+            logger.warning(f"Tag with path '{path}' already exists on node '{self.key}', overwriting...")
             del self.tags[path]
-        # print(f"adding tag on key: {path}")
         self.tags[path] = tag
+        logger.info(f"Adding tag with path '{path}' on node '{self.key}'")
         return tag
 
+    def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
+        return self._add_readable_tag(path, type, props)
+
     def add_writable_tag(self, path: str, type: Type, write_handler: TagWriteHandler, responses: list[tuple[int, bool, dict[str, Any]]], props: dict[str, Any] = {}) -> Tag:
-        tag = Tag(path, DataType.from_type(type), Props.from_value(props), True, responses, write_handler)
-        if path in self.tags:
-            print(f"Warning: tag {path} already exists in edge node {self.key}, updating...")
-            del self.tags[path]
-        print(f"adding tag on key: {path}")
-        self.tags[path] = tag
-        return tag
+        tag = self._add_readable_tag(path, type, props)
+        return tag.writable(write_handler, responses)
     
     def add_write_responses(self, path: str, responses: list[tuple[int, bool, dict[str, Any]]]):
         if path not in self.tags:
@@ -74,11 +76,13 @@ class NodeConfig:
     def delete_tag(self, path: str):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
+        logger.info(f"Deleting tag with path '{path}' on node '{self.key}'")
         del self.tags[path]
     
     def add_method(self, path: str, handler, props: dict[str, Any] = {}):
         method = Method(path, handler, Props.from_value(props), {}, [])
         self.methods[path] = method
+        logger.info(f"Adding method with path '{path}' on node '{self.key}'")
         return method
     
     def add_params(self, path: str, **kwargs):
@@ -96,17 +100,17 @@ class NodeConfig:
     def delete_method(self, path: str):
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
+        logger.info(f"Deleting tag with path '{path}' on node '{self.key}'")
         del self.methods[path]
     
     def _verify_tags(self):
         for path in self.tags:
             tag = self.tags[path]
             if tag._writable:
-                assert tag.write_handler is not None, f"Tag {path} declared as writable but no write handler"
+                assert tag.write_handler is not None, f"Tag {path} declared as writable but no write handler was provided"
                 assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
 
     def build_meta(self) -> Meta:
-        # print(f"building meta for {self.key}")
         self._verify_tags()
         tags: list[proto.Tag] = [t.to_proto() for t in self.tags.values()]
         methods: list[proto.Method] = [m.to_proto() for m in self.methods.values()]
@@ -114,6 +118,7 @@ class NodeConfig:
         return meta
 
     def connect(self):
+        logger.info(f"Node {self.key} attempting to connect to network")
         meta = self.build_meta()
         return NodeSession(config=self, meta=meta)
 
@@ -170,6 +175,7 @@ class NodeSession:
             i += 1
 
     def connect_to_remote(self, key: str, on_state: StateCallback = None, on_meta: MetaCallback = None, on_liveliness_change: LivelinessCallback = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
+        logger.info(f"Node {self.config.key} connecting to remote node {key}")
         connection = RemoteConnection(RemoteConfig(key), self._comm, self._on_remote_close)
         if on_state:
             connection.add_state_callback(on_state)
@@ -197,13 +203,13 @@ class NodeSession:
             self.disconnect_from_remote(key)
         self._comm.session.close()
     
-    def _write_handler(self, path: str, callback: TagWriteHandler) -> ZenohQueryCallback:
-        print("registered write callback")
+    def _write_handler(self, path: str, handler: TagWriteHandler) -> ZenohQueryCallback:
         def _on_write(query: zenoh.Query) -> None:
             try:
                 data: proto.TagData = self._comm.deserialize(proto.TagData(), query.payload.to_bytes())
                 data: TagData = TagData.from_proto(data, self.tags[path].type).to_py()
-                code = callback(str(query.key_expr), data)
+                logger.info(f"Node {self.config.key} received tag write at path '{path}' with value '{data.value}'")
+                code = handler(str(query.key_expr), data.value)
                 if code not in [r.code for r in self.tags[path].responses]:
                     raise Exception(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
                 response = WriteResponseData(code=code)
@@ -224,7 +230,12 @@ class NodeSession:
                 params[key] = TagData.proto_to_py(value, data_type)
             q = Query(self.ks, path, self._comm, query, query.parameters, method.responses)
             q.parameters = params
-            handler(q)
+            try:
+                logger.info(f"Node {self.config.key} method call at path '{path}' with parameters {params}")
+                handler(q)
+            except Exception as e:
+                code = 500
+                q.reply(code=code, error=str(e))
         return _method_call
     
     def _verify_node_collision(self):
@@ -237,6 +248,7 @@ class NodeSession:
         self._comm.send_meta(self.ks, self.meta)
         self.update_state(True)
         self.node_liveliness = self._comm.liveliness_token(self.ks)
+        logger.info(f"Registering tags and methods on node {self.config.key}")
         for path in self.config.tags:
             tag = self.config.tags[path]
             if not tag._writable: continue
