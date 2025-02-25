@@ -1,5 +1,6 @@
 from gedge.edge.data_type import DataType
 from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler, Type, ZenohQueryCallback, Any
+from typing import Self
 from gedge.edge.prop import Props
 from gedge.node import codes
 from gedge.node.query import Query
@@ -37,7 +38,7 @@ class NodeConfig:
         self.ks = NodeKeySpace.from_user_key(key)
     
     def warn_duplicate_tag(func):
-        def wrapper(self: NodeConfig, *args, **kwargs):
+        def wrapper(self: Self, *args, **kwargs):
             path = args[0]
             if path in self.tags:
                 logger.warning(f"Tag with path '{path}' already exists on node '{self.key}', overwriting...")
