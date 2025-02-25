@@ -15,7 +15,6 @@ message Response {
     int32 code = 1;
     map<string, Prop> props = 3;
     map<string, DataType> body = 4;
-    bool final = 5;
 }
 
 // Session
