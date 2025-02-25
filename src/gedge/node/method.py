@@ -33,10 +33,10 @@ class Method:
         for key, value in kwargs.items():
             self.parameters[key] = DataType.from_type(value)
 
-    def add_response(self, code: int, success: bool, props: dict[str, TagValue] = {}, body: dict[str, Type] = {}, final: bool = False): 
+    def add_response(self, code: int, props: dict[str, TagValue] = {}, body: dict[str, Type] = {}, final: bool = False): 
         props = Props.from_value(props)
         body = {key:DataType.from_type(value) for key, value in body.items()}
-        response = Response(code, success, props, body, final)
+        response = Response(code, props, body, final)
         self.responses.append(response)
         return response
 

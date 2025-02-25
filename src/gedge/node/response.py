@@ -6,9 +6,8 @@ from gedge.edge.gtypes import Type
 
 
 class Response:
-    def __init__(self, code: int, success: bool, props: Props, body: dict[str, DataType], final: bool):
+    def __init__(self, code: int, props: Props, body: dict[str, DataType], final: bool):
         self.code = code
-        self.success = success
         self.props = props
         self.body = body
         self.final = final
@@ -16,7 +15,7 @@ class Response:
     def to_proto(self) -> proto.Response:
         props = self.props.to_proto()
         body = {key:value.to_proto() for key, value in self.body.items()}
-        return proto.Response(code=self.code, success=self.success, props=props, body=body, final=self.final)
+        return proto.Response(code=self.code, props=props, body=body, final=self.final)
 
     @classmethod
     def from_proto(self, proto: proto.Response) -> Self:
@@ -38,7 +37,7 @@ class Response:
         '''
         props = Props.from_proto(proto.props)
         body = {key:DataType.from_proto(value) for key, value in proto.body.items()}
-        return Response(proto.code, proto.success, props, body, proto.final)
+        return Response(proto.code, props, body, proto.final)
     
     def add_prop(self, key: str, value: Any):
         self.props.add_prop(key, value)
@@ -48,5 +47,5 @@ class Response:
             self.body[key] = DataType.from_type(value)
     
     def __repr__(self):
-        return f"Response(code={self.code}, success={self.success}, final={self.final} body={self.body})"
+        return f"Response(code={self.code}, final={self.final} body={self.body})"
     
