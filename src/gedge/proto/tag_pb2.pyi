@@ -29,7 +29,7 @@ class Tag(_message.Message):
     def __init__(self, path: _Optional[str] = ..., type: _Optional[_Union[_tag_data_pb2.DataType, str]] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., writable: bool = ..., responses: _Optional[_Iterable[_Union[WriteResponse, _Mapping]]] = ...) -> None: ...
 
 class WriteResponse(_message.Message):
-    __slots__ = ("code", "success", "props")
+    __slots__ = ("code", "props")
     class PropsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -38,12 +38,10 @@ class WriteResponse(_message.Message):
         value: _prop_pb2.Prop
         def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_prop_pb2.Prop, _Mapping]] = ...) -> None: ...
     CODE_FIELD_NUMBER: _ClassVar[int]
-    SUCCESS_FIELD_NUMBER: _ClassVar[int]
     PROPS_FIELD_NUMBER: _ClassVar[int]
     code: int
-    success: bool
     props: _containers.MessageMap[str, _prop_pb2.Prop]
-    def __init__(self, code: _Optional[int] = ..., success: bool = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ...) -> None: ...
+    def __init__(self, code: _Optional[int] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ...) -> None: ...
 
 class WriteResponseData(_message.Message):
     __slots__ = ("code", "error")
