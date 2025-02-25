@@ -36,11 +36,18 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
     
+    def warn_duplicate_tag(func):
+        def wrapper(self: NodeConfig, *args, **kwargs):
+            path = args[0]
+            if path in self.tags:
+                logger.warning(f"Tag with path '{path}' already exists on node '{self.key}', overwriting...")
+            result = func(self, *args, **kwargs)
+            return result
+        return wrapper
+    
+    @warn_duplicate_tag
     def _add_readable_tag(self, path: str, type: Type, props: dict[str, TagValue] = {}):
         tag = Tag(path, DataType.from_type(type), Props.from_value(props), False, [], None)
-        if path in self.tags:
-            logger.warning(f"Tag with path '{path}' already exists on node '{self.key}', overwriting...")
-            del self.tags[path]
         self.tags[path] = tag
         logger.info(f"Adding tag with path '{path}' on node '{self.key}'")
         return tag
