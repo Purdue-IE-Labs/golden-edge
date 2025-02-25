@@ -34,7 +34,7 @@ class Method(_message.Message):
     def __init__(self, path: _Optional[str] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., parameters: _Optional[_Mapping[str, _tag_data_pb2.DataType]] = ..., responses: _Optional[_Iterable[_Union[Response, _Mapping]]] = ...) -> None: ...
 
 class Response(_message.Message):
-    __slots__ = ("code", "success", "props", "body", "final")
+    __slots__ = ("code", "props", "body", "final")
     class PropsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -50,16 +50,14 @@ class Response(_message.Message):
         value: _tag_data_pb2.DataType
         def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_tag_data_pb2.DataType, str]] = ...) -> None: ...
     CODE_FIELD_NUMBER: _ClassVar[int]
-    SUCCESS_FIELD_NUMBER: _ClassVar[int]
     PROPS_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
     FINAL_FIELD_NUMBER: _ClassVar[int]
     code: int
-    success: bool
     props: _containers.MessageMap[str, _prop_pb2.Prop]
     body: _containers.ScalarMap[str, _tag_data_pb2.DataType]
     final: bool
-    def __init__(self, code: _Optional[int] = ..., success: bool = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., body: _Optional[_Mapping[str, _tag_data_pb2.DataType]] = ..., final: bool = ...) -> None: ...
+    def __init__(self, code: _Optional[int] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., body: _Optional[_Mapping[str, _tag_data_pb2.DataType]] = ..., final: bool = ...) -> None: ...
 
 class MethodCall(_message.Message):
     __slots__ = ("parameters",)

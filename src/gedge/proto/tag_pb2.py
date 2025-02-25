@@ -26,7 +26,7 @@ from . import prop_pb2 as prop__pb2
 from . import tag_data_pb2 as tag__data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ttag.proto\x1a\nprop.proto\x1a\x0etag_data.proto\"\xb6\x01\n\x03Tag\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.DataType\x12\x1e\n\x05props\x18\x03 \x03(\x0b\x32\x0f.Tag.PropsEntry\x12\x10\n\x08writable\x18\x04 \x01(\x08\x12!\n\tresponses\x18\x05 \x03(\x0b\x32\x0e.WriteResponse\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\"\x8d\x01\n\rWriteResponse\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\x0f\n\x07success\x18\x02 \x01(\x08\x12(\n\x05props\x18\x03 \x03(\x0b\x32\x19.WriteResponse.PropsEntry\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\"?\n\x11WriteResponseData\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\x12\n\x05\x65rror\x18\x02 \x01(\tH\x00\x88\x01\x01\x42\x08\n\x06_errorb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ttag.proto\x1a\nprop.proto\x1a\x0etag_data.proto\"\xb6\x01\n\x03Tag\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.DataType\x12\x1e\n\x05props\x18\x03 \x03(\x0b\x32\x0f.Tag.PropsEntry\x12\x10\n\x08writable\x18\x04 \x01(\x08\x12!\n\tresponses\x18\x05 \x03(\x0b\x32\x0e.WriteResponse\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\"|\n\rWriteResponse\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12(\n\x05props\x18\x03 \x03(\x0b\x32\x19.WriteResponse.PropsEntry\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\"?\n\x11WriteResponseData\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\x12\n\x05\x65rror\x18\x02 \x01(\tH\x00\x88\x01\x01\x42\x08\n\x06_errorb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -41,10 +41,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_TAG']._serialized_end=224
   _globals['_TAG_PROPSENTRY']._serialized_start=173
   _globals['_TAG_PROPSENTRY']._serialized_end=224
-  _globals['_WRITERESPONSE']._serialized_start=227
-  _globals['_WRITERESPONSE']._serialized_end=368
+  _globals['_WRITERESPONSE']._serialized_start=226
+  _globals['_WRITERESPONSE']._serialized_end=350
   _globals['_WRITERESPONSE_PROPSENTRY']._serialized_start=173
   _globals['_WRITERESPONSE_PROPSENTRY']._serialized_end=224
-  _globals['_WRITERESPONSEDATA']._serialized_start=370
-  _globals['_WRITERESPONSEDATA']._serialized_end=433
+  _globals['_WRITERESPONSEDATA']._serialized_start=352
+  _globals['_WRITERESPONSEDATA']._serialized_end=415
 # @@protoc_insertion_point(module_scope)

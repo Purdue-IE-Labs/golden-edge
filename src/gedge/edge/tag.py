@@ -5,23 +5,20 @@ from gedge import proto
 from gedge.edge.prop import Prop, Props
 
 class WriteResponse:
-    def __init__(self, code: int, success: bool, props: Props):
+    def __init__(self, code: int, props: Props):
         self.code = code
-        self.success = success
         self.props: Props = props
     
     def to_proto(self) -> proto.WriteResponse:
         code = self.code
-        success = self.success
         props = self.props.to_proto()
-        return proto.WriteResponse(code=code, success=success, props=props)
+        return proto.WriteResponse(code=code, props=props)
 
     @classmethod
     def from_proto(cls, response: proto.WriteResponse):
         code = response.code
-        success = response.success
         props = Props.from_proto(response.props)
-        return WriteResponse(code, success, props)
+        return WriteResponse(code, props)
 
 
 class Tag:
@@ -54,8 +51,8 @@ class Tag:
             self.add_write_response(tup[0], tup[1], tup[2])
         return self
     
-    def add_write_response(self, code: int, success: bool, props: Prop = {}):
-        response = WriteResponse(code, success, props)
+    def add_write_response(self, code: int, props: Prop = {}):
+        response = WriteResponse(code, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:
             raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")
         self.responses.append(response)

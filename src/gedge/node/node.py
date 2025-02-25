@@ -55,13 +55,13 @@ class NodeConfig:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        for code, success, props in responses:
-            tag.add_write_response(code, success, props)
+        for code, props in responses:
+            tag.add_write_response(code, props)
     
-    def add_write_response(self, path: str, code: int, success: bool, props: dict[str, Any] = {}):
+    def add_write_response(self, path: str, code: int, props: dict[str, Any] = {}):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        self.tags[path].add_write_response(code, success, props)
+        self.tags[path].add_write_response(code, props)
     
     def add_write_handler(self, path: str, callback: TagWriteHandler):
         if path not in self.tags:
