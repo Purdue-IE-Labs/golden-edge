@@ -3,6 +3,7 @@ from gedge.edge.data_type import DataType
 from gedge.edge.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.response import Response
+from gedge.node import codes
 from gedge import proto
 from gedge.edge.error import MethodLookupError, SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
@@ -11,6 +12,7 @@ from gedge.edge.tag_bind import TagBind
 from gedge.comm.keys import *
 from gedge.edge.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback, ZenohReplyCallback
 import zenoh
+import uuid
 
 import logging
 logger = logging.getLogger(__name__)
@@ -137,18 +139,22 @@ class RemoteConnection:
     async def write_tag_async(self, path: str, value: Any) -> tuple[int, str]:
         return self._write_tag(path, value)
     
-    def _on_reply(self, path: str, on_reply: Callable[[int, str, dict[str, Any]], None]) -> ZenohReplyCallback:
-        def _on_reply(reply: zenoh.Reply) -> None:
-            if not reply.ok:
+    def _on_reply(self, path: str, on_reply: Callable[[int, str, dict[str, Any]], None]) -> ZenohCallback:
+        def _on_reply(reply: zenoh.Sample) -> None:
+            if not reply:
                 print("warning: reply super not ok")
                 return
-            r: proto.ResponseData = self._comm.deserialize(proto.ResponseData(), reply.result.payload.to_bytes())
+            r: proto.ResponseData = self._comm.deserialize(proto.ResponseData(), reply.payload.to_bytes())
             body = {}
             for key, value in r.body.items():
                 response = self.responses[path][r.code]
                 data_type = response.body[key]
                 body[key] = TagData.proto_to_py(value, data_type)
             on_reply(r.code, r.error, body)
+            if r.code in {codes.DONE, codes.METHOD_ERROR}:
+                # remove subscription after we are done
+                logger.debug(f"remove subscription for key expr {reply.key_expr}")
+                self._subscriptions.remove([x for x in self._subscriptions if x.key_expr == reply.key_expr][0])
         return _on_reply
     
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
@@ -156,10 +162,20 @@ class RemoteConnection:
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
         
+        # TODO: should this be a queryable with selectors? 
+        caller_id = str(uuid.uuid4())
+        method_call_id = str(uuid.uuid4())
         method = self.methods[path]
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
             data_type = method.parameters[key]
             params[key] = TagData.py_to_proto(value, data_type)
 
-        self._comm.query_method(self.ks, path, params, self._on_reply(path, on_reply))
+        on_reply = self._on_reply(path, on_reply)
+        # TODO: we need a subscriber for /** and for /caller_id/method_call_id
+        # subscriber = self._comm.method_queryable_v2(self.ks, path, caller_id, method_call_id, on_reply)
+        # self._subscriptions.append(subscriber)
+        logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
+        key_expr = key_join(self.ks.method_path(path), caller_id, method_call_id, "response")
+        self._subscriptions.append(self._comm._subscriber(key_expr, on_reply))
+        self._comm.query_method_v2(self.ks, path, caller_id, method_call_id, params)

@@ -1,6 +1,7 @@
 from gedge.edge.data_type import DataType
 from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler, Type, ZenohQueryCallback, Any
 from gedge.edge.prop import Props
+from gedge.node import codes
 from gedge.node.query import Query
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import Meta, State, WriteResponseData, MethodCall
@@ -127,7 +128,7 @@ class NodeSession:
         self._comm = Comm() 
         self.config = config
         self.ks = config.ks
-        self.connections: dict[str, RemoteConnection] = dict() # user key -> RemoteConnection
+        self.connections: dict[str, RemoteConnection] = dict() # user_key -> RemoteConnection
 
         # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = meta
@@ -214,28 +215,31 @@ class NodeSession:
                     raise Exception(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
                 response = WriteResponseData(code=code)
             except Exception as e:
-                code = 500
-                response = WriteResponseData(code=code, error=str(e))
+                response = WriteResponseData(code=codes.TAG_ERROR, error=repr(e))
             b = self._comm.serialize(response)
             query.reply(query.key_expr, payload=b)
         return _on_write
     
     def _method_call(self, path: str, handler):
+        logger.info(f"Setting up method at path: {path} on node {self.ks.user_key}")
         method = self.config.methods[path]
-        def _method_call(query: zenoh.Query) -> zenoh.Reply:
-            m: MethodCall = self._comm.deserialize(MethodCall(), query.payload.to_bytes())
+        def _method_call(sample: zenoh.Sample) -> None:
+            m: MethodCall = self._comm.deserialize(MethodCall(), sample.payload.to_bytes())
             params: dict[str, Any] = {}
             for key, value in m.parameters.items():
                 data_type = method.parameters[key]
                 params[key] = TagData.proto_to_py(value, data_type)
-            q = Query(self.ks, path, self._comm, query, query.parameters, method.responses)
-            q.parameters = params
+            key_expr = key_join(str(sample.key_expr), "response")
+            q = Query(key_expr, self._comm, params, method.responses)
             try:
                 logger.info(f"Node {self.config.key} method call at path '{path}' with parameters {params}")
+                logger.debug(f"Received from {str(sample.key_expr)}")
                 handler(q)
             except Exception as e:
-                code = 500
-                q.reply(code=code, error=str(e))
+                code = codes.METHOD_ERROR
+                q.reply(code=code, error=repr(e))
+            else:
+                q.reply(code=codes.DONE)
         return _method_call
     
     def _verify_node_collision(self):
@@ -255,7 +259,7 @@ class NodeSession:
             self._comm.tag_queryable(self.ks, path, self._write_handler(path, tag.write_handler))
         for path in self.config.methods:
             method = self.config.methods[path]
-            self._comm.method_queryable(self.ks, path, self._method_call(path, method.handler))
+            self._comm.method_queryable_v2(self.ks, path, self._method_call(path, method.handler))
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]

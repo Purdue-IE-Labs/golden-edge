@@ -9,8 +9,12 @@ from gedge.edge.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallb
 
 ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodCall
 
+import logging
+logger = logging.getLogger(__name__)
+
 # handle Zenoh communications
 # The user will not interact with this item
+# TODO: should this hold a key_space? and allow for a context manager when we want to change it
 class Comm:
     def __init__(self):
         # TODO: user should specify which router than want to connect to 
@@ -40,6 +44,7 @@ class Comm:
         return proto
 
     def _send_proto(self, key_expr: str, value: proto.Meta | proto.State | proto.TagData):
+        logger.debug(f"putting proto on key_expr '{key_expr}'")
         b = self.serialize(value)
         self.session.put(key_expr, b, encoding="application/protobuf")
     
@@ -56,6 +61,7 @@ class Comm:
         return self.session.liveliness().get(key_expr).recv()
 
     def _subscriber(self, key_expr: str, handler: ZenohCallback) -> zenoh.Subscriber:
+        logger.debug(f"declaring subscriber on key expression '{key_expr}'")
         return self.session.declare_subscriber(key_expr, handler)
     
     def _queryable(self, key_expr: str, handler: ZenohQueryCallback) -> zenoh.Queryable:
@@ -90,11 +96,29 @@ class Comm:
     def method_queryable(self, ks: NodeKeySpace, path: str, on_call: ZenohQueryCallback) -> zenoh.Queryable:
         return self._queryable(ks.method_path(path), on_call)
     
+    # def method_queryable_v2_call(self, ks: NodeKeySpace, path: str, caller_id: str, method_call_id: str, on_call: ZenohCallback) -> zenoh.Subscriber:
+    #     key_expr = ks.method_path(path)
+    #     key_expr = keys.key_join(key_expr, caller_id, method_call_id)
+    #     return self._subscriber(key_expr, on_call)
+    
+    def method_queryable_v2(self, ks: NodeKeySpace, path: str, on_call: ZenohCallback) -> zenoh.Subscriber:
+        key_expr = ks.method_path(path)
+        # the two * signify caller_id and method_call_id, but we should not subscribe to responses
+        key_expr = keys.key_join(key_expr, "*", "*")
+        return self._subscriber(key_expr, on_call)
+    
     def query_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: ZenohReplyCallback) -> None:
         key_expr = ks.method_path(path)
         method_call = proto.MethodCall(parameters=params)
         b = self.serialize(method_call)
         self._query_callback(key_expr, payload=b, handler=on_reply)
+    
+    def query_method_v2(self, ks: NodeKeySpace, path: str, caller_id: str, method_call_id: str, params: dict[str, proto.TagData]) -> None:
+        key_expr = ks.method_path(path)
+        key_expr = keys.key_join(key_expr, caller_id, method_call_id)
+        method_call = proto.MethodCall(parameters=params)
+        self._send_proto(key_expr, method_call)
+        # self._query_callback(key_expr, payload=b, handler=on_reply)
 
     def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
         key_expr = ks.tag_data_path(path)
