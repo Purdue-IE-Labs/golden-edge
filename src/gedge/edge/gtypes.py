@@ -10,7 +10,7 @@ Type = DataType | type
 
 # a node defines this on its own config for its writable tags
 TagValue = int | float | bool | str | list[int] | list[float] | list[bool] | list[str]
-TagWriteHandler = Callable[[TagValue], int]
+TagWriteHandler = Callable[[str, TagValue], int]
 
 # MethodCallback = Callable[[query]]
 
