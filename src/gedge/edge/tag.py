@@ -44,14 +44,14 @@ class Tag:
         t = Tag(tag.path, type, props, tag.writable, responses, None)
         return t
     
-    def writable(self, write_handler: TagWriteHandler = None, responses: list[tuple[int, bool, dict[str, Any]]] = []):
+    def writable(self, write_handler: TagWriteHandler = None, responses: list[tuple[int, dict[str, Any]]] = []):
         self._writable = True
         self.write_handler = write_handler
         for tup in responses:
-            self.add_write_response(tup[0], tup[1], tup[2])
+            self.add_write_response(tup[0], Props.from_value(tup[1]))
         return self
     
-    def add_write_response(self, code: int, props: Prop = {}):
+    def add_write_response(self, code: int, props: Props = {}):
         response = WriteResponse(code, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:
             raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")

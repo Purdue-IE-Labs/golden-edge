@@ -10,6 +10,9 @@ from gedge.node import codes
 from gedge.node.response import Response
 from gedge import proto
 
+import logging
+logger = logging.getLogger(__name__)
+
 class Query:
     def __init__(self, key_expr: str, comm: Comm, parameters: dict[str, Any] = {}, responses: list[Response] = []):
         self._comm = comm
@@ -18,6 +21,7 @@ class Query:
         self.key_expr = key_expr
     
     def reply(self, code: int, body: dict[str, Any] = {}, error: str = ""):
+        logger.info(f"Replying to method with code {code} on path {self.key_expr}")
         if code not in {i.code for i in self._responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
             raise ValueError(f"invalid repsonse code {code}")
         new_body: dict[str, proto.TagData] = {}

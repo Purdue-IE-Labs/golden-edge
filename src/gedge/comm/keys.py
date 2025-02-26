@@ -7,6 +7,7 @@ DATA = "DATA"
 WRITE = "WRITE"
 STATE = "STATE"
 METHODS = "METHODS"
+RESPONSE = "RESPONSE"
 
 def key_join(*components: list[str]):
     return "/".join(components)
@@ -32,7 +33,7 @@ def tag_write_key(prefix: str, name: str, key: str):
 def state_key_prefix(prefix: str, name: str):
     return key_join(node_key_prefix(prefix, name), STATE)
 
-def method_key_perfix(prefix: str, name: str):
+def method_key_prefix(prefix: str, name: str):
     return key_join(node_key_prefix(prefix, name), METHODS)
 
 def liveliness_key_prefix(prefix: str, name: str):
@@ -41,6 +42,9 @@ def liveliness_key_prefix(prefix: str, name: str):
 def node_name_from_key_expr(key_expr: str | zenoh.KeyExpr):
     components = str(key_expr).split("/")
     return components[components.index(NODE) + 1]
+
+def method_response_from_call(key_expr: str):
+    return key_join(key_expr, RESPONSE)
 
 class NodeKeySpace:
     def __init__(self, prefix: str, name: str):
@@ -134,7 +138,7 @@ class NodeKeySpace:
         self.tag_data_key_prefix = tag_data_key_prefix(prefix, name)
         self.tag_write_key_prefix = tag_write_key_prefix(prefix, name)
         self.liveliness_key_prefix = liveliness_key_prefix(prefix, name)
-        self.method_key_prefix = method_key_perfix(prefix, name)
+        self.method_key_prefix = method_key_prefix(prefix, name)
     
     def tag_data_path(self, path: str):
         return tag_data_key(self.prefix, self.name, path)
@@ -145,3 +149,9 @@ class NodeKeySpace:
     def method_path(self, path: str):
         return key_join(self.method_key_prefix, path)
         
+    def method_call(self, path: str, caller_id: str, method_call_id: str):
+        return key_join(self.method_path(path), caller_id, method_call_id)
+    
+    def method_response(self, path: str, caller_id: str, method_call_id: str):
+        return key_join(self.method_path(path), caller_id, method_call_id, RESPONSE)
+    

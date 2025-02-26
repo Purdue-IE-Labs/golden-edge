@@ -25,13 +25,15 @@ class RemoteConfig:
         self.method_calls = method_calls
 
 class RemoteConnection:
-    def __init__(self, config: RemoteConfig, comm: Comm, on_close: Callable[[str], None] = None):
+    def __init__(self, config: RemoteConfig, comm: Comm, node_id: str, on_close: Callable[[str], None] = None):
         self.config = config
         self._comm = comm 
         self._subscriptions: list[zenoh.Subscriber] = []
         self.key = self.config.key
         self.ks = NodeKeySpace.from_user_key(self.key)
         self.on_close = on_close
+
+        self.node_id = node_id
 
         '''
         TODO: perhaps we should subscribe to this node's meta message, in which case all the following utility variables (self.tags, self.methods, self.responses) 
@@ -163,7 +165,6 @@ class RemoteConnection:
             raise MethodLookupError(path, self.ks.name)
         
         # TODO: should this be a queryable with selectors? 
-        caller_id = str(uuid.uuid4())
         method_call_id = str(uuid.uuid4())
         method = self.methods[path]
         params: dict[str, proto.TagData] = {}
@@ -176,6 +177,6 @@ class RemoteConnection:
         # subscriber = self._comm.method_queryable_v2(self.ks, path, caller_id, method_call_id, on_reply)
         # self._subscriptions.append(subscriber)
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
-        key_expr = key_join(self.ks.method_path(path), caller_id, method_call_id, "response")
+        key_expr = self.ks.method_response(path, self.node_id, method_call_id)
         self._subscriptions.append(self._comm._subscriber(key_expr, on_reply))
-        self._comm.query_method_v2(self.ks, path, caller_id, method_call_id, params)
+        self._comm.query_method_v2(self.ks, path, self.node_id, method_call_id, params)
