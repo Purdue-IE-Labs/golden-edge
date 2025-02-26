@@ -68,7 +68,7 @@ class Comm:
         return self.session.declare_queryable(key_expr, handler)
     
     def _query_sync(self, key_expr: str, payload: bytes) -> zenoh.Reply:
-        return self.session.get(key_expr, payload=payload)
+        return self.session.get(key_expr, payload=payload).recv()
     
     def _query_callback(self, key_expr: str, payload: bytes, handler: ZenohReplyCallback) -> None:
         self.session.get(key_expr, payload=payload, handler=handler)

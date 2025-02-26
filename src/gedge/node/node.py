@@ -1,3 +1,4 @@
+import uuid
 from gedge.edge.data_type import DataType
 from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler, Type, ZenohQueryCallback, Any
 from typing import Self
@@ -56,21 +57,21 @@ class NodeConfig:
     def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
         return self._add_readable_tag(path, type, props)
 
-    def add_writable_tag(self, path: str, type: Type, write_handler: TagWriteHandler, responses: list[tuple[int, bool, dict[str, Any]]], props: dict[str, Any] = {}) -> Tag:
+    def add_writable_tag(self, path: str, type: Type, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]], props: dict[str, Any] = {}) -> Tag:
         tag = self._add_readable_tag(path, type, props)
         return tag.writable(write_handler, responses)
     
-    def add_write_responses(self, path: str, responses: list[tuple[int, bool, dict[str, Any]]]):
+    def add_write_responses(self, path: str, responses: list[tuple[int, dict[str, Any]]]):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
         for code, props in responses:
-            tag.add_write_response(code, props)
+            tag.add_write_response(code, Props.from_value(props))
     
     def add_write_response(self, path: str, code: int, props: dict[str, Any] = {}):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        self.tags[path].add_write_response(code, props)
+        self.tags[path].add_write_response(code, Props.from_value(props))
     
     def add_write_handler(self, path: str, callback: TagWriteHandler):
         if path not in self.tags:
@@ -137,6 +138,7 @@ class NodeSession:
         self.config = config
         self.ks = config.ks
         self.connections: dict[str, RemoteConnection] = dict() # user_key -> RemoteConnection
+        self.id = str(uuid.uuid4())
 
         # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = meta
@@ -185,7 +187,7 @@ class NodeSession:
 
     def connect_to_remote(self, key: str, on_state: StateCallback = None, on_meta: MetaCallback = None, on_liveliness_change: LivelinessCallback = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
         logger.info(f"Node {self.config.key} connecting to remote node {key}")
-        connection = RemoteConnection(RemoteConfig(key), self._comm, self._on_remote_close)
+        connection = RemoteConnection(RemoteConfig(key), self._comm, self.id, self._on_remote_close)
         if on_state:
             connection.add_state_callback(on_state)
         if on_meta:
@@ -216,13 +218,16 @@ class NodeSession:
         def _on_write(query: zenoh.Query) -> None:
             try:
                 data: proto.TagData = self._comm.deserialize(proto.TagData(), query.payload.to_bytes())
-                data: TagData = TagData.from_proto(data, self.tags[path].type).to_py()
-                logger.info(f"Node {self.config.key} received tag write at path '{path}' with value '{data.value}'")
-                code = handler(str(query.key_expr), data.value)
+                data: TagValue = TagData.proto_to_py(data, self.tags[path].type)
+                logger.info(f"Node {self.config.key} received tag write at path '{path}' with value '{data}'")
+
+                code = handler(str(query.key_expr), data)
+
                 if code not in [r.code for r in self.tags[path].responses]:
-                    raise Exception(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
+                    raise LookupError(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
                 response = WriteResponseData(code=code)
             except Exception as e:
+                logger.warning(f"Sending tag write response on path {path}: error={repr(e)}")
                 response = WriteResponseData(code=codes.TAG_ERROR, error=repr(e))
             b = self._comm.serialize(response)
             query.reply(query.key_expr, payload=b)
@@ -237,7 +242,7 @@ class NodeSession:
             for key, value in m.parameters.items():
                 data_type = method.parameters[key]
                 params[key] = TagData.proto_to_py(value, data_type)
-            key_expr = key_join(str(sample.key_expr), "response")
+            key_expr = method_response_from_call(str(sample.key_expr))
             q = Query(key_expr, self._comm, params, method.responses)
             try:
                 logger.info(f"Node {self.config.key} method call at path '{path}' with parameters {params}")
@@ -284,7 +289,7 @@ class NodeSession:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        self._comm.update_tag(prefix, node_name, tag.path, TagData.py_to_proto(value, tag.type))
+        self._comm.update_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
     
     def update_state(self, online: bool):
         self._comm.send_state(self.ks, State(online=online))
