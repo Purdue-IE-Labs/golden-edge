@@ -2,7 +2,8 @@ import gedge
 from typing import Any
 import time
 
-def on_reply(code: int, body: dict[str, Any], error: str):
+def on_reply(reply: gedge.Reply):
+    code, body, error = reply.code, reply.body, reply.error
     print(f"received code {code}")
 
 with gedge.connect(gedge.NodeConfig("BuildAtScale/Robots/Methods/Demo/Caller")) as session:

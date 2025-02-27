@@ -1,0 +1,70 @@
+{
+    key: "BuildScale/Robots/Arms",
+    tags: [
+        {
+            path: "tm12/joint_pos",
+            type: "list[float]",
+            props: {
+                eng_units: "deg",
+                another_prop: 2,
+            },
+        },
+        {
+            path: "project/is_running",
+            type: "bool",
+            props: {
+                description: "True if a project is running, false if not"
+            },
+        },
+        {
+            path: "my/writable/tag",
+            type: "int",
+            writable: true,
+            responses: [
+                {
+                    code: 200,
+                    props: {
+                        description: "tag updated",
+                    }
+                }
+
+            ]
+        }
+    ],
+    methods: [
+        {
+            path: "start/project",
+            props: {
+                description: "start the project",
+            },
+            params: {
+                name: "string",
+                speed: "int"
+            },
+            responses: [
+                {
+                    code: 200,
+                    props: {
+                        description: "project started"
+                    },
+                    body: {
+                        body1: "int",
+                    }
+                },
+                {
+                    code: 300,
+                    props: {
+                        description: "a thing"
+                    }
+                },
+                400,
+                404,
+                500
+            ],
+        },
+        {
+            path: "another/method",
+            responses: [200, 201, 400, 401],
+        }
+    ]
+}
