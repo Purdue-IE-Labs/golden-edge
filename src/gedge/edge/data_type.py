@@ -24,6 +24,24 @@ class DataType(Enum):
     @classmethod
     def from_proto(cls, proto: proto.DataType) -> Self:
         return cls(int(proto))
+    
+    @classmethod
+    def from_json5(cls, type: str) -> Self:
+        mapping = {
+            "int": DataType.INT,
+            "long": DataType.LONG,
+            "float": DataType.FLOAT,
+            "string": DataType.STRING,
+            "bool": DataType.BOOL,
+            "list[int]": DataType.LIST_INT,
+            "list[long]": DataType.LIST_LONG,
+            "list[float]": DataType.LIST_FLOAT,
+            "list[string]": DataType.LIST_STRING,
+            "list[bool]": DataType.LIST_BOOL,
+        }
+        if type not in mapping:
+            raise ValueError(f"Invalid type {type}")
+        return cls(mapping[type])
 
     def to_proto(self) -> int:
         return self.value

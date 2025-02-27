@@ -3,7 +3,7 @@ from gedge.edge.gtypes import TagValue, Type
 from gedge.edge.prop import Props
 from gedge.node.query import Query
 from gedge import proto
-from typing import Self, Callable
+from typing import Any, Self, Callable
 from gedge.node.response import Response
 
 MethodType = Callable[[Query], None]
@@ -28,6 +28,29 @@ class Method:
         parameters = {key:DataType.from_proto(value) for key, value in proto.parameters.items()}
         responses = [Response.from_proto(r) for r in proto.responses]
         return cls(proto.path, None, props, parameters, responses)
+    
+    @classmethod
+    def from_json5(cls, json: Any) -> Self:
+        if not isinstance(json, dict):
+            raise ValueError(f"Invalid method {json}")
+        
+        json: dict[str, Any]
+        if "path" not in json:
+            raise LookupError(f"Method must have path, {json}")
+        path = json["path"]
+        props = Props.from_json5(json.get("props", {}))
+
+        params = {}
+        if "params" in json and isinstance(json["params"], dict):
+            params = {key:DataType.from_json5(value) for key, value in json["params"].items()}
+        
+        responses = []
+        if "responses" in json:
+            for response in json["responses"]:
+                r = Response.from_json5(response)
+                responses.append(r)
+
+        return cls(path, None, props, params, responses)
 
     def add_params(self, **kwargs: Type):
         for key, value in kwargs.items():
