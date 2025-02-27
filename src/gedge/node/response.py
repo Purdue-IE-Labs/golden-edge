@@ -17,26 +17,27 @@ class Response:
         return proto.Response(code=self.code, props=props, body=body)
 
     @classmethod
-    def from_proto(self, proto: proto.Response) -> Self:
-        '''
-        TODO: There is a recurring problem here. For the props field, the proto message variant of the field is of type dict[str, proto.Prop]
-        Ideally, we could just call Props.from_proto() to get that to be of type dict[str, Prop]. However, this class 
-        accepts a dict[str, Any] and then coerces that into a dict[str, Prop]. Thus, there is no clean and easy way 
-        to go straight from dict[str, proto.Prop] to dict[str, Any], and even if there was, this would be unproductive 
-        because the constructor of this class already converts from dict[str, Any] to dict[str, Prop]
-
-        Solution:
-            1. This class could accept either a dict[str, Any] or a dict[str, Prop] (which is the same as Props), so that in Response.from_proto() we could 
-            just call Props.from_proto() and pass that into the constructor of Response.
-            2. Only add from_proto() to classes as needed. We may never need it in this function because this is part of the META message 
-            which is just going into the historian 
-
-        I don't like the idea of the user interacting directly with the Protobuf message class because it's a little messy
-        Current solution is for this class to only accept a Prop
-        '''
+    def from_proto(cls, proto: proto.Response) -> Self:
         props = Props.from_proto(proto.props)
         body = {key:DataType.from_proto(value) for key, value in proto.body.items()}
-        return Response(proto.code, props, body)
+        return cls(proto.code, props, body)
+    
+    @classmethod
+    def from_json5(cls, json: Any) -> Self:
+        if isinstance(json, int):
+            return cls(json, Props.from_value({}), {}) 
+        if not isinstance(json, dict):
+            raise ValueError(f"Invalid method repsonse type, {json}")
+        
+        json: dict[str, Any]
+
+        if "code" not in json:
+            raise LookupError(f"Method response must include code, {json}")
+        code = int(json["code"])
+
+        props = Props.from_json5(json.get("props", {}))
+        body = {key:DataType.from_json5(value) for key, value in json.get("body", {}).items()}
+        return cls(code, props, body)
     
     def add_prop(self, key: str, value: Any):
         self.props.add_prop(key, value)

@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, Self
 from gedge.edge.data_type import DataType
 from gedge.edge.gtypes import TagWriteHandler, Type
 from gedge import proto
 from gedge.edge.prop import Prop, Props
+from gedge.node.response import Response
 
 class WriteResponse:
     def __init__(self, code: int, props: Props):
@@ -15,11 +16,26 @@ class WriteResponse:
         return proto.WriteResponse(code=code, props=props)
 
     @classmethod
-    def from_proto(cls, response: proto.WriteResponse):
+    def from_proto(cls, response: proto.WriteResponse) -> Self:
         code = response.code
         props = Props.from_proto(response.props)
-        return WriteResponse(code, props)
-
+        return cls(code, props)
+    
+    @classmethod
+    def from_json5(cls, json: Any) -> Self:
+        if isinstance(json, int):
+            return cls(json, Props.from_value({}))
+        if not isinstance(json, dict):
+            raise ValueError(f"invalid write response {json}")
+        
+        if "code" not in json:
+            raise LookupError(f"Tag write response must include code")
+        code = int(json["code"])
+        props = Props.from_json5(json.get("props", {}))
+        return cls(code, props)
+    
+    def __repr__(self) -> str:
+        return f"WriteResponse(code={self.code}, props={self.props})"
 
 class Tag:
     def __init__(self, path: str, type: DataType, props: Props, writable: bool, responses: list[WriteResponse], write_handler: TagWriteHandler | None):
@@ -44,6 +60,24 @@ class Tag:
         t = Tag(tag.path, type, props, tag.writable, responses, None)
         return t
     
+    @classmethod
+    def from_json5(cls, json: Any):
+        if not isinstance(json, dict):
+            raise ValueError(f"invalid tag, tag must be a dict")
+        
+        if not("path" in json and "type" in json):
+            raise LookupError(f"tag must include both a path and a type")
+        path = json["path"]
+        type = DataType.from_json5(json["type"])
+        props = Props.from_json5(json.get("props", {}))
+        writable = json.get("writable", False)
+        responses = []
+        for response in json.get("responses", []):
+            r = WriteResponse.from_json5(response)
+            responses.append(r)
+
+        return cls(path, type, props, writable, responses, write_handler=None)
+    
     def writable(self, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]] = []):
         self._writable = True
         self.write_handler = write_handler
@@ -51,7 +85,7 @@ class Tag:
             self.add_write_response(tup[0], Props.from_value(tup[1]))
         return self
     
-    def add_write_response(self, code: int, props: Props = {}):
+    def add_write_response(self, code: int, props: Props = Props.from_value({})):
         response = WriteResponse(code, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:
             raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")
@@ -66,18 +100,9 @@ class Tag:
     
     def add_prop(self, key: str, value: Any):
         self.props.add_prop(key, value)
-
-if __name__ == "__main__":
-    print("list int")
-    t = Tag("my_tag", list[int], props={"joe": "buck"})
-    print(t.type)
-    print(f"\nDatatype.LIST_BOOL")
-    t = Tag("my_tag", proto.DataType.LIST_BOOL, props={"joe": "buck"})
-    print(t.type)
-    print(f"\nint")
-    t = Tag("my_tag", int, props={"joe": "buck"})
-    print(t.type)
-    t = Tag("my_tag", list[float])
-    t = Tag("my_tag", type=list[str])
-    t = Tag("my_tag", proto.DataType.LIST_LONG)
-    print(t.type)
+    
+    def __repr__(self) -> str:
+        res = f"Tag(path={self.path}, type={self.type}, props={self.props}, writable={self._writable}"
+        if self._writable:
+            res = f"{res}, {self.responses}"
+        return f"{res})"

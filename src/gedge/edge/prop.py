@@ -56,6 +56,14 @@ class Props:
     def from_value(cls, props: dict[str, Any]) -> Self:
         return cls({key:Prop.from_value(value) for key, value in props.items()})
     
+    @classmethod
+    def from_json5(cls, props: Any) -> Self:
+        if not isinstance(props, dict):
+            raise ValueError(f"invalid props {props}")
+        
+        props: dict[str, Any]
+        return cls.from_value(props)
+    
     def add_prop(self, key: str, value: Any):
         self.props[key] = Prop.from_value(value)
     

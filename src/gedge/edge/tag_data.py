@@ -78,3 +78,6 @@ class TagData:
             case DataType.LIST_BOOL:
                 return list(tag_data.list_bool_data.list)
         raise ValueError(f"Cannot convert tag to type {type}")
+    
+    def __repr__(self) -> str:
+        return f"TagData('{self.value}')"
