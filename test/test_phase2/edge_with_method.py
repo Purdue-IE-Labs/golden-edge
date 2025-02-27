@@ -181,11 +181,15 @@ if __name__ == "__main__":
     # name = "testing2"
     # speed = 80
     handler = on_start_project()
- 
     config = gedge.NodeConfig("BuildAtScale/Robots/Methods/Demo/Callee")
     m = config.add_method("start/project", handler)
     m.add_params(name=str, speed=int)
     m.add_response(400)
+    m.add_response(400, props={"prop": "a description"}, body={
+        "return1": list[float],
+        "return2": list[int]
+    })
+
     m.add_response(401)
     m.add_response(402)
     m.add_response(403)
