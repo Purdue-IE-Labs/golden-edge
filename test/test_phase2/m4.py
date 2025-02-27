@@ -2,7 +2,8 @@ import gedge
 from typing import Any
 import time
 
-def on_reply(code: int, d: dict[str, Any], error: str):
+def on_reply(reply: gedge.Reply):
+    code, d, error = reply.code, reply.body, reply.error
     print(f"received {code}, {error}, {d}")
 
 def main():
