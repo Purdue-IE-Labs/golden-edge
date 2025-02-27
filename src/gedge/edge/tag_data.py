@@ -18,12 +18,12 @@ class TagData:
     
     @classmethod
     def from_proto(cls, proto: proto.TagData, type: DataType) -> Self:
-        return TagData(proto, type)
+        return cls(proto, type)
     
     @classmethod
     def from_value(cls, value: TagValue, type: DataType) -> Self:
         proto = cls.py_to_proto(value, type)
-        return TagData(proto, type)
+        return cls(proto, type)
     
     @classmethod
     def py_to_proto(cls, value: TagValue, type: DataType) -> proto.TagData:

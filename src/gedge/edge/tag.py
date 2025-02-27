@@ -22,7 +22,7 @@ class WriteResponse:
 
 
 class Tag:
-    def __init__(self, path: str, type: DataType, props: Props, writable: bool, responses: list[WriteResponse], write_handler: TagWriteHandler):
+    def __init__(self, path: str, type: DataType, props: Props, writable: bool, responses: list[WriteResponse], write_handler: TagWriteHandler | None):
         self.path = path
         self.type = type
         self.props = props
@@ -44,7 +44,7 @@ class Tag:
         t = Tag(tag.path, type, props, tag.writable, responses, None)
         return t
     
-    def writable(self, write_handler: TagWriteHandler = None, responses: list[tuple[int, dict[str, Any]]] = []):
+    def writable(self, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]] = []):
         self._writable = True
         self.write_handler = write_handler
         for tup in responses:
