@@ -1,7 +1,7 @@
 import uuid
 from gedge.edge.data_type import DataType
 from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler, Type, ZenohQueryCallback, Any
-from typing import Self
+from typing import Callable, Self
 from gedge.edge.prop import Props
 from gedge.node import codes
 from gedge.node.query import Query
@@ -16,10 +16,12 @@ from gedge.comm.keys import *
 from gedge.node.method import Method, Response
 from gedge.edge.tag_data import TagData 
 import zenoh
+import json5
 
 import logging
 logger = logging.getLogger(__name__)
 
+MethodType = Callable[[Query], None]
 
 # TODO: eventually, should support JSON
 class NodeConfig:
@@ -28,6 +30,21 @@ class NodeConfig:
         self.ks = NodeKeySpace.from_user_key(key)
         self.tags: dict[str, Tag] = dict()
         self.methods: dict[str, Method] = dict()
+    
+    @classmethod
+    def from_json5(cls, path: str):
+        with open(path, "r") as f:
+            node: dict[str, Any] = json5.load(f)
+        if "key" not in node:
+            raise LookupError(f"Node must have a key")
+        config = cls(node["key"])
+        for tag_json in node.get("tags", []):
+            tag = Tag.from_json5(tag_json)
+            config.tags[tag.path] = tag
+        for method_json in node.get("methods", []):
+            method = Method.from_json5(method_json)
+            config.methods[method.path] = method
+        return config
 
     @property
     def key(self):
@@ -74,10 +91,15 @@ class NodeConfig:
             raise TagLookupError(path, self.ks.name)
         self.tags[path].add_write_response(code, Props.from_value(props))
     
-    def add_write_handler(self, path: str, callback: TagWriteHandler):
+    def add_tag_write_handler(self, path: str, handler: TagWriteHandler):
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
-        self.tags[path].add_write_handler(callback)
+        self.tags[path].add_write_handler(handler)
+    
+    def add_method_handler(self, path: str, handler: MethodType):
+        if path not in self.methods:
+            raise MethodLookupError(path, self.ks.name)
+        self.methods[path].handler = handler
     
     def add_props(self, path: str, props: dict[str, Any]):
         if path not in self.tags:
