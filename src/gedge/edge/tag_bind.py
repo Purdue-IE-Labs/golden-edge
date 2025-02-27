@@ -9,7 +9,7 @@ import zenoh
 from gedge.edge.tag_data import TagData
 
 class TagBind:
-    def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any], None]):
+    def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any], tuple[int, str]]):
         self.path = tag.path
         self._on_set = on_set
         if value:

@@ -2,6 +2,7 @@ from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable
 from gedge.edge.data_type import DataType
 from gedge.edge.tag_data import TagData
 from gedge.node.method import Method
+from gedge.node.reply import Reply
 from gedge.node.response import Response
 from gedge.node import codes
 from gedge import proto
@@ -25,7 +26,7 @@ class RemoteConfig:
         self.method_calls = method_calls
 
 class RemoteConnection:
-    def __init__(self, config: RemoteConfig, comm: Comm, node_id: str, on_close: Callable[[str], None] = None):
+    def __init__(self, config: RemoteConfig, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
         self.config = config
         self._comm = comm 
         self._subscriptions: list[zenoh.Subscriber] = []
@@ -77,14 +78,14 @@ class RemoteConnection:
         def _on_meta(sample: zenoh.Sample):
             meta: proto.Meta = self._comm.deserialize(proto.Meta(), sample.payload.to_bytes())
             logger.info(f"Remote node {self.key} publishing meta message")
-            on_meta(sample.key_expr, meta)
+            on_meta(str(sample.key_expr), meta)
         return _on_meta
     
     def _on_liveliness(self, on_liveliness_change: LivelinessCallback) -> ZenohCallback:
         def _on_liveliness(sample: zenoh.Sample):
             is_online = sample.kind == zenoh.SampleKind.PUT
             logger.info(f"Liveliness of remote node {self.key} changed: {"online" if is_online else "offline"}")
-            on_liveliness_change(sample.key_expr, is_online)
+            on_liveliness_change(str(sample.key_expr), is_online)
         return _on_liveliness
 
     def close(self):
@@ -141,26 +142,27 @@ class RemoteConnection:
     async def write_tag_async(self, path: str, value: Any) -> tuple[int, str]:
         return self._write_tag(path, value)
     
-    def _on_reply(self, path: str, on_reply: Callable[[int, str, dict[str, Any]], None]) -> ZenohCallback:
-        def _on_reply(reply: zenoh.Sample) -> None:
-            if not reply:
+    def _on_reply(self, path: str, on_reply: Callable[[Reply], None]) -> ZenohCallback:
+        def _on_reply(sample: zenoh.Sample) -> None:
+            if not sample:
                 print("warning: reply super not ok")
                 return
-            r: proto.ResponseData = self._comm.deserialize(proto.ResponseData(), reply.payload.to_bytes())
+            r: proto.ResponseData = self._comm.deserialize(proto.ResponseData(), sample.payload.to_bytes())
             body = {}
             for key, value in r.body.items():
                 response = self.responses[path][r.code]
                 data_type = response.body[key]
                 body[key] = TagData.proto_to_py(value, data_type)
-            on_reply(r.code, r.error, body)
+            reply = Reply(str(sample.key_expr), r.code, body, r.error)
+            on_reply(reply)
             if r.code in {codes.DONE, codes.METHOD_ERROR}:
                 # remove subscription after we are done
-                logger.debug(f"remove subscription for key expr {reply.key_expr}")
-                self._subscriptions.remove([x for x in self._subscriptions if x.key_expr == reply.key_expr][0])
+                logger.debug(f"remove subscription for key expr {sample.key_expr}")
+                self._subscriptions.remove([x for x in self._subscriptions if x.key_expr == sample.key_expr][0])
         return _on_reply
     
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
-    def call_method(self, path: str, on_reply: Callable[[int, dict[str, Any], str], None], **kwargs) -> None:
+    def call_method(self, path: str, on_reply: Callable[[Reply], None], **kwargs) -> None:
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
         
@@ -172,11 +174,11 @@ class RemoteConnection:
             data_type = method.parameters[key]
             params[key] = TagData.py_to_proto(value, data_type)
 
-        on_reply = self._on_reply(path, on_reply)
+        on_reply_: ZenohCallback = self._on_reply(path, on_reply)
         # TODO: we need a subscriber for /** and for /caller_id/method_call_id
         # subscriber = self._comm.method_queryable_v2(self.ks, path, caller_id, method_call_id, on_reply)
         # self._subscriptions.append(subscriber)
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
         key_expr = self.ks.method_response(path, self.node_id, method_call_id)
-        self._subscriptions.append(self._comm._subscriber(key_expr, on_reply))
+        self._subscriptions.append(self._comm._subscriber(key_expr, on_reply_))
         self._comm.query_method_v2(self.ks, path, self.node_id, method_call_id, params)

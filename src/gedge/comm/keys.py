@@ -9,7 +9,7 @@ STATE = "STATE"
 METHODS = "METHODS"
 RESPONSE = "RESPONSE"
 
-def key_join(*components: list[str]):
+def key_join(*components: str):
     return "/".join(components)
 
 def node_key_prefix(prefix: str, name: str):

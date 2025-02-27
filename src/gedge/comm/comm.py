@@ -1,4 +1,5 @@
 import base64
+from typing import Any
 import zenoh
 import json
 from gedge.edge.error import NodeLookupError
@@ -7,7 +8,7 @@ from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace
 from gedge.edge.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
-ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodCall
+ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodCall | proto.ResponseData | proto.WriteResponseData
 
 import logging
 logger = logging.getLogger(__name__)
@@ -38,12 +39,12 @@ class Comm:
         b = base64.b64encode(b)
         return b
     
-    def deserialize(self, proto: ProtoMessage, payload: bytes) -> ProtoMessage:
+    def deserialize(self, proto: ProtoMessage, payload: bytes) -> Any:
         b = base64.b64decode(payload)
         proto.ParseFromString(b)
         return proto
 
-    def _send_proto(self, key_expr: str, value: proto.Meta | proto.State | proto.TagData):
+    def _send_proto(self, key_expr: str, value: ProtoMessage):
         logger.debug(f"putting proto on key_expr '{key_expr}'")
         b = self.serialize(value)
         self.session.put(key_expr, b, encoding="application/protobuf")
@@ -104,7 +105,7 @@ class Comm:
     def method_queryable_v2(self, ks: NodeKeySpace, path: str, on_call: ZenohCallback) -> zenoh.Subscriber:
         key_expr = ks.method_path(path)
         # the two * signify caller_id and method_call_id, but we should not subscribe to responses
-        key_expr = keys.key_join(key_expr, "*", "*")
+        key_expr = keys.key_join(key_expr, "*", "*") 
         return self._subscriber(key_expr, on_call)
     
     def query_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: ZenohReplyCallback) -> None:
@@ -127,7 +128,7 @@ class Comm:
     def write_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> proto.WriteResponseData:
         reply = self.query_tag(ks, path, value)
         if reply.ok:
-            d = self.deserialize(proto.WriteResponseData(), reply.result.payload.to_bytes())
+            d: proto.WriteResponseData = self.deserialize(proto.WriteResponseData(), reply.result.payload.to_bytes())
             print(f"returning {d}")
             return d
         else:
@@ -175,9 +176,9 @@ class Comm:
             
     def is_online(self, ks: NodeKeySpace) -> bool:
         try:
-            reply = self.query_liveliness(ks.liveliness_key_prefix)
+            reply = self.query_liveliness(ks)
             if not reply.ok:
                 return False
-            return reply.result.kind == zenoh.SampleKind.PUT
+            return reply.ok.kind == zenoh.SampleKind.PUT
         except:
             return False
