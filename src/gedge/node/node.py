@@ -38,6 +38,7 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
     
+    @staticmethod
     def warn_duplicate_tag(func):
         def wrapper(self: Self, *args, **kwargs):
             path = args[0]
@@ -99,13 +100,13 @@ class NodeConfig:
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
         method = self.methods[path]
-        method.add_params([(key, value) for key, value in kwargs.items()])
+        method.add_params(**kwargs)
     
-    def add_response(self, path: str, response: Response):
+    def add_response(self, path: str, code: int, props: dict[str, TagValue] = {}, body: dict[str, Type] = {}):
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
         method = self.methods[path]
-        method.add_response(response)
+        method.add_response(code, props, body)
     
     def delete_method(self, path: str):
         if path not in self.methods:
@@ -155,6 +156,8 @@ class NodeSession:
         self._comm.__exit__(*exc)
 
     def close(self):
+        for key in self.connections:
+            self.disconnect_from_remote(key)
         self.update_state(False)
         self._comm.session.close()
 
@@ -181,11 +184,11 @@ class NodeSession:
         i = 1
         for meta in metas:
             _, _, name = meta.key.rpartition("/")
-            print(f"{i}. {meta.key}: {"online" if self._comm.is_online(NodeKeySpace.from_user_key(meta.key), name) else "offline"}")
+            print(f"{i}. {meta.key}: {"online" if self._comm.is_online(NodeKeySpace.from_user_key(meta.key)) else "offline"}")
             print(f"{meta}\n")
             i += 1
 
-    def connect_to_remote(self, key: str, on_state: StateCallback = None, on_meta: MetaCallback = None, on_liveliness_change: LivelinessCallback = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
+    def connect_to_remote(self, key: str, on_state: StateCallback | None = None, on_meta: MetaCallback | None = None, on_liveliness_change: LivelinessCallback | None = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
         logger.info(f"Node {self.config.key} connecting to remote node {key}")
         connection = RemoteConnection(RemoteConfig(key), self._comm, self.id, self._on_remote_close)
         if on_state:
@@ -209,10 +212,6 @@ class NodeSession:
         connection.close()
         del self.connections[key]
     
-    def close(self):
-        for key in self.connections:
-            self.disconnect_from_remote(key)
-        self._comm.session.close()
     
     def _write_handler(self, path: str, handler: TagWriteHandler) -> ZenohQueryCallback:
         def _on_write(query: zenoh.Query) -> None:

@@ -9,7 +9,7 @@ from gedge.node.response import Response
 MethodType = Callable[[Query], None]
 
 class Method:
-    def __init__(self, path: str, handler: MethodType, props: Props, parameters: dict[str, DataType], responses: list[Response]):
+    def __init__(self, path: str, handler: MethodType | None, props: Props, parameters: dict[str, DataType], responses: list[Response]):
         self.path = path
         self.handler = handler
         self.props = props
@@ -27,16 +27,16 @@ class Method:
         props = Props.from_proto(proto.props)
         parameters = {key:DataType.from_proto(value) for key, value in proto.parameters.items()}
         responses = [Response.from_proto(r) for r in proto.responses]
-        return Method(proto.path, None, props, parameters, responses)
+        return cls(proto.path, None, props, parameters, responses)
 
     def add_params(self, **kwargs: Type):
         for key, value in kwargs.items():
             self.parameters[key] = DataType.from_type(value)
 
     def add_response(self, code: int, props: dict[str, TagValue] = {}, body: dict[str, Type] = {}): 
-        props = Props.from_value(props)
-        body = {key:DataType.from_type(value) for key, value in body.items()}
-        response = Response(code, props, body)
+        props_ = Props.from_value(props)
+        body_ = {key:DataType.from_type(value) for key, value in body.items()}
+        response = Response(code, props_, body_)
         self.responses.append(response)
         return response
 

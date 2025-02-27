@@ -16,13 +16,13 @@ class Prop:
     def from_proto(cls, prop: proto.Prop) -> Self:
         type = DataType.from_proto(prop.type)
         value = TagData.from_proto(prop.value, type)
-        return Prop(type, value)
+        return cls(type, value)
     
     @classmethod
     def from_value(cls, value: TagValue) -> Self:
-        type = cls.intuit_type(value)
-        value = TagData.from_value(value, type)
-        return Prop(type, value)
+        type_ = cls.intuit_type(value)
+        value_ = TagData.from_value(value, type_)
+        return cls(type_, value_)
     
     @staticmethod
     def intuit_type(value: Any) -> DataType:
@@ -49,12 +49,12 @@ class Props:
         return {key:value.to_proto() for key, value in self.props.items()}
     
     @classmethod
-    def from_proto(self, props: dict[str, proto.Prop]) -> Self:
-        return Props({key:Prop.from_proto(value) for key, value in props.items()})
+    def from_proto(cls, props: dict[str, proto.Prop]) -> Self:
+        return cls({key:Prop.from_proto(value) for key, value in props.items()})
     
     @classmethod
-    def from_value(self, props: dict[str, Any]) -> Self:
-        return Props({key:Prop.from_value(value) for key, value in props.items()})
+    def from_value(cls, props: dict[str, Any]) -> Self:
+        return cls({key:Prop.from_value(value) for key, value in props.items()})
     
     def add_prop(self, key: str, value: Any):
         self.props[key] = Prop.from_value(value)
