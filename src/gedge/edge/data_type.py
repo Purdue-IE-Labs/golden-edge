@@ -81,14 +81,3 @@ class DataType(Enum):
     def __repr__(self):
         return self.name
 
-
-if __name__ == "__main__":
-    res = DataType(proto.DataType.LIST_BOOL)
-    print(res)
-    p = res.to_proto()
-    print(p)
-    d = proto.DataType.BOOL
-    print(d)
-    print(type(d))
-    res = DataType.from_proto(p)
-    print(res)
