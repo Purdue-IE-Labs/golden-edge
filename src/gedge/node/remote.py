@@ -1,4 +1,5 @@
 from __future__ import annotations
+from tkinter import W
 
 from gedge.node.data_type import DataType
 from gedge.node.tag_data import TagData
@@ -7,7 +8,7 @@ from gedge.node.reply import Reply
 from gedge.node.response import Response
 from gedge.node import codes
 from gedge import proto
-from gedge.node.error import MethodLookupError, SessionError, ConfigError, TagLookupError
+from gedge.node.error import MethodLookupError, SessionError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.node.tag import Tag
 from gedge.node.tag_bind import TagBind
@@ -172,7 +173,7 @@ class RemoteConnection:
             raise MethodLookupError(path, self.ks.name)
         
         # TODO: should this be a queryable with selectors? 
-        method_call_id = str(uuid.uuid4())
+        method_query_id = str(uuid.uuid4())
         method = self.methods[path]
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
@@ -180,10 +181,10 @@ class RemoteConnection:
             params[key] = TagData.py_to_proto(value, data_type)
 
         on_reply_: ZenohCallback = self._on_reply(path, on_reply)
-        # TODO: we need a subscriber for /** and for /caller_id/method_call_id
-        # subscriber = self._comm.method_queryable_v2(self.ks, path, caller_id, method_call_id, on_reply)
+        # TODO: we need a subscriber for /** and for /caller_id/method_query_id
+        # subscriber = self._comm.method_queryable_v2(self.ks, path, caller_id, method_query_id, on_reply)
         # self._subscriptions.append(subscriber)
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
-        key_expr = self.ks.method_response(path, self.node_id, method_call_id)
+        key_expr = self.ks.method_response(path, self.node_id, method_query_id)
         self._subscriptions.append(self._comm._subscriber(key_expr, on_reply_))
-        self._comm.query_method_v2(self.ks, path, self.node_id, method_call_id, params)
+        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params)

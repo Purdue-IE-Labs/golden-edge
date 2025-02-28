@@ -57,7 +57,7 @@ class Response(_message.Message):
     body: _containers.ScalarMap[str, _tag_data_pb2.DataType]
     def __init__(self, code: _Optional[int] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., body: _Optional[_Mapping[str, _tag_data_pb2.DataType]] = ...) -> None: ...
 
-class MethodCall(_message.Message):
+class MethodQueryData(_message.Message):
     __slots__ = ("params",)
     class ParamsEntry(_message.Message):
         __slots__ = ("key", "value")
