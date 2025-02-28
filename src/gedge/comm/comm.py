@@ -12,7 +12,7 @@ from typing import Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
-ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodCall | proto.ResponseData | proto.WriteResponseData
+ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData
 
 import logging
 logger = logging.getLogger(__name__)
@@ -98,32 +98,14 @@ class Comm:
         b = self.serialize(value)
         return self._query_sync(ks.tag_write_path(path), payload=b)
     
-    def method_queryable(self, ks: NodeKeySpace, path: str, on_call: ZenohQueryCallback) -> zenoh.Queryable:
-        return self._queryable(ks.method_path(path), on_call)
-    
-    # def method_queryable_v2_call(self, ks: NodeKeySpace, path: str, caller_id: str, method_call_id: str, on_call: ZenohCallback) -> zenoh.Subscriber:
-    #     key_expr = ks.method_path(path)
-    #     key_expr = keys.key_join(key_expr, caller_id, method_call_id)
-    #     return self._subscriber(key_expr, on_call)
-    
-    def method_queryable_v2(self, ks: NodeKeySpace, path: str, on_call: ZenohCallback) -> zenoh.Subscriber:
-        key_expr = ks.method_path(path)
-        # the two * signify caller_id and method_call_id, but we should not subscribe to responses
-        key_expr = keys.key_join(key_expr, "*", "*") 
+    def method_queryable(self, ks: NodeKeySpace, path: str, on_call: ZenohCallback) -> zenoh.Subscriber:
+        key_expr = ks.method_query_listen(path)
         return self._subscriber(key_expr, on_call)
     
-    def query_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: ZenohReplyCallback) -> None:
-        key_expr = ks.method_path(path)
-        method_call = proto.MethodCall(params=params)
-        b = self.serialize(method_call)
-        self._query_callback(key_expr, payload=b, handler=on_reply)
-    
-    def query_method_v2(self, ks: NodeKeySpace, path: str, caller_id: str, method_call_id: str, params: dict[str, proto.TagData]) -> None:
-        key_expr = ks.method_path(path)
-        key_expr = keys.key_join(key_expr, caller_id, method_call_id)
-        method_call = proto.MethodCall(params=params)
-        self._send_proto(key_expr, method_call)
-        # self._query_callback(key_expr, payload=b, handler=on_reply)
+    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, method_query_id: str, params: dict[str, proto.TagData]) -> None:
+        key_expr = ks.method_query(path, caller_id, method_query_id)
+        query_data = proto.MethodQueryData(params=params)
+        self._send_proto(key_expr, query_data)
 
     def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
         key_expr = ks.tag_data_path(path)
