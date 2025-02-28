@@ -1,19 +1,24 @@
-from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable
-from gedge.edge.data_type import DataType
-from gedge.edge.tag_data import TagData
+from __future__ import annotations
+
+from gedge.node.data_type import DataType
+from gedge.node.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.reply import Reply
 from gedge.node.response import Response
 from gedge.node import codes
 from gedge import proto
-from gedge.edge.error import MethodLookupError, SessionError, ConfigError, TagLookupError
+from gedge.node.error import MethodLookupError, SessionError, ConfigError, TagLookupError
 from gedge.comm.comm import Comm
-from gedge.edge.tag import Tag
-from gedge.edge.tag_bind import TagBind
+from gedge.node.tag import Tag
+from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
-from gedge.edge.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback, ZenohReplyCallback
 import zenoh
 import uuid
+
+
+from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from gedge.node.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback 
 
 import logging
 logger = logging.getLogger(__name__)

@@ -1,7 +1,9 @@
 from typing import Callable, Any
 import zenoh
 from gedge import proto
-from gedge.edge.data_type import DataType
+from gedge.node.query import MethodQuery
+from gedge.node.tag_write_query import TagWriteQuery
+from gedge.node.data_type import DataType
 
 # specifies that we expect the user to pass a type itself (or a DataType instance)
 # example: int
@@ -10,7 +12,9 @@ Type = DataType | type
 
 # a node defines this on its own config for its writable tags
 TagValue = int | float | bool | str | list[int] | list[float] | list[bool] | list[str]
-TagWriteHandler = Callable[[str, TagValue], int]
+
+TagWriteHandler = Callable[[TagWriteQuery], None]
+MethodHandler = Callable[[MethodQuery], None]
 
 # MethodHandler = Callable[[MethodQuery], None]
 # TagWriteHandler = Callable[[TagWriteQuery], None]
