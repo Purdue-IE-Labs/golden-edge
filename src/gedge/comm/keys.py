@@ -149,9 +149,13 @@ class NodeKeySpace:
     def method_path(self, path: str):
         return key_join(self.method_key_prefix, path)
         
-    def method_call(self, path: str, caller_id: str, method_call_id: str):
-        return key_join(self.method_path(path), caller_id, method_call_id)
+    def method_query(self, path: str, caller_id: str, method_query_id: str):
+        return key_join(self.method_path(path), caller_id, method_query_id)
     
-    def method_response(self, path: str, caller_id: str, method_call_id: str):
-        return key_join(self.method_path(path), caller_id, method_call_id, RESPONSE)
+    def method_response(self, path: str, caller_id: str, method_query_id: str):
+        return key_join(self.method_path(path), caller_id, method_query_id, RESPONSE)
+    
+    def method_query_listen(self, path: str):
+        # the two * signify caller_id and method_query_id, but we should not subscribe to responses
+        return key_join(self.method_path(path), "*", "*")
     

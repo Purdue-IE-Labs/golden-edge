@@ -7,7 +7,7 @@ from gedge.node.prop import Props
 from gedge.node import codes
 from gedge.node.query import MethodQuery
 from gedge.node.remote import RemoteConfig, RemoteConnection
-from gedge.proto import Meta, State, WriteResponseData, MethodCall
+from gedge.proto import Meta, State, WriteResponseData, MethodQueryData
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
@@ -263,9 +263,8 @@ class NodeSession:
     def _method_handler(self, path: str, handler):
         logger.info(f"Setting up method at path: {path} on node {self.ks.user_key}")
         method = self.config.methods[path]
-        def _method_call(sample: zenoh.Sample) -> None:
-            # TODO: change these to MethodQuery and MethodHandler
-            m: MethodCall = self._comm.deserialize(MethodCall(), sample.payload.to_bytes())
+        def _method_handler(sample: zenoh.Sample) -> None:
+            m: MethodQueryData = self._comm.deserialize(MethodQueryData(), sample.payload.to_bytes())
             params: dict[str, Any] = {}
             for key, value in m.params.items():
                 data_type = method.params[key]
@@ -281,7 +280,7 @@ class NodeSession:
                 q.reply(code=code, error=repr(e))
             else:
                 q.reply(code=codes.DONE)
-        return _method_call
+        return _method_handler
     
     def _verify_node_collision(self):
         # verify that key expression with this key prefix and name is not online
@@ -300,7 +299,7 @@ class NodeSession:
             self._comm.tag_queryable(self.ks, path, self._write_handler(path, tag.write_handler))
         for path in self.config.methods:
             method = self.config.methods[path]
-            self._comm.method_queryable_v2(self.ks, path, self._method_handler(path, method.handler))
+            self._comm.method_queryable(self.ks, path, self._method_handler(path, method.handler))
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]

@@ -16,9 +16,6 @@ TagValue = int | float | bool | str | list[int] | list[float] | list[bool] | lis
 TagWriteHandler = Callable[[TagWriteQuery], None]
 MethodHandler = Callable[[MethodQuery], None]
 
-# MethodHandler = Callable[[MethodQuery], None]
-# TagWriteHandler = Callable[[TagWriteQuery], None]
-
 KeyExpr = str
 StateCallback = Callable[[KeyExpr, proto.State], None]
 MetaCallback = Callable[[KeyExpr, proto.Meta], None]
