@@ -1,12 +1,13 @@
-from gedge.edge.data_type import DataType
-from gedge.edge.gtypes import TagValue, Type
-from gedge.edge.prop import Props
-from gedge.node.query import MethodQuery
+from __future__ import annotations
+
+from gedge.node.data_type import DataType
+from gedge.node.prop import Props
 from gedge import proto
-from typing import Any, Self, Callable
 from gedge.node.response import Response
 
-MethodHandler = Callable[[MethodQuery], None]
+from typing import Any, Self, TYPE_CHECKING
+if TYPE_CHECKING:
+    from gedge.node.gtypes import TagValue, Type, MethodHandler
 
 class Method:
     def __init__(self, path: str, handler: MethodHandler | None, props: Props, parameters: dict[str, DataType], responses: list[Response]):

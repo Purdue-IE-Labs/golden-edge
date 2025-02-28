@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from gedge import proto
-from typing import Any, Self
-from gedge.edge.data_type import DataType
-from gedge.edge.gtypes import TagValue
-from gedge.edge.tag_data import TagData
+from gedge.node.data_type import DataType
+from gedge.node.tag_data import TagData
+
+from typing import Any, Self, TYPE_CHECKING
+if TYPE_CHECKING:
+    from gedge.node.gtypes import TagValue
 
 class Prop:
     def __init__(self, type: DataType, value: TagData):

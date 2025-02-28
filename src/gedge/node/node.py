@@ -1,29 +1,29 @@
+from __future__ import annotations
+
 import uuid
-from gedge.edge.data_type import DataType
-from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler, Type, ZenohQueryCallback, Any
-from typing import Callable, Self, TypeAlias
-from gedge.edge.prop import Props
-from gedge.edge.tag_write_query import TagWriteQuery
+from gedge.node.data_type import DataType
+from gedge.node.prop import Props
 from gedge.node import codes
 from gedge.node.query import MethodQuery
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import Meta, State, WriteResponseData, MethodCall
 from gedge import proto
-from gedge.edge.error import MethodLookupError, TagLookupError
+from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
-from gedge.edge.tag import Tag
-from gedge.edge.tag_bind import TagBind
+from gedge.node.tag import Tag
+from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
 from gedge.node.method import Method, Response
-from gedge.edge.tag_data import TagData 
+from gedge.node.tag_data import TagData 
 import zenoh
 import json5
 
+from typing import Self, Any, TYPE_CHECKING
+if TYPE_CHECKING:
+    from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, Type, ZenohQueryCallback, TagWriteHandler, MethodHandler
+
 import logging
 logger = logging.getLogger(__name__)
-
-MethodHandler: TypeAlias = Callable[[MethodQuery], None]
-TagWriteHandler: TypeAlias = Callable[[TagWriteQuery], None]
 
 # TODO: eventually, should support JSON
 class NodeConfig:

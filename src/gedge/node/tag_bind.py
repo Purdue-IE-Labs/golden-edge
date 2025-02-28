@@ -1,12 +1,12 @@
 from gedge.comm.comm import Comm
 from gedge.comm.keys import NodeKeySpace
-from gedge.edge.tag import Tag
+from gedge.node.tag import Tag
 from gedge import proto
 from typing import Any, Callable
 from datetime import datetime
 import zenoh
 
-from gedge.edge.tag_data import TagData
+from gedge.node.tag_data import TagData
 
 class TagBind:
     def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any], Any]):

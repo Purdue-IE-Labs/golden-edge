@@ -1,11 +1,7 @@
 from typing import Any
 
-import zenoh
-
-from gedge.comm import keys
 from gedge.comm.comm import Comm
-from gedge.comm.keys import NodeKeySpace
-from gedge.edge.tag_data import TagData
+from gedge.node.tag_data import TagData
 from gedge.node import codes
 from gedge.node.response import Response
 from gedge import proto
