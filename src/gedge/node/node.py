@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
 from gedge.node import codes
@@ -240,11 +241,14 @@ class NodeSession:
     def _write_handler(self, path: str, handler: TagWriteHandler) -> ZenohQueryCallback:
         def _on_write(query: zenoh.Query) -> None:
             try:
-                data: proto.TagData = self._comm.deserialize(proto.TagData(), query.payload.to_bytes())
-                data: TagValue = TagData.proto_to_py(data, self.tags[path].type)
+                if not query.payload:
+                    raise ValueError(f"Empty write request")
+                proto_data = self._comm.deserialize(proto.TagData(), query.payload.to_bytes())
+                data: TagValue = TagData.proto_to_py(proto_data, self.tags[path].type)
                 logger.info(f"Node {self.config.key} received tag write at path '{path}' with value '{data}'")
 
-                code = handler(str(query.key_expr), data)
+                t = TagWriteQuery(str(query.key_expr), data, self.tags[path], query, self._comm)
+                code = handler(t)
 
                 if code not in [r.code for r in self.tags[path].responses]:
                     raise LookupError(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
