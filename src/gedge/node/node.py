@@ -1,10 +1,11 @@
 import uuid
 from gedge.edge.data_type import DataType
 from gedge.edge.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler, Type, ZenohQueryCallback, Any
-from typing import Callable, Self
+from typing import Callable, Self, TypeAlias
 from gedge.edge.prop import Props
+from gedge.edge.tag_write_query import TagWriteQuery
 from gedge.node import codes
-from gedge.node.query import Query
+from gedge.node.query import MethodQuery
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import Meta, State, WriteResponseData, MethodCall
 from gedge import proto
@@ -21,7 +22,8 @@ import json5
 import logging
 logger = logging.getLogger(__name__)
 
-MethodType = Callable[[Query], None]
+MethodHandler: TypeAlias = Callable[[MethodQuery], None]
+TagWriteHandler: TypeAlias = Callable[[TagWriteQuery], None]
 
 # TODO: eventually, should support JSON
 class NodeConfig:
@@ -96,7 +98,7 @@ class NodeConfig:
             raise TagLookupError(path, self.ks.name)
         self.tags[path].add_write_handler(handler)
     
-    def add_method_handler(self, path: str, handler: MethodType):
+    def add_method_handler(self, path: str, handler: MethodHandler):
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
         self.methods[path].handler = handler
@@ -254,17 +256,18 @@ class NodeSession:
             query.reply(query.key_expr, payload=b)
         return _on_write
     
-    def _method_call(self, path: str, handler):
+    def _method_handler(self, path: str, handler):
         logger.info(f"Setting up method at path: {path} on node {self.ks.user_key}")
         method = self.config.methods[path]
         def _method_call(sample: zenoh.Sample) -> None:
+            # TODO: change these to MethodQuery and MethodHandler
             m: MethodCall = self._comm.deserialize(MethodCall(), sample.payload.to_bytes())
             params: dict[str, Any] = {}
             for key, value in m.parameters.items():
                 data_type = method.parameters[key]
                 params[key] = TagData.proto_to_py(value, data_type)
             key_expr = method_response_from_call(str(sample.key_expr))
-            q = Query(key_expr, self._comm, params, method.responses)
+            q = MethodQuery(key_expr, self._comm, params, method.responses)
             try:
                 logger.info(f"Node {self.config.key} method call at path '{path}' with parameters {params}")
                 logger.debug(f"Received from {str(sample.key_expr)}")
@@ -293,7 +296,7 @@ class NodeSession:
             self._comm.tag_queryable(self.ks, path, self._write_handler(path, tag.write_handler))
         for path in self.config.methods:
             method = self.config.methods[path]
-            self._comm.method_queryable_v2(self.ks, path, self._method_call(path, method.handler))
+            self._comm.method_queryable_v2(self.ks, path, self._method_handler(path, method.handler))
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]

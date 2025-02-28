@@ -1,9 +1,12 @@
-from typing import Any, Self
+from typing import Any, Callable, Self
 from gedge.edge.data_type import DataType
-from gedge.edge.gtypes import TagWriteHandler, Type
+from gedge.edge.gtypes import Type
 from gedge import proto
 from gedge.edge.prop import Prop, Props
+from gedge.edge.tag_write_query import TagWriteQuery
 from gedge.node.response import Response
+
+TagWriteHandler = Callable[[TagWriteQuery], None]
 
 class WriteResponse:
     def __init__(self, code: int, props: Props):

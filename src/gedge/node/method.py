@@ -1,15 +1,15 @@
 from gedge.edge.data_type import DataType
 from gedge.edge.gtypes import TagValue, Type
 from gedge.edge.prop import Props
-from gedge.node.query import Query
+from gedge.node.query import MethodQuery
 from gedge import proto
 from typing import Any, Self, Callable
 from gedge.node.response import Response
 
-MethodType = Callable[[Query], None]
+MethodHandler = Callable[[MethodQuery], None]
 
 class Method:
-    def __init__(self, path: str, handler: MethodType | None, props: Props, parameters: dict[str, DataType], responses: list[Response]):
+    def __init__(self, path: str, handler: MethodHandler | None, props: Props, parameters: dict[str, DataType], responses: list[Response]):
         self.path = path
         self.handler = handler
         self.props = props
@@ -34,7 +34,6 @@ class Method:
         if not isinstance(json, dict):
             raise ValueError(f"Invalid method {json}")
         
-        json: dict[str, Any]
         if "path" not in json:
             raise LookupError(f"Method must have path, {json}")
         path = json["path"]
