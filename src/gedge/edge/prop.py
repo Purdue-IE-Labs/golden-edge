@@ -60,8 +60,6 @@ class Props:
     def from_json5(cls, props: Any) -> Self:
         if not isinstance(props, dict):
             raise ValueError(f"invalid props {props}")
-        
-        props: dict[str, Any]
         return cls.from_value(props)
     
     def add_prop(self, key: str, value: Any):

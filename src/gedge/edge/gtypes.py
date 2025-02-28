@@ -12,7 +12,8 @@ Type = DataType | type
 TagValue = int | float | bool | str | list[int] | list[float] | list[bool] | list[str]
 TagWriteHandler = Callable[[str, TagValue], int]
 
-# MethodCallback = Callable[[query]]
+# MethodHandler = Callable[[MethodQuery], None]
+# TagWriteHandler = Callable[[TagWriteQuery], None]
 
 KeyExpr = str
 StateCallback = Callable[[KeyExpr, proto.State], None]

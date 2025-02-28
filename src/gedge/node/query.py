@@ -13,11 +13,12 @@ from gedge import proto
 import logging
 logger = logging.getLogger(__name__)
 
-class Query:
-    def __init__(self, key_expr: str, comm: Comm, parameters: dict[str, Any] = {}, responses: list[Response] = []):
+class MethodQuery:
+    def __init__(self, key_expr: str, comm: Comm, params: dict[str, Any] = {}, responses: list[Response] = []):
         self._comm = comm
-        self.parameters = parameters
         self._responses = responses
+
+        self.params = params
         self.key_expr = key_expr
     
     def reply(self, code: int, body: dict[str, Any] = {}, error: str = ""):
