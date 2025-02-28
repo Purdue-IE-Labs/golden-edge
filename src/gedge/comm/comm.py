@@ -40,6 +40,8 @@ class Comm:
 
     def serialize(self, proto: ProtoMessage) -> bytes:
         b = proto.SerializeToString()
+        # TODO: base64 is needed due to errors with carriage returns in influxdb
+        # which we should try to address in a better way than this
         b = base64.b64encode(b)
         return b
     
