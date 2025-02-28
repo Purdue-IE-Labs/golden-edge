@@ -88,6 +88,9 @@ class Tag:
             self.add_write_response(tup[0], Props.from_value(tup[1]))
         return self
     
+    def is_writable(self):
+        return self._writable
+    
     def add_write_response(self, code: int, props: Props = Props.from_value({})):
         response = WriteResponse(code, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:

@@ -142,9 +142,14 @@ class NodeConfig:
     def _verify_tags(self):
         for path in self.tags:
             tag = self.tags[path]
-            if tag._writable:
+            if tag.is_writable():
                 assert tag.write_handler is not None, f"Tag {path} declared as writable but no write handler was provided"
                 assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
+    
+    def _verify_methods(self):
+        for path in self.methods:
+            method = self.methods[path]
+            assert method.handler is not None, f"Method {path} has no handler"
 
     def build_meta(self) -> Meta:
         self._verify_tags()
@@ -260,7 +265,7 @@ class NodeSession:
             query.reply(query.key_expr, payload=b)
         return _on_write
     
-    def _method_handler(self, path: str, handler):
+    def _method_handler(self, path: str, handler: MethodHandler):
         logger.info(f"Setting up method at path: {path} on node {self.ks.user_key}")
         method = self.config.methods[path]
         def _method_handler(sample: zenoh.Sample) -> None:
@@ -295,11 +300,12 @@ class NodeSession:
         logger.info(f"Registering tags and methods on node {self.config.key}")
         for path in self.config.tags:
             tag = self.config.tags[path]
-            if not tag._writable: continue
-            self._comm.tag_queryable(self.ks, path, self._write_handler(path, tag.write_handler))
+            if not tag.is_writable():
+                continue
+            self._comm.tag_queryable(self.ks, path, self._write_handler(path, tag.write_handler)) # type: ignore (because _verify_tags)
         for path in self.config.methods:
             method = self.config.methods[path]
-            self._comm.method_queryable(self.ks, path, self._method_handler(path, method.handler))
+            self._comm.method_queryable(self.ks, path, self._method_handler(path, method.handler)) # type: ignore
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
