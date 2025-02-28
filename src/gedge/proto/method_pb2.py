@@ -26,7 +26,7 @@ from . import tag_data_pb2 as tag__data__pb2
 from . import prop_pb2 as prop__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cmethod.proto\x1a\x0etag_data.proto\x1a\nprop.proto\"\xf7\x01\n\x06Method\x12\x0c\n\x04path\x18\x01 \x01(\t\x12!\n\x05props\x18\x02 \x03(\x0b\x32\x12.Method.PropsEntry\x12+\n\nparameters\x18\x03 \x03(\x0b\x32\x17.Method.ParametersEntry\x12\x1c\n\tresponses\x18\x04 \x03(\x0b\x32\t.Response\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\x1a<\n\x0fParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0e\x32\t.DataType:\x02\x38\x01\"\xcd\x01\n\x08Response\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12#\n\x05props\x18\x03 \x03(\x0b\x32\x14.Response.PropsEntry\x12!\n\x04\x62ody\x18\x04 \x03(\x0b\x32\x13.Response.BodyEntry\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\x1a\x36\n\tBodyEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0e\x32\t.DataType:\x02\x38\x01\"z\n\nMethodCall\x12/\n\nparameters\x18\x01 \x03(\x0b\x32\x1b.MethodCall.ParametersEntry\x1a;\n\x0fParametersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x17\n\x05value\x18\x02 \x01(\x0b\x32\x08.TagData:\x02\x38\x01\"\x98\x01\n\x0cResponseData\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12%\n\x04\x62ody\x18\x02 \x03(\x0b\x32\x17.ResponseData.BodyEntry\x12\x12\n\x05\x65rror\x18\x03 \x01(\tH\x00\x88\x01\x01\x1a\x35\n\tBodyEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x17\n\x05value\x18\x02 \x01(\x0b\x32\x08.TagData:\x02\x38\x01\x42\x08\n\x06_errorb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cmethod.proto\x1a\x0etag_data.proto\x1a\nprop.proto\"\xeb\x01\n\x06Method\x12\x0c\n\x04path\x18\x01 \x01(\t\x12!\n\x05props\x18\x02 \x03(\x0b\x32\x12.Method.PropsEntry\x12#\n\x06params\x18\x03 \x03(\x0b\x32\x13.Method.ParamsEntry\x12\x1c\n\tresponses\x18\x04 \x03(\x0b\x32\t.Response\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\x1a\x38\n\x0bParamsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0e\x32\t.DataType:\x02\x38\x01\"\xcd\x01\n\x08Response\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12#\n\x05props\x18\x03 \x03(\x0b\x32\x14.Response.PropsEntry\x12!\n\x04\x62ody\x18\x04 \x03(\x0b\x32\x13.Response.BodyEntry\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\x1a\x36\n\tBodyEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0e\x32\t.DataType:\x02\x38\x01\"n\n\nMethodCall\x12\'\n\x06params\x18\x01 \x03(\x0b\x32\x17.MethodCall.ParamsEntry\x1a\x37\n\x0bParamsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x17\n\x05value\x18\x02 \x01(\x0b\x32\x08.TagData:\x02\x38\x01\"\x98\x01\n\x0cResponseData\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12%\n\x04\x62ody\x18\x02 \x03(\x0b\x32\x17.ResponseData.BodyEntry\x12\x12\n\x05\x65rror\x18\x03 \x01(\tH\x00\x88\x01\x01\x1a\x35\n\tBodyEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x17\n\x05value\x18\x02 \x01(\x0b\x32\x08.TagData:\x02\x38\x01\x42\x08\n\x06_errorb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,34 +35,34 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_METHOD_PROPSENTRY']._loaded_options = None
   _globals['_METHOD_PROPSENTRY']._serialized_options = b'8\001'
-  _globals['_METHOD_PARAMETERSENTRY']._loaded_options = None
-  _globals['_METHOD_PARAMETERSENTRY']._serialized_options = b'8\001'
+  _globals['_METHOD_PARAMSENTRY']._loaded_options = None
+  _globals['_METHOD_PARAMSENTRY']._serialized_options = b'8\001'
   _globals['_RESPONSE_PROPSENTRY']._loaded_options = None
   _globals['_RESPONSE_PROPSENTRY']._serialized_options = b'8\001'
   _globals['_RESPONSE_BODYENTRY']._loaded_options = None
   _globals['_RESPONSE_BODYENTRY']._serialized_options = b'8\001'
-  _globals['_METHODCALL_PARAMETERSENTRY']._loaded_options = None
-  _globals['_METHODCALL_PARAMETERSENTRY']._serialized_options = b'8\001'
+  _globals['_METHODCALL_PARAMSENTRY']._loaded_options = None
+  _globals['_METHODCALL_PARAMSENTRY']._serialized_options = b'8\001'
   _globals['_RESPONSEDATA_BODYENTRY']._loaded_options = None
   _globals['_RESPONSEDATA_BODYENTRY']._serialized_options = b'8\001'
   _globals['_METHOD']._serialized_start=45
-  _globals['_METHOD']._serialized_end=292
-  _globals['_METHOD_PROPSENTRY']._serialized_start=179
-  _globals['_METHOD_PROPSENTRY']._serialized_end=230
-  _globals['_METHOD_PARAMETERSENTRY']._serialized_start=232
-  _globals['_METHOD_PARAMETERSENTRY']._serialized_end=292
-  _globals['_RESPONSE']._serialized_start=295
-  _globals['_RESPONSE']._serialized_end=500
-  _globals['_RESPONSE_PROPSENTRY']._serialized_start=179
-  _globals['_RESPONSE_PROPSENTRY']._serialized_end=230
-  _globals['_RESPONSE_BODYENTRY']._serialized_start=446
-  _globals['_RESPONSE_BODYENTRY']._serialized_end=500
-  _globals['_METHODCALL']._serialized_start=502
-  _globals['_METHODCALL']._serialized_end=624
-  _globals['_METHODCALL_PARAMETERSENTRY']._serialized_start=565
-  _globals['_METHODCALL_PARAMETERSENTRY']._serialized_end=624
-  _globals['_RESPONSEDATA']._serialized_start=627
-  _globals['_RESPONSEDATA']._serialized_end=779
-  _globals['_RESPONSEDATA_BODYENTRY']._serialized_start=716
-  _globals['_RESPONSEDATA_BODYENTRY']._serialized_end=769
+  _globals['_METHOD']._serialized_end=280
+  _globals['_METHOD_PROPSENTRY']._serialized_start=171
+  _globals['_METHOD_PROPSENTRY']._serialized_end=222
+  _globals['_METHOD_PARAMSENTRY']._serialized_start=224
+  _globals['_METHOD_PARAMSENTRY']._serialized_end=280
+  _globals['_RESPONSE']._serialized_start=283
+  _globals['_RESPONSE']._serialized_end=488
+  _globals['_RESPONSE_PROPSENTRY']._serialized_start=171
+  _globals['_RESPONSE_PROPSENTRY']._serialized_end=222
+  _globals['_RESPONSE_BODYENTRY']._serialized_start=434
+  _globals['_RESPONSE_BODYENTRY']._serialized_end=488
+  _globals['_METHODCALL']._serialized_start=490
+  _globals['_METHODCALL']._serialized_end=600
+  _globals['_METHODCALL_PARAMSENTRY']._serialized_start=545
+  _globals['_METHODCALL_PARAMSENTRY']._serialized_end=600
+  _globals['_RESPONSEDATA']._serialized_start=603
+  _globals['_RESPONSEDATA']._serialized_end=755
+  _globals['_RESPONSEDATA_BODYENTRY']._serialized_start=692
+  _globals['_RESPONSEDATA_BODYENTRY']._serialized_end=745
 # @@protoc_insertion_point(module_scope)

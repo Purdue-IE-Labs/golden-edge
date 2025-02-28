@@ -114,14 +114,14 @@ class Comm:
     
     def query_method(self, ks: NodeKeySpace, path: str, params: dict[str, proto.TagData], on_reply: ZenohReplyCallback) -> None:
         key_expr = ks.method_path(path)
-        method_call = proto.MethodCall(parameters=params)
+        method_call = proto.MethodCall(params=params)
         b = self.serialize(method_call)
         self._query_callback(key_expr, payload=b, handler=on_reply)
     
     def query_method_v2(self, ks: NodeKeySpace, path: str, caller_id: str, method_call_id: str, params: dict[str, proto.TagData]) -> None:
         key_expr = ks.method_path(path)
         key_expr = keys.key_join(key_expr, caller_id, method_call_id)
-        method_call = proto.MethodCall(parameters=params)
+        method_call = proto.MethodCall(params=params)
         self._send_proto(key_expr, method_call)
         # self._query_callback(key_expr, payload=b, handler=on_reply)
 
