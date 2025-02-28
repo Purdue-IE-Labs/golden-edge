@@ -1,8 +1,12 @@
-from gedge.edge.data_type import DataType
-from gedge.edge.prop import Props
+from __future__ import annotations
+
+from gedge.node.data_type import DataType
+from gedge.node.prop import Props
 from gedge import proto
-from typing import Any, Self
-from gedge.edge.gtypes import Type
+from typing import Any, Self, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gedge.node.gtypes import Type
 
 
 class Response:
@@ -29,8 +33,6 @@ class Response:
         if not isinstance(json, dict):
             raise ValueError(f"Invalid method repsonse type, {json}")
         
-        json: dict[str, Any]
-
         if "code" not in json:
             raise LookupError(f"Method response must include code, {json}")
         code = int(json["code"])

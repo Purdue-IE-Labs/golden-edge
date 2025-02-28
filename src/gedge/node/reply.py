@@ -1,5 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from gedge.edge.gtypes import TagValue
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from gedge.node.gtypes import TagValue
 
 @dataclass
 class Reply:

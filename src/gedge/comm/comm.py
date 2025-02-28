@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import base64
-from typing import Any
 import zenoh
 import json
-from gedge.edge.error import NodeLookupError
+from gedge.node.error import NodeLookupError
 from gedge import proto
 from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace
-from gedge.edge.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
+
+from typing import Any, TYPE_CHECKING
+if TYPE_CHECKING:
+    from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
 ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodCall | proto.ResponseData | proto.WriteResponseData
 
