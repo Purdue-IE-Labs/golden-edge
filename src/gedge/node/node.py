@@ -263,13 +263,13 @@ class NodeSession:
             # TODO: change these to MethodQuery and MethodHandler
             m: MethodCall = self._comm.deserialize(MethodCall(), sample.payload.to_bytes())
             params: dict[str, Any] = {}
-            for key, value in m.parameters.items():
-                data_type = method.parameters[key]
+            for key, value in m.params.items():
+                data_type = method.params[key]
                 params[key] = TagData.proto_to_py(value, data_type)
             key_expr = method_response_from_call(str(sample.key_expr))
             q = MethodQuery(key_expr, self._comm, params, method.responses)
             try:
-                logger.info(f"Node {self.config.key} method call at path '{path}' with parameters {params}")
+                logger.info(f"Node {self.config.key} method call at path '{path}' with params {params}")
                 logger.debug(f"Received from {str(sample.key_expr)}")
                 handler(q)
             except Exception as e:
@@ -308,8 +308,6 @@ class NodeSession:
         return bind
     
     def update_tag(self, path: str, value: Any):
-        prefix = self.ks.prefix
-        node_name = self.ks.name
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]

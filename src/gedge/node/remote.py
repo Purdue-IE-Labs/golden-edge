@@ -176,7 +176,7 @@ class RemoteConnection:
         method = self.methods[path]
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
-            data_type = method.parameters[key]
+            data_type = method.params[key]
             params[key] = TagData.py_to_proto(value, data_type)
 
         on_reply_: ZenohCallback = self._on_reply(path, on_reply)
