@@ -2,6 +2,7 @@ from __future__ import annotations
 from tkinter import W
 
 from gedge.node.data_type import DataType
+from gedge.node.gtypes import MethodReplyCallback
 from gedge.node.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.reply import Reply
@@ -17,7 +18,7 @@ import zenoh
 import uuid
 
 
-from typing import Any, Set, TypeAlias, Callable, Coroutine, Awaitable, TYPE_CHECKING
+from typing import Any, Generator, Set, TypeAlias, Callable, Coroutine, Awaitable, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback 
 
@@ -148,7 +149,7 @@ class RemoteConnection:
     async def write_tag_async(self, path: str, value: Any) -> tuple[int, str]:
         return self._write_tag(path, value)
     
-    def _on_reply(self, path: str, on_reply: Callable[[Reply], None]) -> ZenohCallback:
+    def _on_reply(self, path: str, on_reply: MethodReplyCallback) -> ZenohCallback:
         def _on_reply(sample: zenoh.Sample) -> None:
             if not sample:
                 print("warning: reply super not ok")
@@ -168,7 +169,10 @@ class RemoteConnection:
         return _on_reply
     
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
-    def call_method(self, path: str, on_reply: Callable[[Reply], None], **kwargs) -> None:
+    def call_method(self, path: str, on_reply: MethodReplyCallback, **kwargs) -> None:
+        # TODO: this setup may limit the user if they want to have a parameter "path" passed into 
+        # their method because it conflicts with this function's arguments
+
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
         
@@ -188,3 +192,34 @@ class RemoteConnection:
         key_expr = self.ks.method_response(path, self.node_id, method_query_id)
         self._subscriptions.append(self._comm._subscriber(key_expr, on_reply_))
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params)
+    
+    def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Generator[Reply, Any, Any]:
+        # TODO: we can probably merge this with call_method eventually, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
+        if path not in self.methods:
+            raise MethodLookupError(path, self.ks.name)
+        
+        from queue import Queue
+        
+        method_query_id = str(uuid.uuid4())
+        method = self.methods[path]
+        params: dict[str, proto.TagData] = {}
+        for key, value in kwargs.items():
+            data_type = method.params[key]
+            params[key] = TagData.py_to_proto(value, data_type)
+        
+        replies: Queue[Reply] = Queue()
+        def _on_reply(reply: Reply) -> None:
+            replies.put(reply)
+
+        logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
+        key_expr = self.ks.method_response(path, self.node_id, method_query_id)
+        self._subscriptions.append(self._comm._subscriber(key_expr, self._on_reply(path, _on_reply)))
+        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params)
+        while True:
+            res = replies.get(block=True, timeout=timeout)
+            if res.code in {codes.DONE}:
+                return
+            yield res
+            if res.code in {codes.METHOD_ERROR, codes.TAG_ERROR}:
+                return
+
