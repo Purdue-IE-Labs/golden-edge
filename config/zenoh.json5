@@ -11,27 +11,17 @@
       write: false
     }
   },
-  // /// Configuration of data messages timestamps management.
-  // timestamping: {
-  //   /// Whether data messages should be timestamped if not already.
-  //   /// Accepts a single boolean value or different values for router, peer and client.
-  //   enabled: { router: true, peer: true, client: false },
-  //   /// Whether data messages with timestamps in the future should be dropped or not.
-  //   /// If set to false (default), messages with timestamps in the future are retimestamped.
-  //   /// Timestamps are ignored if timestamping is disabled.
-  //   drop_future_timestamp: false,
-  // },
-  // scouting: {
-  //   multicast: {
-  //     enabled: false
-  //   },
-  //   gossip: {
-  //     enabled: false
-  //   }
-  // },
   mode: "router",
-  connect: {
-    endpoints: ["tcp/localhost:7447"],
+  scouting: {
+    multicast: {
+      enabled: false,
+    },
+    gossip: {
+      enabled: false,
+    }
+  },
+  listen: {
+    endpoints: { router: ["tcp/192.168.4.60:7447"]},
   },
   plugins: {
     storage_manager: {
@@ -48,16 +38,46 @@
       },
       storages: {
         meta: {
-          key_expr: "**/META/**",
+          key_expr: "**/NODE/*/META",
           volume: {
             id: "influxdb2",
             db: "meta",
-            create_db: false,
-            // Are both needed?
-            // private: {
-            //    org_id: "ielabs",
-            //    token: "H5V4O_PHxiHZlyVbTCrZE7XDp2Rgo_Zry-rGNZMWYTnuOICtuKDYwra2t1v8qmCdZwBPLDIHlFM33T_cMASsTw==" 
-            // }
+            create_db: true,
+          }
+        },
+        state: {
+          key_expr: "**/NODE/*/STATE",
+          volume: {
+            id: "influxdb2",
+            db: "state",
+            create_db: true,
+          }
+        },
+        tag_data: {
+          key_expr: "**/NODE/*/TAGS/DATA/**",
+          volume: {
+            id: "influxdb2",
+            db: "tag_data",
+            create_db: true,
+          }
+        },
+        tag_write: {
+          key_expr: "**/NODE/*/TAGS/WRITE/**",
+          volume: {
+            id: "influxdb2",
+            db: "tag_write",
+            create_db: true,
+          }
+        },
+        // TODO: methods are actually gross under the hood, should we 
+        // create some sort of hook that cleans up a method call to put 
+        // into influxdb or let future people look into that
+        method: {
+          key_expr: "**/NODE/*/METHODS/**",
+          volume: {
+            id: "influxdb2",
+            db: "method",
+            create_db: true,
           }
         }
       }
@@ -66,5 +86,5 @@
       __required__: true,
       http_port: 8000,
     }
-  }
+  },
 }
