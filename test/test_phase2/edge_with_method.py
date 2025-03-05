@@ -69,8 +69,8 @@ def on_start_project():
         result_string = result_string.replace("\0", "")
         return result_string
  
-    def method(query: gedge.Query):
-        proj_name, speed = query.parameters["name"], query.parameters["speed"]
+    def method(query: gedge.MethodQuery):
+        proj_name, speed = query.params["name"], query.params["speed"]
 
         # Check if project is running - FC:2, Addr: 7202
         result = client.read_discrete_inputs(address=7202, count=1, slave=1)
@@ -144,7 +144,6 @@ def on_start_project():
             # Return Code 300: Warning, failed to set project speed
             print("Return Code 300: Warning, failed to set project speed")
             query.reply(300)
-            pass
  
         # Wait for project to stop running on controller
         while proj_running:
@@ -184,40 +183,35 @@ if __name__ == "__main__":
     config = gedge.NodeConfig("BuildAtScale/Robots/Methods/Demo/Callee")
     m = config.add_method("start/project", handler)
     m.add_params(name=str, speed=int)
-    m.add_response(400)
-    m.add_response(400, props={"prop": "a description"}, body={
-        "return1": list[float],
-        "return2": list[int]
+    m.add_response(400, props={
+        "desc": "Fail, a project is already running"
+    })
+    m.add_response(401, props={
+        "desc": "Fail, remote fieldbus is not active (Not in Auto Remote Mode)"
+    })
+    m.add_response(402, props={
+        "desc": "Fail, could not change project name"
+    })
+    m.add_response(403, props={
+        "desc": "Cannot play project"
+    })
+    m.add_response(404, props={
+        "desc": "project ended with error"
+    })
+    m.add_response(200, props={
+        "desc": "Project Successfully Started"
+    })
+    m.add_response(201, props={
+        "desc": "Reserved"
+    })
+    m.add_response(202, props={
+        "desc": "Project ended successfully"
+    })
+    m.add_response(300, props={
+        "desc": "Warning, failed to set project speed"
     })
 
-    m.add_response(401)
-    m.add_response(402)
-    m.add_response(403)
-    m.add_response(404)
-    m.add_response(200)
-    m.add_response(201)
-    m.add_response(202)
-    m.add_response(300)
-
     with gedge.connect(config) as session:
-        time.sleep(60)
+        while True:
+            pass
  
-    # print("ZENOH DAISY TELEMETRY DEMO\n")
-    # # Hide cursor
-    # print('\033[?25l', end="")
- 
-    # config = gedge.NodeConfig('BuildAtScale/Robots/Arms')
-    # config.add_tag("tm12/joint_pos", list[float], props={'eng_units': 'deg'})
-    # # config.add_tag("project/is_running", bool, props={'Description': 'True if a project is running, false if not'})
-    # with gedge.connect(config) as session:
-    #     print("Publishing data from BuildAtScale/Robots/Arms...\n")
-    #     joint_names = [f"J{i}" for i in range(1,7)]
-    #     joint_names = [f"{x:>8}" for x in joint_names]
-    #     print(f"              {joint_names[0]}{joint_names[1]}{joint_names[2]}{joint_names[3]}{joint_names[4]}{joint_names[5]}")
-    #     while True:
-    #         joint_pos = pull_joint_pos()
-    #         session.update_tag("tm12/joint_pos", joint_pos)
-    #         joint_pos = [f"{x:8.2f}" for x in joint_pos]
-    #         sys.stdout.write(f"\rjoint values: {joint_pos[0]}{joint_pos[1]}{joint_pos[2]}{joint_pos[3]}{joint_pos[4]}{joint_pos[5]}")
-    #         sys.stdout.flush()
-    #         time.sleep(0.05)
