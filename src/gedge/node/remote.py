@@ -1,5 +1,4 @@
 from __future__ import annotations
-from tkinter import W
 
 from gedge.node.data_type import DataType
 from gedge.node.gtypes import MethodReplyCallback
@@ -199,7 +198,7 @@ class RemoteConnection:
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
         
-        from queue import Queue
+        from queue import Queue, Empty
         
         method_query_id = str(uuid.uuid4())
         method = self.methods[path]
@@ -217,7 +216,11 @@ class RemoteConnection:
         self._subscriptions.append(self._comm._subscriber(key_expr, self._on_reply(path, _on_reply)))
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params)
         while True:
-            res = replies.get(block=True, timeout=timeout)
+            try:
+                res = replies.get(block=True, timeout=timeout)
+            except Empty:
+                logger.error(f"Timeout exceeded")
+                return
             yield res
             if res.code in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
                 return
