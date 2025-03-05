@@ -21,21 +21,20 @@ logger = logging.getLogger(__name__)
 # The user will not interact with this item
 # TODO: should this hold a key_space? and allow for a context manager when we want to change it
 class Comm:
-    def __init__(self):
-        # TODO: user should specify which router than want to connect to (hardcoded to my local IP right now)
+    def __init__(self, connections: list[str]):
         config = json.dumps({
             "mode": "client",
             "connect": {
-                "endpoints": [
-                    "tcp/192.168.4.60:7447",
-                ]
+                "endpoints": list(connections)
             }
         })
+        self.connections = connections
         config = zenoh.Config.from_json5(config)
         self.config = config
         self.__enter__()
 
     def __enter__(self):
+        logger.info(f"Attemping to connect to: {self.connections}")
         session = zenoh.open(self.config)
         self.session = session
         return self

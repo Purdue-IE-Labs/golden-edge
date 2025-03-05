@@ -158,14 +158,14 @@ class NodeConfig:
         meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods)
         return meta
 
-    def connect(self):
+    def _connect(self, connections: list[str]):
         logger.info(f"Node {self.key} attempting to connect to network")
         meta = self.build_meta()
-        return NodeSession(config=self, meta=meta)
+        return NodeSession(config=self, meta=meta, connections=connections)
 
 class NodeSession:
-    def __init__(self, config: NodeConfig, meta: Meta):
-        self._comm = Comm() 
+    def __init__(self, config: NodeConfig, meta: Meta, connections: list[str]):
+        self._comm = Comm(connections) 
         self.config = config
         self.ks = config.ks
         self.connections: dict[str, RemoteConnection] = dict() # user_key -> RemoteConnection
