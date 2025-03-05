@@ -18,7 +18,7 @@ import zenoh
 import uuid
 
 
-from typing import Any, Generator, Set, TypeAlias, Callable, Coroutine, Awaitable, TYPE_CHECKING
+from typing import Any, Iterator, Callable, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback 
 
@@ -193,7 +193,8 @@ class RemoteConnection:
         self._subscriptions.append(self._comm._subscriber(key_expr, on_reply_))
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params)
     
-    def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Generator[Reply, Any, Any]:
+    def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Iterator[Reply]:
+        # appparently, Generator[Reply, None, None] == Iterator[Reply]?
         # TODO: we can probably merge this with call_method eventually, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
@@ -217,9 +218,7 @@ class RemoteConnection:
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params)
         while True:
             res = replies.get(block=True, timeout=timeout)
-            if res.code in {codes.DONE}:
-                return
             yield res
-            if res.code in {codes.METHOD_ERROR, codes.TAG_ERROR}:
+            if res.code in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
                 return
 
