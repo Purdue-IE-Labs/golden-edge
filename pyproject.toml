@@ -8,7 +8,8 @@ description = "A replacement for MQTT Sparkplug"
 readme = "README.md"
 dependencies = [
     "protobuf",
-    "eclipse-zenoh"
+    "eclipse-zenoh",
+    "json5",
 ]
 
 [project.optional-dependencies]
