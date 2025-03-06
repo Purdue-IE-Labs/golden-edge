@@ -2,7 +2,7 @@ from typing import Callable, Any
 import zenoh
 from gedge import proto
 from gedge.node.query import MethodQuery
-from gedge.node.reply import Reply
+from gedge.node.method_reply import MethodReply
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.data_type import DataType
 
@@ -16,7 +16,7 @@ TagValue = int | float | bool | str | list[int] | list[float] | list[bool] | lis
 
 TagWriteHandler = Callable[[TagWriteQuery], None]
 MethodHandler = Callable[[MethodQuery], None]
-MethodReplyCallback = Callable[[Reply], None]
+MethodReplyCallback = Callable[[MethodReply], None]
 
 KeyExpr = str
 StateCallback = Callable[[KeyExpr, proto.State], None]

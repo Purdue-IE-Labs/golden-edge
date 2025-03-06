@@ -3,14 +3,14 @@ from typing import Any
 from gedge.comm.comm import Comm
 from gedge.node.tag_data import TagData
 from gedge.node import codes
-from gedge.node.response import Response
+from gedge.node.method_response import MethodResponse
 from gedge import proto
 
 import logging
 logger = logging.getLogger(__name__)
 
 class MethodQuery:
-    def __init__(self, key_expr: str, comm: Comm, params: dict[str, Any] = {}, responses: list[Response] = []):
+    def __init__(self, key_expr: str, comm: Comm, params: dict[str, Any] = {}, responses: list[MethodResponse] = []):
         self._comm = comm
         self._responses = responses
 
