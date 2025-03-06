@@ -1,11 +1,12 @@
 from __future__ import annotations
+from urllib import response
 
 from gedge.node.data_type import DataType
 from gedge.node.gtypes import MethodReplyCallback
 from gedge.node.tag_data import TagData
 from gedge.node.method import Method
-from gedge.node.reply import Reply
-from gedge.node.response import Response
+from gedge.node.method_reply import MethodReply
+from gedge.node.method_response import MethodResponse
 from gedge.node import codes
 from gedge import proto
 from gedge.node.error import MethodLookupError, SessionError, TagLookupError
@@ -18,6 +19,8 @@ import uuid
 
 
 from typing import Any, Iterator, Callable, TYPE_CHECKING
+
+from gedge.node.tag_write_reply import TagWriteReply
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback 
 
@@ -51,7 +54,7 @@ class RemoteConnection:
         self.tags = {t.path: t for t in tags}
         methods: list[Method] = [Method.from_proto(m) for m in self.meta.methods]
         self.methods = {m.path: m for m in methods}
-        self.responses: dict[str, dict[int, Response]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
 
     def __enter__(self):
         return self
@@ -134,18 +137,35 @@ class RemoteConnection:
         bind = TagBind(self.ks, self._comm, tag, value, self.write_tag)
         return bind
 
-    def _write_tag(self, path: str, value: Any) -> tuple[int, str]:
+    def _write_tag(self, path: str, value: Any) -> TagWriteReply:
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
+        print(tag)
         response = self._comm.write_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
-        return response.code, response.error
+        code, error = response.code, response.error
 
-    def write_tag(self, path: str, value: Any) -> tuple[int, str]:
+        '''
+        Bit of a design decision here. The issue is that golden-edge reserved codes do not have 
+        any props, so we would get an error here. So, if the error field is not empty, we 
+        can assume that something went wrong and the user should only be looking at 
+        'code' and 'error' rather than props, because they are sorta in 'undefined behavior'.
+        For well-defined errors (i.e. 401: project already running), the user should 
+        define these in the meta and have the requisite props.
+        '''
+        props = {}    
+        if not error:
+            r = [r for r in self.tags[path].responses if r.code == code] 
+            props = r[0].props.to_value()
+
+        reply = TagWriteReply(self.ks.tag_write_path(path), code, error, value, tag, props)
+        return reply
+
+    def write_tag(self, path: str, value: Any) -> TagWriteReply:
         return self._write_tag(path, value)
 
-    async def write_tag_async(self, path: str, value: Any) -> tuple[int, str]:
+    async def write_tag_async(self, path: str, value: Any) -> TagWriteReply:
         return self._write_tag(path, value)
     
     def _on_reply(self, path: str, on_reply: MethodReplyCallback) -> ZenohCallback:
@@ -154,12 +174,13 @@ class RemoteConnection:
                 print("warning: reply super not ok")
                 return
             r: proto.ResponseData = self._comm.deserialize(proto.ResponseData(), sample.payload.to_bytes())
+            response: MethodResponse = self.responses[path][r.code]
             body = {}
             for key, value in r.body.items():
-                response = self.responses[path][r.code]
                 data_type = response.body[key]
                 body[key] = TagData.proto_to_py(value, data_type)
-            reply = Reply(str(sample.key_expr), r.code, body, r.error)
+            method_config = self.methods[path] 
+            reply = MethodReply(str(sample.key_expr), r.code, body, r.error, method_config, response)
             on_reply(reply)
             if r.code in {codes.DONE, codes.METHOD_ERROR}:
                 # remove subscription after we are done
@@ -192,7 +213,7 @@ class RemoteConnection:
         self._subscriptions.append(self._comm._subscriber(key_expr, on_reply_))
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params)
     
-    def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Iterator[Reply]:
+    def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Iterator[MethodReply]:
         # appparently, Generator[Reply, None, None] == Iterator[Reply]?
         # TODO: we can probably merge this with call_method eventually, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
         if path not in self.methods:
@@ -207,8 +228,8 @@ class RemoteConnection:
             data_type = method.params[key]
             params[key] = TagData.py_to_proto(value, data_type)
         
-        replies: Queue[Reply] = Queue()
-        def _on_reply(reply: Reply) -> None:
+        replies: Queue[MethodReply] = Queue()
+        def _on_reply(reply: MethodReply) -> None:
             replies.put(reply)
 
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")

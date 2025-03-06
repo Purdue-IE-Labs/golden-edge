@@ -1,8 +1,10 @@
 from .node.node import NodeConfig, NodeSession
 from .node.query import MethodQuery
-from .node.method import Response
+from .node.method import MethodResponse
 from .node.data_type import DataType
-from .node.reply import Reply
+from .node.method_reply import MethodReply
+from .node.tag_write_query import TagWriteQuery
+from .node.tag_write_reply import TagWriteReply
 
 import logging
 import os

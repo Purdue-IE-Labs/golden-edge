@@ -20,9 +20,13 @@ class TagWriteQuery:
     value: Any
     tag_config: Tag
     _query: zenoh.Query
-    _comm: 'Comm'
+    _comm: Comm
 
     def reply(self, code: int, error: str = ""):
+        # this is to allow the node to have access to this later
+        self.code = code
+        self.error = error
+
         logger.info(f"Replying to tag value write with code {code}")
         if code not in {i.code for i in self.tag_config.responses} and code not in {codes.TAG_ERROR}:
             raise ValueError(f"invalid response code {code}")
