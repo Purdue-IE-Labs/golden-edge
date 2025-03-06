@@ -1,0 +1,39 @@
+{
+    key: "test/method/calls/callee",
+    methods: [
+        {
+            path: "call/method",
+            type: "int",
+            params: {
+                name: "string",
+                speed: "int",
+            },
+            responses: [
+                {
+                    code: 200,
+                    body: {
+                        res1: "int"
+                    },
+                    props: {
+                        desc: "successfully executed method"
+                    }
+                },
+                {
+                    code: 400,
+                    props: {
+                        desc: "speed must be in range [0, 100]"
+                    }
+                },
+                {
+                    code: 401,
+                    props: {
+                        desc: "name cannot be longer than 30 characters"
+                    }
+                }
+            ],
+            props: {
+                desc: "testing method calls"
+            },
+        }    
+    ]
+}
