@@ -121,10 +121,8 @@ class Comm:
         reply = self.query_tag(ks, path, value)
         if reply.ok:
             d: proto.WriteResponseData = self.deserialize(proto.WriteResponseData(), reply.result.payload.to_bytes())
-            print(f"returning {d}")
             return d
         else:
-            print("raising exception")
             raise Exception("reply super not ok")
 
     def send_state(self, ks: NodeKeySpace, state: proto.State):
