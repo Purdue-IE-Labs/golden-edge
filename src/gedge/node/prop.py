@@ -66,6 +66,10 @@ class Props:
             raise ValueError(f"invalid props {props}")
         return cls.from_value(props)
     
+    @classmethod
+    def empty(cls) -> Self:
+        return cls({})
+    
     def add_prop(self, key: str, value: Any):
         self.props[key] = Prop.from_value(value)
     

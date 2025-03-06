@@ -27,7 +27,7 @@ class WriteResponse:
     @classmethod
     def from_json5(cls, json: Any) -> Self:
         if isinstance(json, int):
-            return cls(json, Props.from_value({}))
+            return cls(json, Props.empty())
         if not isinstance(json, dict):
             raise ValueError(f"invalid write response {json}")
         
@@ -41,7 +41,7 @@ class WriteResponse:
         return f"WriteResponse(code={self.code}, props={self.props})"
 
 class Tag:
-    def __init__(self, path: str, type: DataType, props: Props, writable: bool, responses: list[WriteResponse], write_handler: 'TagWriteHandler | None'):
+    def __init__(self, path: str, type: DataType, props: Props, writable: bool, responses: list[WriteResponse], write_handler: TagWriteHandler | None):
         self.path = path
         self.type = type
         self.props = props
@@ -81,7 +81,7 @@ class Tag:
 
         return cls(path, type, props, writable, responses, write_handler=None)
     
-    def writable(self, write_handler: 'TagWriteHandler', responses: list[tuple[int, dict[str, Any]]] = []):
+    def writable(self, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]] = []):
         self._writable = True
         self.write_handler = write_handler
         for tup in responses:
@@ -91,13 +91,13 @@ class Tag:
     def is_writable(self):
         return self._writable
     
-    def add_write_response(self, code: int, props: Props = Props.from_value({})):
+    def add_write_response(self, code: int, props: Props = Props.empty()):
         response = WriteResponse(code, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:
             raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")
         self.responses.append(response)
     
-    def add_write_handler(self, handler: 'TagWriteHandler'):
+    def add_write_handler(self, handler: TagWriteHandler):
         self.write_handler = handler
     
     def add_props(self, p: dict[str, Any]):
