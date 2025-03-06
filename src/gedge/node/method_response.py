@@ -8,8 +8,8 @@ from typing import Any, Self, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.node.gtypes import Type
 
-
-class Response:
+# CONFIG object
+class MethodResponse:
     def __init__(self, code: int, props: Props, body: dict[str, DataType]):
         self.code = code
         self.props = props

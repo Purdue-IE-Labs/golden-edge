@@ -16,6 +16,9 @@ class Prop:
     def to_proto(self) -> proto.Prop:
         return proto.Prop(type=self.type.to_proto(), value=self.value.to_proto()) 
     
+    def to_value(self) -> Any:
+        return self.value.to_py()
+    
     @classmethod
     def from_proto(cls, prop: proto.Prop) -> Self:
         type = DataType.from_proto(prop.type)
@@ -42,7 +45,7 @@ class Prop:
             raise ValueError(f"Illegal type for property. Allowed properties are str, int, float, bool. value is of type {type(value)}")
     
     def __repr__(self):
-        return f"{self.value}"
+        return f"{self.value.to_py()}"
 
 
 class Props:
@@ -51,6 +54,9 @@ class Props:
     
     def to_proto(self) -> dict[str, proto.Prop]:
         return {key:value.to_proto() for key, value in self.props.items()}
+    
+    def to_value(self) -> dict[str, Any]:
+        return {key:value.to_value() for key, value in self.props.items()}
     
     @classmethod
     def from_proto(cls, props: dict[str, proto.Prop]) -> Self:
@@ -74,5 +80,5 @@ class Props:
         self.props[key] = Prop.from_value(value)
     
     def __repr__(self):
-        return f"Props({self.props})"
+        return f"{self.props}"
     

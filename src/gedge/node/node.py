@@ -11,10 +11,10 @@ from gedge.proto import Meta, State, WriteResponseData, MethodQueryData
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
-from gedge.node.tag import Tag
+from gedge.node.tag import Tag, WriteResponse
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
-from gedge.node.method import Method, Response
+from gedge.node.method import Method, MethodResponse
 from gedge.node.tag_data import TagData 
 import zenoh
 import json5
@@ -175,8 +175,9 @@ class NodeSession:
         self.meta = meta
         self.startup()
         self.tags: dict[str, Tag] = self.config.tags
+        self.tag_write_responses: dict[str, dict[int, WriteResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
         self.methods: dict[str, Method] = self.config.methods
-        self.responses: dict[str, dict[int, Response]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.method_responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
 
     def __enter__(self):
         return self
@@ -242,7 +243,6 @@ class NodeSession:
         connection.close()
         del self.connections[key]
     
-    
     def _write_handler(self, path: str, handler: TagWriteHandler) -> ZenohQueryCallback:
         def _on_write(query: zenoh.Query) -> None:
             try:
@@ -253,11 +253,18 @@ class NodeSession:
                 logger.info(f"Node {self.config.key} received tag write at path '{path}' with value '{data}'")
 
                 t = TagWriteQuery(str(query.key_expr), data, self.tags[path], query, self._comm)
-                code = handler(t)
+                handler(t)
+                
+                try:
+                    code = t.code
+                    error = t.error
+                except:
+                    raise ValueError(f"Tag write handler must call 'reply(...)' at some point")
 
-                if code not in [r.code for r in self.tags[path].responses]:
+                if code not in self.tag_write_responses[path]:
                     raise LookupError(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
-                response = WriteResponseData(code=code)
+
+                response = WriteResponseData(code=code, error=error)
             except Exception as e:
                 logger.warning(f"Sending tag write response on path {path}: error={repr(e)}")
                 response = WriteResponseData(code=codes.TAG_ERROR, error=repr(e))

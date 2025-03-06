@@ -3,14 +3,14 @@ from __future__ import annotations
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
 from gedge import proto
-from gedge.node.response import Response
+from gedge.node.method_response import MethodResponse
 
 from typing import Any, Self, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagValue, Type, MethodHandler
 
 class Method:
-    def __init__(self, path: str, handler: MethodHandler | None, props: Props, params: dict[str, DataType], responses: list[Response]):
+    def __init__(self, path: str, handler: MethodHandler | None, props: Props, params: dict[str, DataType], responses: list[MethodResponse]):
         self.path = path
         self.handler = handler
         self.props = props
@@ -27,7 +27,7 @@ class Method:
     def from_proto(cls, proto: proto.Method) -> Self:
         props = Props.from_proto(proto.props)
         params = {key:DataType.from_proto(value) for key, value in proto.params.items()}
-        responses = [Response.from_proto(r) for r in proto.responses]
+        responses = [MethodResponse.from_proto(r) for r in proto.responses]
         return cls(proto.path, None, props, params, responses)
     
     @classmethod
@@ -47,7 +47,7 @@ class Method:
         responses = []
         if "responses" in json:
             for response in json["responses"]:
-                r = Response.from_json5(response)
+                r = MethodResponse.from_json5(response)
                 responses.append(r)
 
         return cls(path, None, props, params, responses)
@@ -59,7 +59,7 @@ class Method:
     def add_response(self, code: int, props: dict[str, TagValue] = {}, body: dict[str, Type] = {}): 
         props_ = Props.from_value(props)
         body_ = {key:DataType.from_type(value) for key, value in body.items()}
-        response = Response(code, props_, body_)
+        response = MethodResponse(code, props_, body_)
         self.responses.append(response)
         return response
 
