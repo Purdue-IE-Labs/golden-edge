@@ -1,8 +1,7 @@
 from __future__ import annotations
-from urllib import response
 
-from gedge.node.data_type import DataType
 from gedge.node.gtypes import MethodReplyCallback
+from gedge.node.prop import Props
 from gedge.node.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
@@ -174,7 +173,20 @@ class RemoteConnection:
                 print("warning: reply super not ok")
                 return
             r: proto.ResponseData = self._comm.deserialize(proto.ResponseData(), sample.payload.to_bytes())
-            response: MethodResponse = self.responses[path][r.code]
+
+            '''
+            Design decision here. The problem is that golden-edge reserved codes do not have a 
+            config backing (we could add one if we wanted), so we have to create a config on 
+            the fly to give back to the user for them to look at. For now, it's empty. At config 
+            initialization, we could (and maybe should) inject these. But then if the users 
+            goes len(responses) they may be confused to find that we have added some without 
+            there permission. Or maybe we just never show the user any of these. But also 
+            they need to see the error ones to know that something went terribly wrong.
+            '''
+            if r.code in {codes.DONE, codes.METHOD_ERROR}:
+                response: MethodResponse = MethodResponse(r.code, Props.empty(), {})
+            else:
+                response: MethodResponse = self.responses[path][r.code]
             body = {}
             for key, value in r.body.items():
                 data_type = response.body[key]
