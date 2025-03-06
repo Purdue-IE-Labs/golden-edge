@@ -29,7 +29,7 @@ class Response:
     @classmethod
     def from_json5(cls, json: Any) -> Self:
         if isinstance(json, int):
-            return cls(json, Props.from_value({}), {}) 
+            return cls(json, Props.empty(), {}) 
         if not isinstance(json, dict):
             raise ValueError(f"Invalid method repsonse type, {json}")
         
