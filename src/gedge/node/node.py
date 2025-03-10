@@ -215,7 +215,8 @@ class NodeSession:
         i = 1
         for meta in metas:
             _, _, name = meta.key.rpartition("/")
-            print(f"{i}. {meta.key}: {"online" if self._comm.is_online(NodeKeySpace.from_user_key(meta.key)) else "offline"}")
+            online = "online" if self._comm.is_online(NodeKeySpace.from_user_key(meta.key)) else "offline"
+            print(f"{i}. {meta.key}: {online}")
             print(f"{meta}\n")
             i += 1
 

@@ -92,7 +92,8 @@ class RemoteConnection:
     def _on_liveliness(self, on_liveliness_change: LivelinessCallback) -> ZenohCallback:
         def _on_liveliness(sample: zenoh.Sample):
             is_online = sample.kind == zenoh.SampleKind.PUT
-            logger.info(f"Liveliness of remote node {self.key} changed: {"online" if is_online else "offline"}")
+            online = "online" if is_online else "offline"
+            logger.info(f"Liveliness of remote node {self.key} changed: {online}")
             on_liveliness_change(str(sample.key_expr), is_online)
         return _on_liveliness
 
