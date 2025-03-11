@@ -8,11 +8,9 @@ with gedge.connect(config, "tcp/localhost:7447") as session:
     print("FIRST TAG WRITE")
     reply = remote.write_tag("tag/write", value=20)
     print(f"got reply: {reply}\n")
-    print(f"tag props: {reply.tag_config.props}")
-    print(f"response props: {reply.response_props}")
+    print(f"response props: {reply.props}")
 
     print("\n\nSECOND TAG WRITE")
     reply = remote.write_tag("tag/write", value=5)
     print(f"got reply: {reply}\n")
-    print(f"tag props: {reply.tag_config.props}")
-    print(f"response props: {reply.response_props}")
+    print(f"response props: {reply.props}")

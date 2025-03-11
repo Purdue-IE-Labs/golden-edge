@@ -10,5 +10,5 @@ class TagWriteReply:
     code: int
     error: str | None
     attempted_write_value: Any
-    tag_config: Tag
-    response_props: dict[str, Any]
+    # tag_config: Tag
+    props: dict[str, Any]

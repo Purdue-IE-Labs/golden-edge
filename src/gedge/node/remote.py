@@ -142,7 +142,6 @@ class RemoteConnection:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        print(tag)
         response = self._comm.write_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
         code, error = response.code, response.error
 
@@ -159,7 +158,7 @@ class RemoteConnection:
             r = [r for r in self.tags[path].responses if r.code == code] 
             props = r[0].props.to_value()
 
-        reply = TagWriteReply(self.ks.tag_write_path(path), code, error, value, tag, props)
+        reply = TagWriteReply(self.ks.tag_write_path(path), code, error, value, props)
         return reply
 
     def write_tag(self, path: str, value: Any) -> TagWriteReply:
@@ -192,8 +191,9 @@ class RemoteConnection:
             for key, value in r.body.items():
                 data_type = response.body[key]
                 body[key] = TagData.proto_to_py(value, data_type)
-            method_config = self.methods[path] 
-            reply = MethodReply(str(sample.key_expr), r.code, body, r.error, method_config, response)
+            # method_config = self.methods[path] 
+            props = response.props.to_value()
+            reply = MethodReply(str(sample.key_expr), r.code, body, r.error, props)
             on_reply(reply)
             if r.code in {codes.DONE, codes.METHOD_ERROR}:
                 # remove subscription after we are done
