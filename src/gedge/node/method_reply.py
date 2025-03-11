@@ -15,5 +15,6 @@ class MethodReply:
     code: int
     body: dict[str, TagValue]
     error: str | None
-    method_config: Method
-    response_config: MethodResponse
+    # method_config: Method
+    # response_config: MethodResponse
+    props: dict[str, TagValue]
