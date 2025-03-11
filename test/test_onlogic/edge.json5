@@ -1,0 +1,27 @@
+{
+    key: "BuildScale/Lathe/Onlogic",
+    tags: [
+        {
+            path: "vice/open",
+            type: "bool",
+            props: {
+                desc: "is the vice open or not",
+            },
+            writable: true,
+            responses: [
+                {
+                    code: 200,
+                    props: {
+                        desc: "vice opened",
+                    }
+                },
+                {
+                    code: 400,
+                    props: {
+                        desc: "vice could not be opened"
+                    }
+                }
+            ]
+        },
+    ],
+}
