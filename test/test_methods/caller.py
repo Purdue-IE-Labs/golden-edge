@@ -8,14 +8,12 @@ with gedge.connect(config, "tcp/localhost:7447") as session:
     print("FIRST METHOD CALL")
     responses = remote.call_method_iter("call/method", name="super long things that should get rejected by func", speed=100)
     for response in responses:
-        print(response.code, response.response_config.props)
-        method_props = response.method_config.props
-    print(f"method properties: {method_props}")
+        print(response.code, response.props)
     print("\n\nSECOND METHOD CALL")
     responses2 = remote.call_method_iter("call/method", name="hello world", speed=200)
     for response in responses2:
-        print(response.code, response.response_config.props)
+        print(response.code, response.props)
     print("\n\nTHIRD METHOD CALL")
     responses3 = remote.call_method_iter("call/method", name="hello world", speed=40)
     for response in responses3:
-        print(response.code, response.response_config.props)
+        print(response.code, response.props)
