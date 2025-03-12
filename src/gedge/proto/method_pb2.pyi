@@ -1,5 +1,7 @@
 from . import tag_data_pb2 as _tag_data_pb2
 from . import prop_pb2 as _prop_pb2
+from . import param_pb2 as _param_pb2
+from . import body_pb2 as _body_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -21,17 +23,17 @@ class Method(_message.Message):
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
-        value: _tag_data_pb2.DataType
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_tag_data_pb2.DataType, str]] = ...) -> None: ...
+        value: _param_pb2.Param
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_param_pb2.Param, _Mapping]] = ...) -> None: ...
     PATH_FIELD_NUMBER: _ClassVar[int]
     PROPS_FIELD_NUMBER: _ClassVar[int]
     PARAMS_FIELD_NUMBER: _ClassVar[int]
     RESPONSES_FIELD_NUMBER: _ClassVar[int]
     path: str
     props: _containers.MessageMap[str, _prop_pb2.Prop]
-    params: _containers.ScalarMap[str, _tag_data_pb2.DataType]
+    params: _containers.MessageMap[str, _param_pb2.Param]
     responses: _containers.RepeatedCompositeFieldContainer[Response]
-    def __init__(self, path: _Optional[str] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., params: _Optional[_Mapping[str, _tag_data_pb2.DataType]] = ..., responses: _Optional[_Iterable[_Union[Response, _Mapping]]] = ...) -> None: ...
+    def __init__(self, path: _Optional[str] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., params: _Optional[_Mapping[str, _param_pb2.Param]] = ..., responses: _Optional[_Iterable[_Union[Response, _Mapping]]] = ...) -> None: ...
 
 class Response(_message.Message):
     __slots__ = ("code", "props", "body")
@@ -47,15 +49,15 @@ class Response(_message.Message):
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
-        value: _tag_data_pb2.DataType
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_tag_data_pb2.DataType, str]] = ...) -> None: ...
+        value: _body_pb2.Body
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_body_pb2.Body, _Mapping]] = ...) -> None: ...
     CODE_FIELD_NUMBER: _ClassVar[int]
     PROPS_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
     code: int
     props: _containers.MessageMap[str, _prop_pb2.Prop]
-    body: _containers.ScalarMap[str, _tag_data_pb2.DataType]
-    def __init__(self, code: _Optional[int] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., body: _Optional[_Mapping[str, _tag_data_pb2.DataType]] = ...) -> None: ...
+    body: _containers.MessageMap[str, _body_pb2.Body]
+    def __init__(self, code: _Optional[int] = ..., props: _Optional[_Mapping[str, _prop_pb2.Prop]] = ..., body: _Optional[_Mapping[str, _body_pb2.Body]] = ...) -> None: ...
 
 class MethodQueryData(_message.Message):
     __slots__ = ("params",)

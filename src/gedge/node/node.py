@@ -121,18 +121,6 @@ class NodeConfig:
         logger.info(f"Adding method with path '{path}' on node '{self.key}'")
         return method
     
-    def add_params(self, path: str, **kwargs):
-        if path not in self.methods:
-            raise MethodLookupError(path, self.ks.name)
-        method = self.methods[path]
-        method.add_params(**kwargs)
-    
-    def add_response(self, path: str, code: int, props: dict[str, TagValue] = {}, body: dict[str, Type] = {}):
-        if path not in self.methods:
-            raise MethodLookupError(path, self.ks.name)
-        method = self.methods[path]
-        method.add_response(code, props, body)
-    
     def delete_method(self, path: str):
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
@@ -280,7 +268,7 @@ class NodeSession:
             m: MethodQueryData = self._comm.deserialize(MethodQueryData(), sample.payload.to_bytes())
             params: dict[str, Any] = {}
             for key, value in m.params.items():
-                data_type = method.params[key]
+                data_type = method.params[key].type
                 params[key] = TagData.proto_to_py(value, data_type)
             key_expr = method_response_from_call(str(sample.key_expr))
             q = MethodQuery(key_expr, self._comm, params, method.responses)

@@ -43,8 +43,8 @@ class DataType(Enum):
             raise ValueError(f"Invalid type {type}")
         return cls(mapping[type])
 
-    def to_proto(self) -> int:
-        return self.value
+    def to_proto(self) -> proto.DataType:
+        return self.value # type: ignore
 
     @classmethod
     def from_py_type(cls, type) -> Self:
