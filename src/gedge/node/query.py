@@ -1,13 +1,16 @@
-from typing import Any
+from __future__ import annotations
 
 from gedge.comm.comm import Comm
 from gedge.node.tag_data import TagData
 from gedge.node import codes
-from gedge.node.method_response import MethodResponse
 from gedge import proto
 
 import logging
 logger = logging.getLogger(__name__)
+
+from typing import TYPE_CHECKING, Any
+if TYPE_CHECKING:
+    from gedge.node.method_response import MethodResponse
 
 class MethodQuery:
     def __init__(self, key_expr: str, comm: Comm, params: dict[str, Any] = {}, responses: list[MethodResponse] = []):
