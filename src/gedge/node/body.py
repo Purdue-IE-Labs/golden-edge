@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from multiprocessing import Value
-from typing import Any, Self
 
 from gedge.node.data_type import DataType
-from gedge.node.gtypes import TagValue
 from gedge.node.prop import Props
 from gedge import proto
+
+from typing import Any, Self, TYPE_CHECKING
+if TYPE_CHECKING:
+    from gedge.node.gtypes import TagValue
 
 @dataclass
 class Body:
