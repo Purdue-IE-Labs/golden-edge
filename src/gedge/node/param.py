@@ -3,6 +3,7 @@ from multiprocessing import Value
 from typing import Any, Self
 
 from gedge.node.data_type import DataType
+from gedge.node.gtypes import TagValue
 from gedge.node.prop import Props
 from gedge import proto
 
@@ -32,3 +33,8 @@ class Param:
         type = DataType.from_json5(param["type"])
         props = Props.from_json5(param.get("props", {}))
         return cls(type, props)
+
+@dataclass
+class ParamData:
+    value: TagValue
+    props: dict[str, TagValue]
