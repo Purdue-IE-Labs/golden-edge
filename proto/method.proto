@@ -2,19 +2,21 @@ syntax = "proto3";
 
 import "tag_data.proto";
 import "prop.proto";
+import "param.proto";
+import "body.proto";
 
 // Config
 message Method {
     string path = 1;
     map<string, Prop> props = 2;
-    map<string, DataType> params = 3;
+    map<string, Param> params = 3;
     repeated Response responses = 4;
 }
 
 message Response {
     int32 code = 1;
     map<string, Prop> props = 3;
-    map<string, DataType> body = 4;
+    map<string, Body> body = 4;
 }
 
 // Session

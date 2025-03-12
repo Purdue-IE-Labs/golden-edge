@@ -58,8 +58,10 @@ class Props:
     def to_value(self) -> dict[str, Any]:
         return {key:value.to_value() for key, value in self.props.items()}
     
+    # 'Any' added because the proto version of a dict is a MessageMap, which means that 
+    # Pylance thinks this is an error of types, even though it is not
     @classmethod
-    def from_proto(cls, props: dict[str, proto.Prop]) -> Self:
+    def from_proto(cls, props: dict[str, proto.Prop] | Any) -> Self:
         return cls({key:Prop.from_proto(value) for key, value in props.items()})
     
     @classmethod

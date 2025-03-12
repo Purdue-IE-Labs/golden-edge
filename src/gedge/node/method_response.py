@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from gedge.node.body import Body
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
 from gedge import proto
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
 
 # CONFIG object
 class MethodResponse:
-    def __init__(self, code: int, props: Props, body: dict[str, DataType]):
+    def __init__(self, code: int, props: Props, body: dict[str, Body]):
         self.code = code
         self.props = props
         self.body = body
@@ -23,7 +24,7 @@ class MethodResponse:
     @classmethod
     def from_proto(cls, proto: proto.Response) -> Self:
         props = Props.from_proto(proto.props)
-        body = {key:DataType.from_proto(value) for key, value in proto.body.items()}
+        body = {key:Body.from_proto(value) for key, value in proto.body.items()}
         return cls(proto.code, props, body)
     
     @classmethod
@@ -38,15 +39,11 @@ class MethodResponse:
         code = int(json["code"])
 
         props = Props.from_json5(json.get("props", {}))
-        body = {key:DataType.from_json5(value) for key, value in json.get("body", {}).items()}
+        body = {key:Body.from_json5(value) for key, value in json.get("body", {}).items()}
         return cls(code, props, body)
     
     def add_prop(self, key: str, value: Any):
         self.props.add_prop(key, value)
-    
-    def add_body(self, **kwargs: Type):
-        for key, value in kwargs.items():
-            self.body[key] = DataType.from_type(value)
     
     def __repr__(self):
         return f"Response(code={self.code}, body={self.body})"
