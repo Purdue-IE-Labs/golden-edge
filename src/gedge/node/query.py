@@ -24,7 +24,7 @@ class MethodQuery:
         new_body: dict[str, proto.TagData] = {}
         for key, value in body.items():
             response = [i for i in self._responses if i.code == code][0]
-            data_type = response.body[key]
+            data_type = response.body[key].type
             new_body[key] = TagData.py_to_proto(value, data_type)
         r = proto.ResponseData(code=code, error=error, body=new_body)
         b = self._comm.serialize(r)

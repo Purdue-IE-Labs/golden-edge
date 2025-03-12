@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from gedge.node.body import Body
 from gedge.node.gtypes import MethodReplyCallback
 from gedge.node.prop import Props
 from gedge.node.tag_data import TagData
@@ -189,8 +190,23 @@ class RemoteConnection:
                 response: MethodResponse = self.responses[path][r.code]
             body = {}
             for key, value in r.body.items():
-                data_type = response.body[key]
-                body[key] = TagData.proto_to_py(value, data_type)
+                data_type = response.body[key].type
+                props = response.body[key].props
+                '''
+                TODO: this means the user has to do something like resp.body['res1']['value'], which
+                is pretty verbose. On top of that, the built in responses (10, 20, 30) will not throw a 
+                key error with resp.body['res1'] because it has no body.
+                Ways to fix this: make something like a BodyData object (or change Body to BodyConfig)
+                that has a value and props, then we have a .to_value() method on that object that 
+                presents it all pretty to the user (or don't even have that because that object would 
+                only have the purpose of presenting stuff to the user).
+                In terms of the built in codes, we could either add dummy bodies onto them or we 
+                just don't give that back to the user
+                '''
+                body[key] = {
+                    "value": TagData.proto_to_py(value, data_type),
+                    "props": props,
+                }
             # method_config = self.methods[path] 
             props = response.props.to_value()
             reply = MethodReply(str(sample.key_expr), r.code, body, r.error, props)
@@ -214,7 +230,7 @@ class RemoteConnection:
         method = self.methods[path]
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
-            data_type = method.params[key]
+            data_type = method.params[key].type
             params[key] = TagData.py_to_proto(value, data_type)
 
         on_reply_: ZenohCallback = self._on_reply(path, on_reply)
@@ -238,7 +254,7 @@ class RemoteConnection:
         method = self.methods[path]
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
-            data_type = method.params[key]
+            data_type = method.params[key].type
             params[key] = TagData.py_to_proto(value, data_type)
         
         replies: Queue[MethodReply] = Queue()
