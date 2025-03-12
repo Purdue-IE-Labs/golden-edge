@@ -1,6 +1,8 @@
 import gedge
 import pathlib
 
+EXCEPTION = 'EXCEPTION'
+
 def handler(query: gedge.MethodQuery):
     name = query.params["name"]
     speed = query.params["speed"]
@@ -10,6 +12,8 @@ def handler(query: gedge.MethodQuery):
     if speed < 0 or speed > 100:
         query.reply(400)
         return
+    if name == EXCEPTION:
+        raise ValueError("exception thrown in method handler")
     query.reply(200, body={
         "res1": speed
     })

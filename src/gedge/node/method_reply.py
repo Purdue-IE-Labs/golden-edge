@@ -3,17 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from typing import TYPE_CHECKING
-
-from gedge.node.tag_data import TagData
-
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagValue
+    from gedge.node.body import BodyData
 
 @dataclass
 class MethodReply:
     key_expr: str
     code: int
-    body: dict[str, dict]
+    body: dict[str, BodyData]
     error: str | None
     # method_config: Method
     # response_config: MethodResponse
