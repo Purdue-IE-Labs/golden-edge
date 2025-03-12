@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from gedge.node.body import Body, BodyData
-from gedge.node.gtypes import MethodReplyCallback
 from gedge.node.prop import Props
 from gedge.node.tag_data import TagData
 from gedge.node.method import Method
@@ -22,7 +21,7 @@ from typing import Any, Iterator, Callable, TYPE_CHECKING
 
 from gedge.node.tag_write_reply import TagWriteReply
 if TYPE_CHECKING:
-    from gedge.node.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback 
+    from gedge.node.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
 
 import logging
 logger = logging.getLogger(__name__)
