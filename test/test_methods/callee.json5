@@ -5,14 +5,29 @@
             path: "call/method",
             type: "int",
             params: {
-                name: "string",
-                speed: "int",
+                name: {
+                    type: "string",
+                    props: {
+                        desc: "name of the project"
+                    }
+                },
+                speed: {
+                    type: "int",
+                    props: {
+                        desc: "desired speed of the project (in range [0, 100])"
+                    }
+                },
             },
             responses: [
                 {
                     code: 200,
                     body: {
-                        res1: "int"
+                        res1: {
+                            type: "int",
+                            props: {
+                                desc: "a body item named res1"
+                            }
+                        }
                     },
                     props: {
                         desc: "successfully executed method"
