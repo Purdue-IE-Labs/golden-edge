@@ -17,7 +17,8 @@ requires-python = ">=3.11"
 test = [
     "pymodbus",
     "requests",
-    "python-dotenv"
+    "python-dotenv",
+    "pyserial",
 ]
 
 [project.urls]
