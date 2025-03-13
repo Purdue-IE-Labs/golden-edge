@@ -10,13 +10,11 @@ def handler(query: gedge.MethodQuery):
         query.reply(401)
         return
     if speed < 0 or speed > 100:
-        query.reply(400)
+        query.reply(400, body={"res1": speed})
         return
     if name == EXCEPTION:
         raise ValueError("exception thrown in method handler")
-    query.reply(200, body={
-        "res1": speed
-    })
+    query.reply(200, body={"res1": speed})
 
 here = pathlib.Path(__file__).parent
 config = gedge.NodeConfig.from_json5(str(here / "callee.json5"))
