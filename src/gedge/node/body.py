@@ -29,9 +29,12 @@ class Body:
     
     @classmethod
     def from_json5(cls, body: Any) -> Self:
+        if isinstance(body, str):
+            type = DataType.from_json5(body)
+            return cls(type, Props.empty())
+
         if not isinstance(body, dict):
             raise ValueError(f"invalid body {body}")
-        
         if "type" not in body:
             raise ValueError(f"body {body} must have type")
         type = DataType.from_json5(body["type"])
