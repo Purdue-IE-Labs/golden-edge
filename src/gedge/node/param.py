@@ -27,9 +27,12 @@ class Param:
     
     @classmethod
     def from_json5(cls, param: Any) -> Self:
+        if isinstance(param, str):
+            type = DataType.from_json5(param)
+            return cls(type, Props.empty())
+
         if not isinstance(param, dict):
             raise ValueError(f"invalid param {param}")
-        
         if "type" not in param:
             raise ValueError(f"param {param} must have type")
         type = DataType.from_json5(param["type"])

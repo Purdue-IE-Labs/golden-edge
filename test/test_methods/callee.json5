@@ -11,12 +11,7 @@
                         desc: "name of the project"
                     }
                 },
-                speed: {
-                    type: "int",
-                    props: {
-                        desc: "desired speed of the project (in range [0, 100])"
-                    }
-                },
+                speed: "int",
             },
             responses: [
                 {
@@ -35,6 +30,9 @@
                 },
                 {
                     code: 400,
+                    body: {
+                        res1: "int",
+                    },
                     props: {
                         desc: "speed must be in range [0, 100]"
                     }
