@@ -5,7 +5,6 @@ from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
 from gedge.node import codes
-from gedge.node.query import MethodQuery
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import Meta, State, WriteResponseData, MethodQueryData
 from gedge import proto
@@ -232,57 +231,6 @@ class NodeSession:
         connection.close()
         del self.connections[key]
     
-    def _write_handler(self, path: str, handler: TagWriteHandler) -> ZenohQueryCallback:
-        def _on_write(query: zenoh.Query) -> None:
-            try:
-                if not query.payload:
-                    raise ValueError(f"Empty write request")
-                proto_data = self._comm.deserialize(proto.TagData(), query.payload.to_bytes())
-                data: TagValue = TagData.proto_to_py(proto_data, self.tags[path].type)
-                logger.info(f"Node {self.config.key} received tag write at path '{path}' with value '{data}'")
-
-                t = TagWriteQuery(str(query.key_expr), data, self.tags[path], query, self._comm)
-                handler(t)
-                
-                try:
-                    code = t.code
-                    error = t.error
-                except:
-                    raise ValueError(f"Tag write handler must call 'reply(...)' at some point")
-
-                if code not in self.tag_write_responses[path]:
-                    raise LookupError(f"Tag write handler for tag {path} given incorrect code {code} not found in callback config")
-
-                response = WriteResponseData(code=code, error=error)
-            except Exception as e:
-                logger.warning(f"Sending tag write response on path {path}: error={repr(e)}")
-                response = WriteResponseData(code=codes.TAG_ERROR, error=repr(e))
-            b = self._comm.serialize(response)
-            query.reply(query.key_expr, payload=b)
-        return _on_write
-    
-    def _method_handler(self, path: str, handler: MethodHandler):
-        logger.info(f"Setting up method at path: {path} on node {self.ks.user_key}")
-        method = self.config.methods[path]
-        def _method_handler(sample: zenoh.Sample) -> None:
-            m: MethodQueryData = self._comm.deserialize(MethodQueryData(), sample.payload.to_bytes())
-            params: dict[str, Any] = {}
-            for key, value in m.params.items():
-                data_type = method.params[key].type
-                params[key] = TagData.proto_to_py(value, data_type)
-            key_expr = method_response_from_call(str(sample.key_expr))
-            q = MethodQuery(key_expr, self._comm, params, method.responses)
-            try:
-                logger.info(f"Node {self.config.key} method call at path '{path}' with params {params}")
-                logger.debug(f"Received from {str(sample.key_expr)}")
-                handler(q)
-            except Exception as e:
-                code = codes.METHOD_ERROR
-                q.reply(code=code, error=repr(e))
-            else:
-                q.reply(code=codes.DONE)
-        return _method_handler
-    
     def _verify_node_collision(self):
         # verify that key expression with this key prefix and name is not online
         metas = self._comm.pull_meta_messages(only_online=True)
@@ -295,13 +243,16 @@ class NodeSession:
         self.node_liveliness = self._comm.liveliness_token(self.ks)
         logger.info(f"Registering tags and methods on node {self.config.key}")
         for path in self.config.tags:
+            # hook up tag write handlers
             tag = self.config.tags[path]
             if not tag.is_writable():
                 continue
-            self._comm.tag_queryable(self.ks, path, self._write_handler(path, tag.write_handler)) # type: ignore (because _verify_tags)
+            assert tag.write_handler is not None
+            self._comm.tag_queryable(self.ks, tag) 
         for path in self.config.methods:
+            # hook up method handlers
             method = self.config.methods[path]
-            self._comm.method_queryable(self.ks, path, self._method_handler(path, method.handler)) # type: ignore
+            self._comm.method_queryable(self.ks, method) 
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
