@@ -39,13 +39,10 @@ def method_key_prefix(prefix: str, name: str):
 def liveliness_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name)
 
-def node_name_from_key_expr(key_expr: str | zenoh.KeyExpr):
-    components = str(key_expr).split("/")
-    return components[components.index(NODE) + 1]
-
 def method_response_from_call(key_expr: str):
     return key_join(key_expr, RESPONSE)
 
+# this defines a key prefix and a name
 class NodeKeySpace:
     def __init__(self, prefix: str, name: str):
         self._prefix = prefix
@@ -158,4 +155,9 @@ class NodeKeySpace:
     def method_query_listen(self, path: str):
         # the two * signify caller_id and method_query_id, but we should not subscribe to responses
         return key_join(self.method_path(path), "*", "*")
+    
+    def contains(self, key_expr: str):
+        name = self.name_from_key(key_expr)
+        prefix = self.prefix_from_key(key_expr)
+        return name == self.name and prefix == self.prefix
     

@@ -41,6 +41,7 @@ class Comm:
             }
         })
         self.connections = connections
+        self.subscriptions: list[zenoh.Subscriber] = []
         config = zenoh.Config.from_json5(config)
         self.config = config
         self.__enter__()
@@ -53,6 +54,11 @@ class Comm:
     
     def __exit__(self, *exc):
         self.session.close()
+    
+    def close_remote(self, ks: NodeKeySpace):
+        subscriptions = [s for s in self.subscriptions if ks.contains(str(s.key_expr))]
+        for s in subscriptions:
+            s.undeclare()
 
     def serialize(self, proto: ProtoMessage) -> bytes:
         b = proto.SerializeToString()
@@ -224,18 +230,20 @@ class Comm:
                 reply(code, error=error)
         return _on_query
 
-    def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> zenoh.Subscriber:
+    def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> None:
         key_expr = ks.liveliness_key_prefix
         zenoh_handler = self._on_liveliness(handler)
-        return self.session.liveliness().declare_subscriber(key_expr, zenoh_handler)
+        subscriber = self.session.liveliness().declare_subscriber(key_expr, zenoh_handler)
+        self.subscriptions.append(subscriber)
 
-    def query_liveliness(self, ks: NodeKeySpace) -> zenoh.Reply:
+    def _query_liveliness(self, ks: NodeKeySpace) -> zenoh.Reply:
         key_expr = ks.liveliness_key_prefix
         return self.session.liveliness().get(key_expr).recv()
 
-    def _subscriber(self, key_expr: str, handler: ZenohCallback) -> zenoh.Subscriber:
+    def _subscriber(self, key_expr: str, handler: ZenohCallback) -> None:
         logger.debug(f"declaring subscriber on key expression '{key_expr}'")
-        return self.session.declare_subscriber(key_expr, handler)
+        subscriber = self.session.declare_subscriber(key_expr, handler)
+        self.subscriptions.append(subscriber)
     
     def _queryable(self, key_expr: str, handler: ZenohQueryCallback) -> zenoh.Queryable:
         return self.session.declare_queryable(key_expr, handler)
@@ -246,20 +254,20 @@ class Comm:
     def _query_callback(self, key_expr: str, payload: bytes, handler: ZenohReplyCallback) -> None:
         self.session.get(key_expr, payload=payload, handler=handler)
     
-    def meta_subscriber(self, ks: NodeKeySpace, handler: MetaCallback) -> zenoh.Subscriber:
+    def meta_subscriber(self, ks: NodeKeySpace, handler: MetaCallback) -> None:
         key_expr = ks.meta_key_prefix
         zenoh_handler = self._on_meta(handler)
-        return self._subscriber(key_expr, zenoh_handler)
+        self._subscriber(key_expr, zenoh_handler)
     
-    def state_subscriber(self, ks: NodeKeySpace, handler: StateCallback) -> zenoh.Subscriber:
+    def state_subscriber(self, ks: NodeKeySpace, handler: StateCallback) -> None:
         key_expr = ks.state_key_prefix
         zenoh_handler = self._on_state(handler)
-        return self._subscriber(key_expr, zenoh_handler)
+        self._subscriber(key_expr, zenoh_handler)
     
-    def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, Tag]) -> zenoh.Subscriber:
+    def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, Tag]) -> None:
         key_expr = ks.tag_data_path(path)
         zenoh_handler = self._on_tag_data(handler, tags)
-        return self._subscriber(key_expr, zenoh_handler)
+        self._subscriber(key_expr, zenoh_handler)
 
     def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> zenoh.Queryable:
         key_expr = ks.tag_write_path(tag.path)
@@ -270,10 +278,10 @@ class Comm:
         b = self.serialize(value)
         return self._query_sync(ks.tag_write_path(path), payload=b)
     
-    def method_queryable(self, ks: NodeKeySpace, method: Method) -> zenoh.Subscriber:
+    def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
         key_expr = ks.method_query_listen(method.path)
         zenoh_handler = self._on_method_query(method)
-        return self._subscriber(key_expr, zenoh_handler)
+        self._subscriber(key_expr, zenoh_handler)
     
     def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, method_query_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> None:
         query_key_expr = ks.method_query(path, caller_id, method_query_id)
@@ -281,7 +289,7 @@ class Comm:
 
         response_key_expr = ks.method_response(path, caller_id, method_query_id)
         zenoh_handler = self._on_method_reply(on_reply, responses)
-        subscriber = self._subscriber(response_key_expr, zenoh_handler)
+        self._subscriber(response_key_expr, zenoh_handler)
         self._send_proto(query_key_expr, query_data)
 
     def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
@@ -337,7 +345,7 @@ class Comm:
             
     def is_online(self, ks: NodeKeySpace) -> bool:
         try:
-            reply = self.query_liveliness(ks)
+            reply = self._query_liveliness(ks)
             if not reply.ok:
                 return False
             return reply.ok.kind == zenoh.SampleKind.PUT
