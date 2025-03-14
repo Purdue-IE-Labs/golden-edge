@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-
-from gedge.comm.comm import Comm
-from gedge.node.tag_data import TagData
 from gedge.node import codes
-from gedge import proto
 
 import logging
 logger = logging.getLogger(__name__)
