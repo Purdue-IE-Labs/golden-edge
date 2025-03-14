@@ -5,6 +5,7 @@ from .node.data_type import DataType
 from .node.method_reply import MethodReply
 from .node.tag_write_query import TagWriteQuery
 from .node.tag_write_reply import TagWriteReply
+from .node.test_node import TestNodeSession
 
 import logging
 import os
@@ -17,3 +18,6 @@ def connect(config: NodeConfig, *connections: str) -> NodeSession:
     if len(conns) == 0:
         raise ValueError("Must provide at least one connection point")
     return config._connect(conns)
+
+def mock_connect(config: NodeConfig) -> TestNodeSession:
+    return TestNodeSession(config)

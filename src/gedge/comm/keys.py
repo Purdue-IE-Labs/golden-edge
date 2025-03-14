@@ -42,6 +42,19 @@ def liveliness_key_prefix(prefix: str, name: str):
 def method_response_from_call(key_expr: str):
     return key_join(key_expr, RESPONSE)
 
+def overlap(key1: str, key2: str):
+    # incredibly simple algorithm to handle * semantics like zenoh does
+    # TODO: handle ** and ? in the future
+    key1_split = key1.split('/')
+    key2_split = key2.split('/')
+    if len(key1_split) != len(key2_split):
+        return False
+    
+    for key1_component, key2_component in zip(key1_split, key2_split):
+        if key1_component != "*" and key2_component != "*" and key1_component != key2_component:
+            return False
+    return True
+
 # this defines a key prefix and a name
 class NodeKeySpace:
     def __init__(self, prefix: str, name: str):
