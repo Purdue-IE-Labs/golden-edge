@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from gedge.comm.comm import Comm
 from gedge.node.tag_data import TagData
 from gedge.node import codes
@@ -8,27 +10,19 @@ from gedge import proto
 import logging
 logger = logging.getLogger(__name__)
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 if TYPE_CHECKING:
     from gedge.node.method_response import MethodResponse
 
+@dataclass
 class MethodQuery:
-    def __init__(self, key_expr: str, comm: Comm, params: dict[str, Any] = {}, responses: list[MethodResponse] = []):
-        self._comm = comm
-        self._responses = responses
-
-        self.params = params
-        self.key_expr = key_expr
+    key_expr: str
+    params: dict[str, Any]
+    _reply: Callable[[int, dict[str, Any], str], None]
+    _responses: list[MethodResponse]
     
     def reply(self, code: int, body: dict[str, Any] = {}, error: str = ""):
-        logger.info(f"Replying to method with code {code} on path {self.key_expr}")
+        logger.info(f"Replying to method with code {code} on path TODO: fix")
         if code not in {i.code for i in self._responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
             raise ValueError(f"invalid repsonse code {code}")
-        new_body: dict[str, proto.TagData] = {}
-        for key, value in body.items():
-            response = [i for i in self._responses if i.code == code][0]
-            data_type = response.body[key].type
-            new_body[key] = TagData.py_to_proto(value, data_type)
-        r = proto.ResponseData(code=code, error=error, body=new_body)
-        b = self._comm.serialize(r)
-        self._comm.session.put(key_expr=self.key_expr, payload=b)
+        self._reply(code, body, error)

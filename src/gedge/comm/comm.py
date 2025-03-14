@@ -3,12 +3,24 @@ from __future__ import annotations
 import base64
 import zenoh
 import json
-from gedge.node.error import NodeLookupError
+from gedge.node import codes
+from gedge.node.body import BodyData
+from gedge.node.error import NodeLookupError, TagLookupError
 from gedge import proto
 from gedge.comm import keys
-from gedge.comm.keys import NodeKeySpace
+from gedge.comm.keys import NodeKeySpace, method_response_from_call
 
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Callable
+
+from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler
+from gedge.node.method import Method
+from gedge.node.method_reply import MethodReply
+from gedge.node.method_response import MethodResponse
+from gedge.node.prop import Props
+from gedge.node.query import MethodQuery
+from gedge.node.tag import Tag, WriteResponse
+from gedge.node.tag_data import TagData
+from gedge.node.tag_write_query import TagWriteQuery
 if TYPE_CHECKING:
     from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
@@ -25,7 +37,7 @@ class Comm:
         config = json.dumps({
             "mode": "client",
             "connect": {
-                "endpoints": list(connections)
+                "endpoints": connections
             }
         })
         self.connections = connections
@@ -63,9 +75,159 @@ class Comm:
         key_expr = ks.liveliness_key_prefix
         return self.session.liveliness().declare_token(key_expr)
 
-    def liveliness_subscriber(self, ks: NodeKeySpace, handler: ZenohCallback) -> zenoh.Subscriber:
+    def _on_liveliness(self, on_liveliness_change: LivelinessCallback) -> ZenohCallback:
+        def _on_liveliness(sample: zenoh.Sample):
+            is_online = sample.kind == zenoh.SampleKind.PUT
+            online = "online" if is_online else "offline"
+            logger.info(f"Liveliness of remote node {sample.key_expr} changed: {online}")
+            on_liveliness_change(str(sample.key_expr), is_online)
+        return _on_liveliness
+
+    def _on_tag_data(self, on_tag_data: TagDataCallback, tags: dict[str, Tag]) -> ZenohCallback:
+        def _on_tag_data(sample: zenoh.Sample):
+            tag_data: proto.TagData = self.deserialize(proto.TagData(), sample.payload.to_bytes())
+            path: str = NodeKeySpace.tag_path_from_key(str(sample.key_expr))
+            if path not in tags:
+                node: str = NodeKeySpace.name_from_key(str(sample.key_expr))
+                raise TagLookupError(path, node)
+            tag_config = tags[path]
+            value = TagData.proto_to_py(tag_data, tag_config.type)
+            logger.info(f"Remote node {sample.key_expr} updating tag {path} with value {value}")
+            on_tag_data(str(sample.key_expr), value)
+        return _on_tag_data
+
+    def _on_state(self, on_state: StateCallback) -> ZenohCallback:
+        def _on_state(sample: zenoh.Sample):
+            state: proto.State = self.deserialize(proto.State(), sample.payload.to_bytes())
+            logger.info(f"Remote node {sample.key_expr} publishing state message")
+            on_state(str(sample.key_expr), state)
+        return _on_state
+
+    def _on_meta(self, on_meta: MetaCallback) -> ZenohCallback:
+        def _on_meta(sample: zenoh.Sample):
+            meta: proto.Meta = self.deserialize(proto.Meta(), sample.payload.to_bytes())
+            logger.info(f"Remote node {sample.key_expr} publishing meta message")
+            on_meta(str(sample.key_expr), meta)
+        return _on_meta
+
+    def _on_method_reply(self, on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> ZenohCallback:
+        def _on_reply(sample: zenoh.Sample) -> None:
+            if not sample:
+                print("warning: reply super not ok")
+                return
+            r: proto.ResponseData = self.deserialize(proto.ResponseData(), sample.payload.to_bytes())
+
+            '''
+            Design decision here. The problem is that golden-edge reserved codes do not have a 
+            config backing (we could add one if we wanted), so we have to create a config on 
+            the fly to give back to the user for them to look at. For now, it's empty. At config 
+            initialization, we could (and maybe should) inject these. But then if the users 
+            goes len(responses) they may be confused to find that we have added some without 
+            there permission. Or maybe we just never show the user any of these. But also 
+            they need to see the error ones to know that something went terribly wrong.
+            '''
+            if r.code in {codes.DONE, codes.METHOD_ERROR}:
+                response: MethodResponse = MethodResponse(r.code, Props.empty(), {})
+            else:
+                response: MethodResponse = responses[r.code]
+            body: dict[str, BodyData] = {}
+            for key, value in r.body.items():
+                data_type = response.body[key].type
+                props = response.body[key].props
+                body[key] = BodyData(TagData.proto_to_py(value, data_type), props.to_value())
+            props = response.props.to_value()
+            reply = MethodReply(str(sample.key_expr), r.code, body, r.error, props)
+            on_reply(reply)
+            if r.code in {codes.DONE, codes.METHOD_ERROR}:
+                # remove subscription after we are done
+                logger.debug(f"remove subscription for key expr {sample.key_expr}")
+                # self._subscriptions.remove([x for x in self._subscriptions if x.key_expr == sample.key_expr][0])
+                # TODO: we need to unsubcribe here because we are closing this method connection, does this mean we should move comm connections
+                # to this function
+        return _on_reply
+    
+    def _tag_write_reply(self, query: zenoh.Query) -> Callable[[int, str], None]:
+        def _reply(code: int, error: str = ""):
+            write_response = proto.WriteResponseData(code=code, error=error)
+            b = self.serialize(write_response)
+            query.reply(key_expr=str(query.key_expr), payload=b)
+        return _reply
+
+    def _on_tag_write(self, tag: Tag) -> ZenohQueryCallback:
+        def _on_write(query: zenoh.Query) -> None:
+            reply = self._tag_write_reply(query)
+            try:
+                if not query.payload:
+                    raise ValueError(f"Empty write request")
+                proto_data = self.deserialize(proto.TagData(), query.payload.to_bytes())
+                data: TagValue = TagData.proto_to_py(proto_data, tag.type)
+                logger.info(f"Node {query.key_expr} received tag write at path '{tag.path}' with value '{data}'")
+
+                t = TagWriteQuery(str(query.key_expr), data, tag, reply)
+                assert tag.write_handler is not None
+                tag.write_handler(t)
+                
+                try:
+                    code = t.code
+                    error = t.error
+                except:
+                    raise ValueError(f"Tag write handler must call 'reply(...)' at some point")
+
+                write_responses: dict[int, WriteResponse] = {r.code:r for r in tag.responses}
+                if code not in write_responses:
+                    raise LookupError(f"Tag write handler for tag {tag.path} given incorrect code {code} not found in callback config")
+
+                response = [code, error]
+            except Exception as e:
+                logger.warning(f"Sending tag write response on path {tag.path}: error={repr(e)}")
+                response = [code, error]
+            finally:
+                reply(*response)
+        return _on_write
+    
+    def _method_reply(self, key_expr: str, responses: list[MethodResponse]):
+        def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
+            logger.info(f"Replying to method with code {code} on path TODO: fix")
+            if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
+                raise ValueError(f"invalid repsonse code {code}")
+            new_body: dict[str, proto.TagData] = {}
+            for key, value in body.items():
+                response = [i for i in responses if i.code == code][0]
+                data_type = response.body[key].type
+                new_body[key] = TagData.py_to_proto(value, data_type)
+            r = proto.ResponseData(code=code, body=new_body, error=error)
+            self._send_proto(key_expr=key_expr, value=r)
+        return _reply
+    
+    def _on_method_query(self, method: Method):
+        logger.info(f"Setting up method at path: {method.path} on node TODO: fix")
+        def _on_query(sample: zenoh.Sample) -> None:
+            m: proto.MethodQueryData = self.deserialize(proto.MethodQueryData(), sample.payload.to_bytes())
+            params: dict[str, Any] = {}
+            for key, value in m.params.items():
+                data_type = method.params[key].type
+                params[key] = TagData.proto_to_py(value, data_type)
+            
+            key_expr = method_response_from_call(str(sample.key_expr))
+            reply = self._method_reply(key_expr, method.responses)
+            q = MethodQuery(str(sample.key_expr), params, reply, method.responses)
+            try:
+                logger.info(f"Node TODO: fix method call at path '{method.path}' with params {params}")
+                logger.debug(f"Received from {str(sample.key_expr)}")
+                assert method.handler is not None, "No method handler provided"
+                method.handler(q)
+                code = codes.DONE
+            except Exception as e:
+                code = codes.METHOD_ERROR
+                error = repr(e)
+            finally:
+                reply(code, error=error)
+        return _on_query
+
+    def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> zenoh.Subscriber:
         key_expr = ks.liveliness_key_prefix
-        return self.session.liveliness().declare_subscriber(key_expr, handler)
+        zenoh_handler = self._on_liveliness(handler)
+        return self.session.liveliness().declare_subscriber(key_expr, zenoh_handler)
 
     def query_liveliness(self, ks: NodeKeySpace) -> zenoh.Reply:
         key_expr = ks.liveliness_key_prefix
@@ -84,34 +246,43 @@ class Comm:
     def _query_callback(self, key_expr: str, payload: bytes, handler: ZenohReplyCallback) -> None:
         self.session.get(key_expr, payload=payload, handler=handler)
     
-    def meta_subscriber(self, ks: NodeKeySpace, handler: ZenohCallback) -> zenoh.Subscriber:
+    def meta_subscriber(self, ks: NodeKeySpace, handler: MetaCallback) -> zenoh.Subscriber:
         key_expr = ks.meta_key_prefix
-        return self._subscriber(key_expr, handler)
+        zenoh_handler = self._on_meta(handler)
+        return self._subscriber(key_expr, zenoh_handler)
     
-    def state_subscriber(self, ks: NodeKeySpace, handler: ZenohCallback) -> zenoh.Subscriber:
+    def state_subscriber(self, ks: NodeKeySpace, handler: StateCallback) -> zenoh.Subscriber:
         key_expr = ks.state_key_prefix
-        return self._subscriber(key_expr, handler)
+        zenoh_handler = self._on_state(handler)
+        return self._subscriber(key_expr, zenoh_handler)
     
-    def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: ZenohCallback) -> zenoh.Subscriber:
+    def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, Tag]) -> zenoh.Subscriber:
         key_expr = ks.tag_data_path(path)
-        return self._subscriber(key_expr, handler)
+        zenoh_handler = self._on_tag_data(handler, tags)
+        return self._subscriber(key_expr, zenoh_handler)
 
-    def tag_queryable(self, ks: NodeKeySpace, path: str, on_write: ZenohQueryCallback) -> zenoh.Queryable:
-        key_expr = ks.tag_write_path(path)
-        return self._queryable(key_expr, on_write)
+    def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> zenoh.Queryable:
+        key_expr = ks.tag_write_path(tag.path)
+        zenoh_handler = self._on_tag_write(tag)
+        return self._queryable(key_expr, zenoh_handler)
     
     def query_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> zenoh.Reply:
         b = self.serialize(value)
         return self._query_sync(ks.tag_write_path(path), payload=b)
     
-    def method_queryable(self, ks: NodeKeySpace, path: str, on_call: ZenohCallback) -> zenoh.Subscriber:
-        key_expr = ks.method_query_listen(path)
-        return self._subscriber(key_expr, on_call)
+    def method_queryable(self, ks: NodeKeySpace, method: Method) -> zenoh.Subscriber:
+        key_expr = ks.method_query_listen(method.path)
+        zenoh_handler = self._on_method_query(method)
+        return self._subscriber(key_expr, zenoh_handler)
     
-    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, method_query_id: str, params: dict[str, proto.TagData]) -> None:
-        key_expr = ks.method_query(path, caller_id, method_query_id)
+    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, method_query_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> None:
+        query_key_expr = ks.method_query(path, caller_id, method_query_id)
         query_data = proto.MethodQueryData(params=params)
-        self._send_proto(key_expr, query_data)
+
+        response_key_expr = ks.method_response(path, caller_id, method_query_id)
+        zenoh_handler = self._on_method_reply(on_reply, responses)
+        subscriber = self._subscriber(response_key_expr, zenoh_handler)
+        self._send_proto(query_key_expr, query_data)
 
     def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
         key_expr = ks.tag_data_path(path)
