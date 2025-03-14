@@ -37,7 +37,6 @@ class RemoteConnection:
     def __init__(self, config: RemoteConfig, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
         self.config = config
         self._comm = comm 
-        self._subscriptions: list[zenoh.Subscriber] = []
         self.key = self.config.key
         self.ks = NodeKeySpace.from_user_key(self.key)
         self.on_close = on_close
@@ -63,8 +62,7 @@ class RemoteConnection:
         self._comm.__exit__(*exc)
     
     def close(self):
-        for sub in self._subscriptions:
-            sub.undeclare()        
+        self._comm.close_remote(self.ks)
         if self.on_close is not None:
             self.on_close(self.key)
     
@@ -73,20 +71,16 @@ class RemoteConnection:
             raise TagLookupError(path, self.ks.name)
 
         self.config.read_write_tags.append(path)
-        subscriber = self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tags)
-        self._subscriptions.append(subscriber)
+        self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tags)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
-        subscriber = self._comm.state_subscriber(self.ks, on_state)
-        self._subscriptions.append(subscriber)
+        self._comm.state_subscriber(self.ks, on_state)
 
     def add_meta_callback(self, on_meta: MetaCallback) -> None:
-        subscriber = self._comm.meta_subscriber(self.ks, on_meta)
-        self._subscriptions.append(subscriber)
+        self._comm.meta_subscriber(self.ks, on_meta)
 
     def add_liveliness_callback(self, on_liveliness_change: LivelinessCallback) -> None:
-        subscriber = self._comm.liveliness_subscriber(self.ks, on_liveliness_change)
-        self._subscriptions.append(subscriber)
+        self._comm.liveliness_subscriber(self.ks, on_liveliness_change)
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
@@ -146,8 +140,6 @@ class RemoteConnection:
             params[key] = TagData.py_to_proto(value, data_type)
 
         # TODO: we need a subscriber for /** and for /caller_id/method_query_id
-        # subscriber = self._comm.method_queryable_v2(self.ks, path, caller_id, method_query_id, on_reply)
-        # self._subscriptions.append(subscriber)
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, on_reply, self.responses[path])
     
