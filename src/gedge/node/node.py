@@ -32,18 +32,27 @@ class NodeConfig:
         self.ks = NodeKeySpace.from_user_key(key)
         self.tags: dict[str, Tag] = dict()
         self.methods: dict[str, Method] = dict()
-    
+
     @classmethod
     def from_json5(cls, path: str):
         with open(path, "r") as f:
             node: dict[str, Any] = json5.load(f)
-        if "key" not in node:
+        return cls._config_from_json5_obj(node)
+    
+    @classmethod
+    def from_json5_str(cls, string: str):
+        node: dict[str, Any] = json5.loads(string) # type: ignore
+        return cls._config_from_json5_obj(node)
+
+    @staticmethod
+    def _config_from_json5_obj(obj: dict[str, Any]):
+        if "key" not in obj:
             raise LookupError(f"Node must have a key")
-        config = cls(node["key"])
-        for tag_json in node.get("tags", []):
+        config = NodeConfig(obj["key"])
+        for tag_json in obj.get("tags", []):
             tag = Tag.from_json5(tag_json)
             config.tags[tag.path] = tag
-        for method_json in node.get("methods", []):
+        for method_json in obj.get("methods", []):
             method = Method.from_json5(method_json)
             config.methods[method.path] = method
         return config
@@ -267,6 +276,7 @@ class NodeSession:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
+        # logger.info(f"Updating tag at path {path}")
         self._comm.update_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
     
     def update_state(self, online: bool):
