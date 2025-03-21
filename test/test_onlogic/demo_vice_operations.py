@@ -5,6 +5,10 @@ import time
 
 dio_port = '/dev/ttyACM0'
 with serial.Serial(dio_port) as mcu:
+    # empty serial waiting queue
+    mcu.flush()
+    mcu.read(mcu.in_waiting)
+    
     def terminal_command(command: str):
         print(f"Running command: {command}")
         mcu.write(command.encode())
