@@ -40,15 +40,21 @@ class Comm:
                 "endpoints": connections
             }
         })
+        self.config = config
         self.connections = connections
         self.subscriptions: list[zenoh.Subscriber] = []
-        config = zenoh.Config.from_json5(config)
-        self.config = config
+    
+    def connect(self):
         self.__enter__()
+    
+    def close(self):
+        # or self.__exit__()?
+        self.session.close()
 
     def __enter__(self):
         logger.info(f"Attemping to connect to: {self.connections}")
-        session = zenoh.open(self.config)
+        config = zenoh.Config.from_json5(self.config)
+        session = zenoh.open(config)
         self.session = session
         return self
     

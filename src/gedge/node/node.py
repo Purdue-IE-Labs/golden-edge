@@ -156,19 +156,22 @@ class NodeConfig:
 
     def _connect(self, connections: list[str]):
         logger.info(f"Node {self.key} attempting to connect to network")
-        meta = self.build_meta()
-        return NodeSession(config=self, meta=meta, connections=connections)
+        return NodeSession(self, Comm(connections))
 
 class NodeSession:
-    def __init__(self, config: NodeConfig, meta: Meta, connections: list[str]):
-        self._comm = Comm(connections) 
+    def __init__(self, config: NodeConfig, comm: Comm):
+        self._comm = comm
         self.config = config
         self.ks = config.ks
         self.connections: dict[str, RemoteConnection] = dict() # user_key -> RemoteConnection
         self.id = str(uuid.uuid4())
 
         # TODO: subscribe to our own meta to handle changes to config during session?
-        self.meta = meta
+        self.meta = self.config.build_meta()
+
+        # connect
+        self._comm.connect()
+
         self.startup()
         self.tags: dict[str, Tag] = self.config.tags
         self.tag_write_responses: dict[str, dict[int, WriteResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
