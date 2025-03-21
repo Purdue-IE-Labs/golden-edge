@@ -22,7 +22,7 @@ config = gedge.NodeConfig.from_json5(str(here / "callee.json5"))
 config.add_method_handler("call/method", handler=handler)
 
 '''
-session = gedge.TestNodeSession(config)
+session = gedge.mock_connect(config)
 
 OR
 
@@ -30,7 +30,7 @@ with gedge.mock_connect(config) as session:
     ...
 '''
 
-node = gedge.TestNodeSession(config)
+node = gedge.mock_connect(config)
 print("FIRST METHOD CALL")
 responses = node.call_method_iter("call/method", name="super long things that should get rejected by func", speed=100)
 for response in responses:
