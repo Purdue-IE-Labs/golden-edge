@@ -16,7 +16,7 @@ from gedge.comm.keys import NodeKeySpace, method_response_from_call
 
 from typing import Any, TYPE_CHECKING, Callable
 
-from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagValue
+from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagValue, ZenohQueryCallback
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import MethodResponse
@@ -57,7 +57,7 @@ class MockComm(Comm):
         # just maps key expressions to functions
         self.subscribers: dict[str, list[MockCallback]] = defaultdict(list)
         self.active_methods: dict[str, MethodReplyCallback] = dict()
-        self.__enter__()
+        self.metas: dict[str, proto.Meta] = dict()
 
     def __enter__(self):
         logger.info(f"Mock connection")
@@ -188,3 +188,26 @@ class MockComm(Comm):
         key_expr = ks.method_query_listen(method.path)
         handler = self._on_method_query(method)
         self._subscriber(key_expr, handler)
+    
+    def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> None:
+        key_expr = ks.tag_write_path(tag.path)
+        zenoh_handler = self._on_tag_write(tag)
+        self._queryable(key_expr, zenoh_handler)
+    
+    def _queryable(self, key_expr: str, handler: Callable[[zenoh.Query], None]) -> None:
+        # TODO: how will MockComm handle queries
+        pass
+    
+    def pull_meta_message(self, ks: NodeKeySpace) -> proto.Meta:
+        return self.metas[ks.user_key]
+
+    def send_meta(self, ks: NodeKeySpace, meta: proto.Meta):
+        self.metas[ks.user_key] = meta
+    
+    def send_state(self, ks: NodeKeySpace, state: proto.State):
+        # maybe MockComm will implement state at some point
+        pass
+    
+    def liveliness_token(self, ks: NodeKeySpace) -> None:
+        # MockComm doesn't worry about this for now
+        pass

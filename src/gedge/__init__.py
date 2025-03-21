@@ -1,3 +1,4 @@
+from .comm.mock_comm import MockComm
 from .node.node import NodeConfig, NodeSession
 from .node.query import MethodQuery
 from .node.method import MethodResponse
@@ -20,4 +21,5 @@ def connect(config: NodeConfig, *connections: str) -> NodeSession:
     return config._connect(conns)
 
 def mock_connect(config: NodeConfig) -> TestNodeSession:
-    return TestNodeSession(config)
+    session = TestNodeSession(config, MockComm())
+    return session
