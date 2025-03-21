@@ -9,6 +9,11 @@ import threading
 print()
 DIO_PORT = '/dev/ttyACM0'
 
+def reset_buffers():
+    with serial.Serial(DIO_PORT) as mcu:
+        mcu.flush()
+        mcu.read(mcu.in_waiting)
+
 def run_command(command: str):
     time.sleep(0.005)
     print(f"Running command: {command}")
@@ -90,15 +95,17 @@ config = gedge.NodeConfig.from_json5(str(here / "edge.json5"))
 config.add_tag_write_handler("vice/open", handler=handler)
 
 with gedge.connect(config, "tcp/192.168.4.60:7447") as session:
+    reset_buffers()
+
     # read initial value of vice
     state = update_vice_state()
     print(f"initial value of vice is {state}")
 
     # new tag: is vice in robot or manual mode
-    mode = update_mode()
-    print(f"initial value of mode if {mode}")
+    # mode = update_mode()
+    # print(f"initial value of mode if {mode}")
 
-    start_mode_checking(every=5000)
+    # start_mode_checking(every=5000)
 
     while True:
         pass
