@@ -5,23 +5,31 @@
             path: "vice/open",
             type: "bool",
             props: {
-                desc: "is the vice open or not",
+                desc: "State of the vice: open (true) or closed (false)",
             },
             writable: true,
             responses: [
                 {
                     code: 200,
                     props: {
-                        desc: "vice opened",
+                        desc: "Vice opened",
                     }
                 },
                 {
                     code: 400,
                     props: {
-                        desc: "vice could not be opened"
+                        desc: "Vice could not be opened. This could be the case when the mode of the vice is manual."
                     }
                 }
             ]
         },
+        {
+            // not writable
+            path: "mode/robot",
+            type: "bool",
+            props: {
+                desc: "Mode of the vice: robot (true) or manual (false)",
+            }
+        }
     ],
 }
