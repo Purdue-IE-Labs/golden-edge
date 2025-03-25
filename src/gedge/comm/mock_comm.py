@@ -26,6 +26,7 @@ from gedge.node.tag import Tag, WriteResponse
 from gedge.node.tag_data import TagData
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.tag_write_reply import TagWriteReply
+import threading
 if TYPE_CHECKING:
     from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
@@ -71,20 +72,11 @@ class MockComm(Comm):
             if keys.overlap(key, key_expr):
                 # print(f"overlap between {key} and {key_expr}")
                 for handler in self.subscribers[key]:
-                    handler(MockSample(key_expr, value))
+                    thread = threading.Thread(target=handler, args=[MockSample(key_expr, value)])
+                    thread.start()
 
     def _subscriber(self, key_expr: str, handler: MockCallback):
         self.subscribers[key_expr].append(handler)
-        # print(self.subscribers)
-    
-    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, method_query_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> None:
-        query_key_expr = ks.method_query(path, caller_id, method_query_id)
-        query_data = proto.MethodQueryData(params=params)
-
-        response_key_expr = ks.method_response(path, caller_id, method_query_id)
-        handler = self._on_method_reply(on_reply, responses)
-        self._subscriber(response_key_expr, handler)
-        self._send_proto(query_key_expr, query_data)
     
     def _on_method_reply(self, on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> MockCallback:
         def _on_reply(reply: MockSample) -> None:
