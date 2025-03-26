@@ -70,7 +70,6 @@ class MockComm(Comm):
     def _send_proto(self, key_expr: str, value: ProtoMessage):
         for key in self.subscribers:
             if keys.overlap(key, key_expr):
-                # print(f"overlap between {key} and {key_expr}")
                 for handler in self.subscribers[key]:
                     thread = threading.Thread(target=handler, args=[MockSample(key_expr, value)])
                     thread.start()

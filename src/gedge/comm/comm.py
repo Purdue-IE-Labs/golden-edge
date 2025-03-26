@@ -125,7 +125,7 @@ class Comm:
     def _on_method_reply(self, on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> ZenohCallback:
         def _on_reply(sample: zenoh.Sample) -> None:
             if not sample:
-                print("warning: reply super not ok")
+                logger.warning(f"reply from method failed")
                 return
             r: proto.ResponseData = self.deserialize(proto.ResponseData(), sample.payload.to_bytes())
 
@@ -255,7 +255,11 @@ class Comm:
         return self.session.declare_queryable(key_expr, handler)
     
     def _query_sync(self, key_expr: str, payload: bytes) -> zenoh.Reply:
-        return self.session.get(key_expr, payload=payload).recv()
+        try:
+            reply = self.session.get(key_expr, payload=payload).recv()
+        except Exception:
+            raise LookupError(f"No queryable defined at {key_expr}")
+        return reply
     
     def _query_callback(self, key_expr: str, payload: bytes, handler: ZenohReplyCallback) -> None:
         self.session.get(key_expr, payload=payload, handler=handler)
@@ -278,10 +282,12 @@ class Comm:
     def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> zenoh.Queryable:
         key_expr = ks.tag_write_path(tag.path)
         zenoh_handler = self._on_tag_write(tag)
+        logger.debug(f"tag queryable on {key_expr}")
         return self._queryable(key_expr, zenoh_handler)
     
     def query_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> zenoh.Reply:
         b = self.serialize(value)
+        logger.debug(f"querying tag at path {ks.tag_write_path(path)}")
         return self._query_sync(ks.tag_write_path(path), payload=b)
     
     def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
@@ -335,7 +341,7 @@ class Comm:
                     continue
                 messages.append(meta)
             except Exception as e:
-                print(f"couldn't decode {e}")
+                raise ValueError(f"Could not deserialize meta from historian")
         return messages
 
     def pull_meta_message(self, ks: NodeKeySpace) -> proto.Meta:
