@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from gedge.comm.keys import NodeKeySpace
 from gedge.node import codes
 
 import logging
@@ -18,7 +19,7 @@ class MethodQuery:
     _responses: list[MethodResponse]
     
     def reply(self, code: int, body: dict[str, Any] = {}, error: str = ""):
-        logger.info(f"Replying to method with code {code} on path TODO: fix")
+        logger.info(f"Replying to method query at path {NodeKeySpace.method_path_from_call_key(self.key_expr)} with code {code}")
         if code not in {i.code for i in self._responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
             raise ValueError(f"invalid repsonse code {code}")
         self._reply(code, body, error)

@@ -62,7 +62,6 @@ class RemoteConnection:
         self.close()
         self._comm.__exit__(*exc)
     
-    # TODO: close will need to work differently in the subnode case
     def close(self):
         self._comm.close_remote(self.ks)
         if self.on_close is not None:

@@ -136,7 +136,7 @@ class MockComm(Comm):
     
     def _method_reply(self, key_expr: str, responses: list[MethodResponse]):
         def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
-            logger.info(f"Replying to method with code {code} on path TODO: fix")
+            logger.info(f"Replying to method with code {code} on path {NodeKeySpace.method_path_from_response_key(key_expr)}")
             if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
                 raise ValueError(f"invalid repsonse code {code}")
             new_body: dict[str, proto.TagData] = {}
@@ -149,7 +149,6 @@ class MockComm(Comm):
         return _reply
     
     def _on_method_query(self, method: Method):
-        logger.info(f"Setting up method at path: {method.path} on node TODO: fix")
         def _on_query(sample: MockSample) -> None:
             assert type(sample.value) == proto.MethodQueryData
             m: proto.MethodQueryData = sample.value
@@ -160,9 +159,9 @@ class MockComm(Comm):
             
             key_expr = method_response_from_call(str(sample.key_expr))
             reply = self._method_reply(key_expr, method.responses)
-            q = MethodQuery(str(sample.key_expr), params, reply, method.responses)
+            q = MethodQuery(sample.key_expr, params, reply, method.responses)
             try:
-                logger.info(f"Node TODO: fix method call at path '{method.path}' with params {params}")
+                logger.info(f"Node {NodeKeySpace.user_key_from_key(sample.key_expr)} method call at path '{method.path}' with params {params}")
                 logger.debug(f"Received from {str(sample.key_expr)}")
                 assert method.handler is not None, "No method handler provided"
                 method.handler(q)
@@ -177,6 +176,7 @@ class MockComm(Comm):
     
     def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
         key_expr = ks.method_query_listen(method.path)
+        logger.info(f"Setting up method at path: {method.path} on node {ks.name}")
         handler = self._on_method_query(method)
         self._subscriber(key_expr, handler)
     
