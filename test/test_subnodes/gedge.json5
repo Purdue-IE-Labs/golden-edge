@@ -6,7 +6,54 @@
             type: "list[int]",
         }
     ],
-    methods: [],
+    methods: [
+        {
+            path: "call/method",
+            params: {
+                name: {
+                    type: "string",
+                    props: {
+                        desc: "name of the project"
+                    }
+                },
+                speed: "int",
+            },
+            responses: [
+                {
+                    code: 200,
+                    body: {
+                        res1: {
+                            type: "int",
+                            props: {
+                                desc: "a body item named res1"
+                            }
+                        }
+                    },
+                    props: {
+                        desc: "successfully executed method"
+                    }
+                },
+                {
+                    code: 400,
+                    body: {
+                        res1: "int",
+                    },
+                    props: {
+                        desc: "speed must be in range [0, 100]"
+                    }
+                },
+                {
+                    code: 401,
+                    props: {
+                        desc: "name cannot be longer than 30 characters"
+                    }
+                }
+            ],
+            props: {
+                desc: "testing method calls"
+            },
+        }
+    ],
     subnodes: [
         {
             name: "Vice",
@@ -38,7 +85,12 @@
         },
         {
             name: "Siemens828D",
-            tags: [],
+            tags: [
+                {
+                    path: "siemens/tag",
+                    type: "list[bool]"
+                }
+            ],
             methods: [],
             subnodes: [
                 {
@@ -52,9 +104,15 @@
                             },
                         }
                     ],
-                    methods: []
-                    }
-                ]
-            }
-        ]
-    }
+                    methods: [
+                        {
+                            path: "inner/method",
+                            params: {},
+                            responses: [200]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

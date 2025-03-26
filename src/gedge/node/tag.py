@@ -69,7 +69,7 @@ class Tag:
             raise ValueError(f"invalid tag, tag must be a dict")
         
         if not("path" in json and "type" in json):
-            raise LookupError(f"tag must include both a path and a type")
+            raise LookupError(f"tag must include both a path and a type: {json}")
         path = json["path"]
         type = DataType.from_json5(json["type"])
         props = Props.from_json5(json.get("props", {}))
