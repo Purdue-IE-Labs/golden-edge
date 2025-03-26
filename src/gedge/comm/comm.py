@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from multiprocessing import Value
 import zenoh
 import json
 from gedge.node import codes
@@ -122,7 +123,8 @@ class Comm:
             on_meta(str(sample.key_expr), meta)
         return _on_meta
 
-    def _on_method_reply(self, on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> ZenohCallback:
+    def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> ZenohCallback:
+        responses = {r.code: r for r in method.responses}
         def _on_reply(sample: zenoh.Sample) -> None:
             if not sample:
                 logger.warning(f"reply from method failed")
@@ -197,7 +199,8 @@ class Comm:
                 reply(*response)
         return _on_write
     
-    def _method_reply(self, key_expr: str, responses: list[MethodResponse]):
+    def _method_reply(self, key_expr: str, method: Method):
+        responses = method.responses
         path = NodeKeySpace.method_path_from_response_key(key_expr)
         def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
             logger.info(f"Replying to method with code {code} on path {path}")
@@ -221,7 +224,7 @@ class Comm:
                 params[key] = TagData.proto_to_py(value, data_type)
             
             key_expr = method_response_from_call(str(sample.key_expr))
-            reply = self._method_reply(key_expr, method.responses)
+            reply = self._method_reply(key_expr, method)
             q = MethodQuery(str(sample.key_expr), params, reply, method.responses)
             name = NodeKeySpace.user_key_from_key(str(sample.key_expr))
             try:
@@ -298,12 +301,12 @@ class Comm:
         zenoh_handler = self._on_method_query(method)
         self._subscriber(key_expr, zenoh_handler)
     
-    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, method_query_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> None:
+    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, method_query_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, method: Method) -> None:
         query_key_expr = ks.method_query(path, caller_id, method_query_id)
         query_data = proto.MethodQueryData(params=params)
 
         response_key_expr = ks.method_response(path, caller_id, method_query_id)
-        zenoh_handler = self._on_method_reply(on_reply, responses)
+        zenoh_handler = self._on_method_reply(on_reply, method)
         self._subscriber(response_key_expr, zenoh_handler)
         self._send_proto(query_key_expr, query_data)
 
