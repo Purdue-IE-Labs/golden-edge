@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import zenoh
 from gedge.node.tag import Tag
-from gedge import proto
 
 from typing import Any, TYPE_CHECKING, Callable
 if TYPE_CHECKING:

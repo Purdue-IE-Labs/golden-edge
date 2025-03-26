@@ -6,3 +6,4 @@ from .prop_pb2 import Prop
 from .tag_pb2 import Tag, WriteResponse, WriteResponseData
 from .body_pb2 import Body
 from .param_pb2 import Param
+from .subnode_pb2 import Subnode

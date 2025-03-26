@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from re import sub
 import uuid
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
-from gedge.node import codes
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.proto import Meta, State, WriteResponseData, MethodQueryData
 from gedge import proto
@@ -15,12 +15,13 @@ from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
 from gedge.node.method import Method, MethodResponse
 from gedge.node.tag_data import TagData 
-import zenoh
 import json5
 
 from typing import Self, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, Type, ZenohQueryCallback, TagWriteHandler, MethodHandler
+    from gedge.node.subnode import SubnodeConfig
+    from gedge.node.subnode import SubnodeSession
 
 import logging
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ class NodeConfig:
         self.ks = NodeKeySpace.from_user_key(key)
         self.tags: dict[str, Tag] = dict()
         self.methods: dict[str, Method] = dict()
+        self.subnodes: dict[str, SubnodeConfig] = dict()
 
     @classmethod
     def from_json5(cls, path: str):
@@ -55,6 +57,10 @@ class NodeConfig:
         for method_json in obj.get("methods", []):
             method = Method.from_json5(method_json)
             config.methods[method.path] = method
+        from gedge.node.subnode import SubnodeConfig
+        for subnode_json in obj.get("subnodes", []):
+            subnode = SubnodeConfig.from_json5(subnode_json, config.ks)
+            config.subnodes[subnode.name] = subnode
         return config
 
     @property
@@ -82,6 +88,20 @@ class NodeConfig:
         self.tags[path] = tag
         logger.info(f"Adding tag with path '{path}' on node '{self.key}'")
         return tag
+    
+    def subnode(self, name: str) -> SubnodeConfig:
+        if "/" in name:
+            curr_node = self
+            subnodes = name.split("/")
+            for s in subnodes:
+                if s not in curr_node.subnodes:
+                    raise ValueError(f"No subnode {s}")
+                curr_node = curr_node.subnodes[s]
+            return curr_node # type: ignore
+
+        if name not in self.subnodes:
+            raise ValueError(f"No subnode {name}") 
+        return self.subnodes[name]
 
     def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
         return self._add_readable_tag(path, type, props)
@@ -147,11 +167,13 @@ class NodeConfig:
             method = self.methods[path]
             assert method.handler is not None, f"Method {path} has no handler"
 
+    # essentially to_proto() for the node
     def build_meta(self) -> Meta:
         self._verify_tags()
         tags: list[proto.Tag] = [t.to_proto() for t in self.tags.values()]
         methods: list[proto.Method] = [m.to_proto() for m in self.methods.values()]
-        meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods)
+        subnodes: list[proto.Subnode] = [s.to_proto() for s in self.subnodes.values()]
+        meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods, subnodes=subnodes)
         return meta
 
     def _connect(self, connections: list[str]):
@@ -177,6 +199,7 @@ class NodeSession:
         self.tag_write_responses: dict[str, dict[int, WriteResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
         self.methods: dict[str, Method] = self.config.methods
         self.method_responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.subnodes: dict[str, SubnodeConfig] = self.config.subnodes
 
     def __enter__(self):
         return self
@@ -221,7 +244,7 @@ class NodeSession:
 
     def connect_to_remote(self, key: str, on_state: StateCallback | None = None, on_meta: MetaCallback | None = None, on_liveliness_change: LivelinessCallback | None = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
         logger.info(f"Node {self.config.key} connecting to remote node {key}")
-        connection = RemoteConnection(RemoteConfig(key), self._comm, self.id, self._on_remote_close)
+        connection = RemoteConnection(RemoteConfig(key), NodeKeySpace.from_user_key(key), self._comm, self.id, self._on_remote_close)
         if on_state:
             connection.add_state_callback(on_state)
         if on_meta:
@@ -249,6 +272,7 @@ class NodeSession:
         assert not any([x.key == self.ks.user_key for x in metas]), f"{[x.key for x in metas]} are online, and {self.ks.user_key} match!"
 
     def startup(self):
+        logger.debug(f"Verifying node collisions...")
         self._verify_node_collision()
         self._comm.send_meta(self.ks, self.meta)
         self.update_state(True)
@@ -265,6 +289,23 @@ class NodeSession:
             # hook up method handlers
             method = self.config.methods[path]
             self._comm.method_queryable(self.ks, method) 
+        
+        def add_subnode_callbacks(config: SubnodeConfig):
+            for path in config.tags:
+                tag = config.tags[path]
+                if not tag.is_writable():
+                    continue
+                assert tag.write_handler is not None
+                self._comm.tag_queryable(config.ks, tag) 
+            for path in config.methods:
+                method = config.methods[path]
+                self._comm.method_queryable(config.ks, method) 
+            for name in config.subnodes:
+                subnode = config.subnodes[name]
+                add_subnode_callbacks(subnode)
+        
+        for s in self.config.subnodes.values():
+            add_subnode_callbacks(s)
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
@@ -284,3 +325,21 @@ class NodeSession:
     
     def update_state(self, online: bool):
         self._comm.send_state(self.ks, State(online=online))
+
+    def subnode(self, name: str) -> SubnodeSession:
+        from gedge.node.subnode import SubnodeSession
+        # need to return a subnode session
+        if "/" in name:
+            curr_node: NodeConfig | SubnodeConfig = self.config
+            subnodes = name.split("/")
+            for s in subnodes:
+                if s not in curr_node.subnodes:
+                    raise ValueError(f"No subnode {s}")
+                curr_node = curr_node.subnodes[s]
+            session = SubnodeSession(curr_node, self._comm) # type: ignore
+            return session
+
+        if name not in self.subnodes:
+            raise ValueError(f"No subnode {name}") 
+        session = SubnodeSession(self.config.subnodes[name], self._comm)
+        return session

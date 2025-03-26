@@ -1,0 +1,60 @@
+{
+    key: "test/subnode/Mill109",
+    tags: [
+        {
+            path: "root/tag",
+            type: "list[int]",
+        }
+    ],
+    methods: [],
+    subnodes: [
+        {
+            name: "Vice",
+            tags: [
+                {
+                    path: "tag/write",
+                    type: "int",
+                    writable: true,
+                    props: {
+                        "desc": "testing a subnode (vice) tag write",
+                    },
+                    responses: [
+                        {
+                            code: 200, 
+                            props: {
+                                "desc": "vice tag updated with value"
+                            }
+                        },
+                        {
+                            code: 400,
+                            props: {
+                                "desc": "invalid value for vice tag (>10)"
+                            }
+                        }
+                    ]
+                },
+            ],
+            methods: []
+        },
+        {
+            name: "Siemens828D",
+            tags: [],
+            methods: [],
+            subnodes: [
+                {
+                    name: "inner-subnode",
+                    tags: [
+                        {
+                            path: "siemens/inner/tag",
+                            type: "float",
+                            props: {
+                                "desc": "testing a subnode subnode (inner) tag",
+                            },
+                        }
+                    ],
+                    methods: []
+                    }
+                ]
+            }
+        ]
+    }
