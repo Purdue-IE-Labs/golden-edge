@@ -1,4 +1,4 @@
-import zenoh
+from __future__ import annotations
 
 NODE = "NODE"
 META = "META"
@@ -8,6 +8,7 @@ WRITE = "WRITE"
 STATE = "STATE"
 METHODS = "METHODS"
 RESPONSE = "RESPONSE"
+SUBNODES = "SUBNODES"
 
 def key_join(*components: str):
     return "/".join(components)
@@ -38,6 +39,9 @@ def method_key_prefix(prefix: str, name: str):
 
 def liveliness_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name)
+
+def subnodes_key_prefix(prefix: str, node_name: str):
+    return key_join(node_key_prefix(prefix, node_name), SUBNODES)
 
 def method_response_from_call(key_expr: str):
     return key_join(key_expr, RESPONSE)
@@ -78,7 +82,7 @@ class NodeKeySpace:
     def split_user_key(key: str):
         key = key.strip('/')
         if '/' not in key:
-            raise ValueError(f"key {key} must include at least one '/'")
+            raise ValueError(f"key '{key}' must include at least one '/'")
         prefix, _, name = key.rpartition('/')
         return prefix, name
 
@@ -149,6 +153,7 @@ class NodeKeySpace:
         self.tag_write_key_prefix = tag_write_key_prefix(prefix, name)
         self.liveliness_key_prefix = liveliness_key_prefix(prefix, name)
         self.method_key_prefix = method_key_prefix(prefix, name)
+        self.subnodes_key_prefix = subnodes_key_prefix(prefix, name)
     
     def tag_data_path(self, path: str):
         return tag_data_key(self.prefix, self.name, path)
@@ -174,3 +179,72 @@ class NodeKeySpace:
         prefix = self.prefix_from_key(key_expr)
         return name == self.name and prefix == self.prefix
     
+    def __repr__(self) -> str:
+        return self.node_key_prefix
+    
+class SubnodeKeySpace(NodeKeySpace):
+    def __init__(self, node_prefix: str, node_name: str, subnode_name: str, subnodes: list[str] = []):
+        self.node_prefix = node_prefix
+        self.node_name = node_name
+        self.subnode_name = subnode_name
+        self.subnodes = subnodes # subnodes before
+        self._set_keys(node_prefix, node_name, subnode_name, subnodes)
+
+    # for now, we are not going to worry about the ability to set the 
+    # name to a new value and such, we will assume that once the user sets the 
+    # name, it's not going to change
+    def _set_keys(self, prefix: str, node_name: str, subnode_name: str, subnodes: list[str]):
+        sequence = key_join(*[key_join(SUBNODES, s) for s in subnodes + [subnode_name]])
+        key_prefix = key_join(node_key_prefix(prefix, node_name), sequence)
+        self.subnode_key_prefix = key_prefix
+        self.state_key_prefix = key_join(key_prefix, STATE)
+        self.tag_data_key_prefix = key_join(key_prefix, TAGS, DATA)
+        self.tag_write_key_prefix = key_join(key_prefix, TAGS, WRITE)
+        self.method_key_prefix = key_join(key_prefix, METHODS)
+        self.subnodes_key_prefix = key_join(key_prefix, SUBNODES)
+    
+    @classmethod
+    def from_node(cls, ks: NodeKeySpace, name: str):
+        if isinstance(ks, SubnodeKeySpace):
+            prefix = ks.node_prefix
+            node_name = ks.node_name
+            subnode_name = name
+            subnodes = ks.subnodes + [ks.subnode_name]
+            return cls(prefix, node_name, subnode_name, subnodes)
+        return cls(ks.prefix, ks.name, name, [])
+    
+    @classmethod
+    def from_subnode(cls, ks: SubnodeKeySpace, name: str):
+        subnode_name = name
+        subnodes = ks.subnodes + [ks.subnode_name]
+        return cls(ks.prefix, ks.name, subnode_name, subnodes)
+
+    def tag_data_path(self, path: str):
+        return key_join(self.tag_data_key_prefix, path)
+    
+    def tag_write_path(self, path: str):
+        return key_join(self.tag_write_key_prefix, path)
+    
+    def method_path(self, path: str):
+        return key_join(self.method_key_prefix, path)
+        
+    def method_query(self, path: str, caller_id: str, method_query_id: str):
+        return key_join(self.method_path(path), caller_id, method_query_id)
+    
+    def method_response(self, path: str, caller_id: str, method_query_id: str):
+        return key_join(self.method_path(path), caller_id, method_query_id, RESPONSE)
+    
+    def method_query_listen(self, path: str):
+        # the two * signify caller_id and method_query_id, but we should not subscribe to responses
+        return key_join(self.method_path(path), "*", "*")
+    
+    def __repr__(self) -> str:
+        return self.subnode_key_prefix
+
+if __name__ == "__main__":
+    ks = SubnodeKeySpace("hello", "mom", "subnode2", ["subnode1"])
+    print(ks.subnode_key_prefix)
+    print(ks.state_key_prefix)
+    print(ks.tag_data_path("hello"))
+    print(ks.tag_write_path("hello"))
+    print(ks.method_key_prefix)

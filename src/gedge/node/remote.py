@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from gedge.node.body import Body, BodyData
-from gedge.node.prop import Props
 from gedge.node.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
@@ -13,15 +11,14 @@ from gedge.comm.comm import Comm
 from gedge.node.tag import Tag
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
-import zenoh
 import uuid
-
 
 from typing import Any, Iterator, Callable, TYPE_CHECKING
 
 from gedge.node.tag_write_reply import TagWriteReply
 if TYPE_CHECKING:
-    from gedge.node.gtypes import TagDataCallback, ZenohCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
+    from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
+    from gedge.node.subnode import RemoteSubConnection
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,11 +31,11 @@ class RemoteConfig:
         self.method_calls = method_calls
 
 class RemoteConnection:
-    def __init__(self, config: RemoteConfig, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
+    def __init__(self, config: RemoteConfig, ks: NodeKeySpace, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
         self.config = config
         self._comm = comm 
         self.key = self.config.key
-        self.ks = NodeKeySpace.from_user_key(self.key)
+        self.ks = ks
         self.on_close = on_close
 
         self.node_id = node_id
@@ -47,12 +44,16 @@ class RemoteConnection:
         TODO: perhaps we should subscribe to this node's meta message, in which case all the following utility variables (self.tags, self.methods, self.responses) 
         would need to react to that (i.e. be properties)
         '''
-        self.meta = self._comm.pull_meta_message(self.ks)
+        self.meta = self._comm.pull_meta_message(ks)
         tags: list[Tag] = [Tag.from_proto(t) for t in self.meta.tags]
         self.tags = {t.path: t for t in tags}
         methods: list[Method] = [Method.from_proto(m) for m in self.meta.methods]
         self.methods = {m.path: m for m in methods}
         self.responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+
+        from gedge.node.subnode import SubnodeConfig
+        subnodes: list[SubnodeConfig] = [SubnodeConfig.from_proto(s, self.ks) for s in self.meta.subnodes]
+        self.subnodes: dict[str, SubnodeConfig] = {s.name: s for s in subnodes}
 
     def __enter__(self):
         return self
@@ -61,6 +62,7 @@ class RemoteConnection:
         self.close()
         self._comm.__exit__(*exc)
     
+    # TODO: close will need to work differently in the subnode case
     def close(self):
         self._comm.close_remote(self.ks)
         if self.on_close is not None:
@@ -91,9 +93,35 @@ class RemoteConnection:
         tag = self.tags[path]
         bind = TagBind(self.ks, self._comm, tag, value, self.write_tag)
         return bind
+    
+    def subnode(self, name: str) -> RemoteSubConnection:
+        from gedge.node.subnode import RemoteSubConnection
+        def on_close(key):
+            pass
+        if "/" in name:
+            curr_node = self
+            subnodes = name.split("/")
+            for s in subnodes:
+                if s not in curr_node.subnodes:
+                    raise ValueError(f"No subnode {s}")
+                curr_node = curr_node.subnodes[s]
+            # we inherit comm
+            # different uuid or same?
+            from gedge.node.subnode import SubnodeConfig
+            assert isinstance(curr_node, SubnodeConfig)
+            r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+            return r
+
+        if name not in self.subnodes:
+            raise ValueError(f"No subnode {name}") 
+        curr_node = self.subnodes[name]
+        logger.debug(self._comm.session.is_closed())
+        r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+        return r
 
     def _write_tag(self, path: str, value: Any) -> TagWriteReply:
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
+        logger.debug(self._comm.session.is_closed())
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
@@ -178,4 +206,3 @@ class RemoteConnection:
             yield res
             if res.code in {codes.METHOD_ERROR, codes.TAG_ERROR}:
                 return
-
