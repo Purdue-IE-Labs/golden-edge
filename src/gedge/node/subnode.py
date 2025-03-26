@@ -22,7 +22,7 @@ class SubnodeConfig(NodeConfig):
         self.tags = tags
         self.methods = methods
         self.subnodes = subnodes
-        self.ks = SubnodeKeySpace.from_node(parent, name)
+        self.ks = SubnodeKeySpace(parent, name)
 
     '''
     we must pass the parent ks into this because 
@@ -46,7 +46,7 @@ class SubnodeConfig(NodeConfig):
             method = Method.from_json5(method_json)
             methods[method.path] = method
         for subnode_json in json.get("subnodes", []):
-            ks = SubnodeKeySpace.from_node(parent, name)
+            ks = SubnodeKeySpace(parent, name)
             subnode = SubnodeConfig.from_json5(subnode_json, ks)
             subnodes[subnode.name] = subnode
         return cls(name, parent, tags, methods, subnodes)
@@ -62,7 +62,8 @@ class SubnodeConfig(NodeConfig):
         name = proto.name
         tags = {t.path: t for t in [Tag.from_proto(t) for t in proto.tags]}
         methods = {m.path: m for m in [Method.from_proto(m) for m in proto.methods]}
-        subnodes = {s.name: s for s in [SubnodeConfig.from_proto(s, SubnodeKeySpace.from_node(parent, proto.name)) for s in proto.subnodes]}
+        ks = SubnodeKeySpace(parent, proto.name)
+        subnodes = {s.name: s for s in [SubnodeConfig.from_proto(s, ks) for s in proto.subnodes]}
         return cls(name, parent, tags, methods, subnodes)
 
 
@@ -84,6 +85,9 @@ class SubnodeSession(NodeSession):
     def subnode(self, name: str) -> SubnodeSession:
         session = SubnodeSession(self.subnodes[name], self._comm)
         return session
+    
+    def close(self):
+        self.update_state(False)
 
 class RemoteSubConnection(RemoteConnection):
     def __init__(self, config: RemoteConfig, ks: SubnodeKeySpace, subnode_config: SubnodeConfig, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
