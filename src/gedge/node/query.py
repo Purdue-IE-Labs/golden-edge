@@ -19,6 +19,8 @@ class MethodQuery:
     _responses: list[MethodResponse]
     
     def reply(self, code: int, body: dict[str, Any] = {}, error: str = ""):
+        if not isinstance(error, str):
+            raise ValueError(f"Argument 'error' in method reply must be a string. Did you pass an Exception?")
         logger.info(f"Replying to method query at path {NodeKeySpace.method_path_from_call_key(self.key_expr)} with code {code}")
         if code not in {i.code for i in self._responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
             raise ValueError(f"invalid repsonse code {code}")

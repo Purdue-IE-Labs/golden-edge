@@ -24,6 +24,8 @@ class TagWriteQuery:
         self.code = code
         self.error = error
 
+        if not isinstance(error, str):
+            raise ValueError(f"Argument 'error' in tag write reply must be a string. Did you pass an Exception?")
         logger.info(f"Replying to tag value write with code {code}")
         if code not in {i.code for i in self.tag_config.responses} and code not in {codes.TAG_ERROR}:
             raise ValueError(f"invalid response code {code}")
