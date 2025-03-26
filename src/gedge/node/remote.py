@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from queue import Queue, Empty
 from gedge.node.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
@@ -168,18 +169,20 @@ class RemoteConnection:
 
         # TODO: we need a subscriber for /** and for /caller_id/method_query_id
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
-        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, on_reply, self.responses[path])
+        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, on_reply, self.methods[path])
     
     def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Iterator[MethodReply]:
         # appparently, Generator[Reply, None, None] == Iterator[Reply]?
         # TODO: we can probably merge this with call_method eventually, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
-        
-        from queue import Queue, Empty
+
+        method = self.methods[path]
+        for param in method.params:
+            if param not in kwargs:
+                raise LookupError(f"Parameter {param} defined in config but not included in method call for method {method.path}")
         
         method_query_id = str(uuid.uuid4())
-        method = self.methods[path]
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
             data_type = method.params[key].type
@@ -191,7 +194,7 @@ class RemoteConnection:
 
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
         # TODO: this function definition is longggggg, so many arguments
-        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, _on_reply, self.responses[path])
+        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, _on_reply, self.methods[path])
         while True:
             try:
                 res = replies.get(block=True, timeout=timeout)

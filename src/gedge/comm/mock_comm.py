@@ -77,7 +77,8 @@ class MockComm(Comm):
     def _subscriber(self, key_expr: str, handler: MockCallback):
         self.subscribers[key_expr].append(handler)
     
-    def _on_method_reply(self, on_reply: MethodReplyCallback, responses: dict[int, MethodResponse]) -> MockCallback:
+    def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> MockCallback:
+        responses = {r.code: r for r in method.responses}
         def _on_reply(reply: MockSample) -> None:
             assert type(reply.value) == proto.ResponseData
             code, body, error = reply.value.code, reply.value.body, reply.value.error
@@ -134,7 +135,8 @@ class MockComm(Comm):
                 reply(*response)
         return _on_write
     
-    def _method_reply(self, key_expr: str, responses: list[MethodResponse]):
+    def _method_reply(self, key_expr: str, method: Method):
+        responses = method.responses
         def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
             logger.info(f"Replying to method with code {code} on path {NodeKeySpace.method_path_from_response_key(key_expr)}")
             if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
@@ -158,7 +160,7 @@ class MockComm(Comm):
                 params[key] = TagData.proto_to_py(value, data_type)
             
             key_expr = method_response_from_call(str(sample.key_expr))
-            reply = self._method_reply(key_expr, method.responses)
+            reply = self._method_reply(key_expr, method)
             q = MethodQuery(sample.key_expr, params, reply, method.responses)
             try:
                 logger.info(f"Node {NodeKeySpace.user_key_from_key(sample.key_expr)} method call at path '{method.path}' with params {params}")

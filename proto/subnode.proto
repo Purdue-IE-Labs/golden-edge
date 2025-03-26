@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "method.proto";
+import "tag.proto";
+
+message Subnode {
+    string name = 1;
+    repeated Tag tags = 2;
+    repeated Method methods = 3;
+    repeated Subnode subnodes = 4;
+}
