@@ -35,3 +35,14 @@ with gedge.connect(config, "tcp/localhost:7447") as session:
             print(response.code, response.error)
         else:
             print(response.code, response.props, response.body)
+
+    print("\n\nFIFTH METHOD CALL")
+    try:
+        responses5 = remote.call_method_iter("call/method", name=EXCEPTION)
+        for response in responses5:
+            if response.error:
+                print(response.code, response.error)
+            else:
+                print(response.code, response.props, response.body)
+    except:
+        print(f"Incorrect parameters")
