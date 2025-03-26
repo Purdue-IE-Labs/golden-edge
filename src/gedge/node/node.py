@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 import logging
 logger = logging.getLogger(__name__)
 
-# TODO: eventually, should support JSON
 class NodeConfig:
     def __init__(self, key: str):
         self._user_key = key

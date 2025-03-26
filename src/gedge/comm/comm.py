@@ -198,8 +198,9 @@ class Comm:
         return _on_write
     
     def _method_reply(self, key_expr: str, responses: list[MethodResponse]):
+        path = NodeKeySpace.method_path_from_response_key(key_expr)
         def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
-            logger.info(f"Replying to method with code {code} on path TODO: fix")
+            logger.info(f"Replying to method with code {code} on path {path}")
             if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
                 raise ValueError(f"invalid repsonse code {code}")
             new_body: dict[str, proto.TagData] = {}
@@ -212,7 +213,6 @@ class Comm:
         return _reply
     
     def _on_method_query(self, method: Method):
-        logger.info(f"Setting up method at path: {method.path} on node TODO: fix")
         def _on_query(sample: zenoh.Sample) -> None:
             m: proto.MethodQueryData = self.deserialize(proto.MethodQueryData(), sample.payload.to_bytes())
             params: dict[str, Any] = {}
@@ -223,8 +223,9 @@ class Comm:
             key_expr = method_response_from_call(str(sample.key_expr))
             reply = self._method_reply(key_expr, method.responses)
             q = MethodQuery(str(sample.key_expr), params, reply, method.responses)
+            name = NodeKeySpace.user_key_from_key(str(sample.key_expr))
             try:
-                logger.info(f"Node TODO: fix method call at path '{method.path}' with params {params}")
+                logger.info(f"Node {name} method call at path '{method.path}' with params {params}")
                 logger.debug(f"Received from {str(sample.key_expr)}")
                 assert method.handler is not None, "No method handler provided"
                 method.handler(q)
@@ -293,6 +294,7 @@ class Comm:
     
     def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
         key_expr = ks.method_query_listen(method.path)
+        logger.info(f"Setting up method at path: {method.path} on node {ks.name}")
         zenoh_handler = self._on_method_query(method)
         self._subscriber(key_expr, zenoh_handler)
     

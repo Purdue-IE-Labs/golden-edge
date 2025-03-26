@@ -109,13 +109,28 @@ class NodeKeySpace:
         return key_join(*components[(i + 1):])
     
     @staticmethod
-    def method_path_from_key(key_expr: str):
+    def method_path_from_call_key(key_expr: str):
         components = key_expr.split("/")
         try:
             i = components.index(METHODS)
         except:
             raise ValueError(f"No method path found in {key_expr}")
         return key_join(*components[(i + 1):])
+
+    @staticmethod
+    def method_path_from_response_key(key_expr: str):
+        key_expr = NodeKeySpace.method_path_from_call_key(key_expr)
+        key_expr = key_expr.rstrip(f"/{RESPONSE}")
+        return key_expr
+    
+    @staticmethod
+    def user_key_from_key(key_expr: str):
+        components = key_expr.split("/")
+        try:
+            i = components.index(NODE)
+        except:
+            raise ValueError(f"Invalid key expr {key_expr}")
+        return key_join(*components[:i], components[i + 1])
 
     @property
     def prefix(self):
