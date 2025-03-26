@@ -198,44 +198,31 @@ class NodeKeySpace:
         return self.node_key_prefix
     
 class SubnodeKeySpace(NodeKeySpace):
-    def __init__(self, node_prefix: str, node_name: str, subnode_name: str, subnodes: list[str] = []):
-        self._prefix = node_prefix
-        self._name = node_name
+    def __init__(self, parent: NodeKeySpace, subnode_name: str):
+        self._prefix = parent.prefix
+        self._name = parent.name
+        self._user_key = key_join(self._prefix, self._name)
+        self._subnode_name = subnode_name
+        self._parent = parent
+        self._set_sub_keys(subnode_name)
+    
+    @property
+    def subnode_name(self):
+        return self._subnode_name
+    
+    @subnode_name.setter
+    def subnode_name(self, value):
+        self._subnode_name = value
+        self._set_sub_keys(value)
 
-        self.node_prefix = node_prefix
-        self.node_name = node_name
-        self.subnode_name = subnode_name
-        self.subnodes = subnodes # subnodes before
-        self._set_keys(node_prefix, node_name, subnode_name, subnodes)
-
-    # for now, we are not going to worry about the ability to set the 
-    # name to a new value and such, we will assume that once the user sets the 
-    # name, it's not going to change
-    def _set_keys(self, prefix: str, node_name: str, subnode_name: str, subnodes: list[str]):
-        sequence = key_join(*[key_join(SUBNODES, s) for s in subnodes + [subnode_name]])
-        key_prefix = key_join(node_key_prefix(prefix, node_name), sequence)
+    def _set_sub_keys(self, subnode_name: str):
+        key_prefix = key_join(self._parent.__repr__(), SUBNODES, subnode_name)
         self.subnode_key_prefix = key_prefix
         self.state_key_prefix = key_join(key_prefix, STATE)
         self.tag_data_key_prefix = key_join(key_prefix, TAGS, DATA)
         self.tag_write_key_prefix = key_join(key_prefix, TAGS, WRITE)
         self.method_key_prefix = key_join(key_prefix, METHODS)
         self.subnodes_key_prefix = key_join(key_prefix, SUBNODES)
-    
-    @classmethod
-    def from_node(cls, ks: NodeKeySpace, name: str):
-        if isinstance(ks, SubnodeKeySpace):
-            prefix = ks.node_prefix
-            node_name = ks.node_name
-            subnode_name = name
-            subnodes = ks.subnodes + [ks.subnode_name]
-            return cls(prefix, node_name, subnode_name, subnodes)
-        return cls(ks.prefix, ks.name, name, [])
-    
-    @classmethod
-    def from_subnode(cls, ks: SubnodeKeySpace, name: str):
-        subnode_name = name
-        subnodes = ks.subnodes + [ks.subnode_name]
-        return cls(ks.prefix, ks.name, subnode_name, subnodes)
 
     def tag_data_path(self, path: str):
         return key_join(self.tag_data_key_prefix, path)
@@ -260,9 +247,34 @@ class SubnodeKeySpace(NodeKeySpace):
         return self.subnode_key_prefix
 
 if __name__ == "__main__":
-    ks = SubnodeKeySpace("hello", "mom", "subnode2", ["subnode1"])
-    print(ks.subnode_key_prefix)
-    print(ks.state_key_prefix)
-    print(ks.tag_data_path("hello"))
-    print(ks.tag_write_path("hello"))
-    print(ks.method_key_prefix)
+    root = NodeKeySpace("hi", "mom")
+    print(root.node_key_prefix)
+    print(root.state_key_prefix)
+    print(root.tag_data_path("hello"))
+    print(root.tag_write_path("hello"))
+    print(root.method_key_prefix)
+    print()
+
+    l1 = SubnodeKeySpace(root, subnode_name="dad")
+    print(l1.subnode_key_prefix)
+    print(l1.state_key_prefix)
+    print(l1.tag_data_path("hello"))
+    print(l1.tag_write_path("hello"))
+    print(l1.method_key_prefix)
+    print()
+
+    l2 = SubnodeKeySpace(l1, subnode_name="child")
+    print(l2.subnode_key_prefix)
+    print(l2.state_key_prefix)
+    print(l2.tag_data_path("hello"))
+    print(l2.tag_write_path("hello"))
+    print(l2.method_key_prefix)
+    print()
+
+    l2.subnode_name = "children"
+    print(l2.subnode_key_prefix)
+    print(l2.state_key_prefix)
+    print(l2.tag_data_path("hello"))
+    print(l2.tag_write_path("hello"))
+    print(l2.method_key_prefix)
+    print()

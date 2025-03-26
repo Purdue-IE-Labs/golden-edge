@@ -121,7 +121,6 @@ class RemoteConnection:
 
     def _write_tag(self, path: str, value: Any) -> TagWriteReply:
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
-        logger.debug(self._comm.session.is_closed())
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
@@ -153,7 +152,7 @@ class RemoteConnection:
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
     def call_method(self, path: str, on_reply: MethodReplyCallback, **kwargs) -> None:
         # TODO: this setup may limit the user if they want to have a parameter "path" passed into 
-        # their method because it conflicts with this function's arguments
+        # their method because it conflicts with this function's arguments, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
 
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
@@ -173,7 +172,7 @@ class RemoteConnection:
     
     def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Iterator[MethodReply]:
         # appparently, Generator[Reply, None, None] == Iterator[Reply]?
-        # TODO: we can probably merge this with call_method eventually, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
+        # TODO: we can probably merge this with call_method eventually
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
 
@@ -199,8 +198,7 @@ class RemoteConnection:
             try:
                 res = replies.get(block=True, timeout=timeout)
             except Empty:
-                logger.error(f"Timeout exceeded")
-                return
+                raise TimeoutError(f"Timeout of method call at path {method.path} exceeded")
             # Design decision: we don't give a codes.DONE to the iterator that the user uses
             # However, we do give them method and tag errors because they could be useful
             if res.code == codes.DONE:
