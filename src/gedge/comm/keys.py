@@ -184,6 +184,9 @@ class NodeKeySpace:
     
 class SubnodeKeySpace(NodeKeySpace):
     def __init__(self, node_prefix: str, node_name: str, subnode_name: str, subnodes: list[str] = []):
+        self._prefix = node_prefix
+        self._name = node_name
+
         self.node_prefix = node_prefix
         self.node_name = node_name
         self.subnode_name = subnode_name

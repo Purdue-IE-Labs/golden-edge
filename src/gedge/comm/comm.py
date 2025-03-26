@@ -229,6 +229,7 @@ class Comm:
                 assert method.handler is not None, "No method handler provided"
                 method.handler(q)
                 code = codes.DONE
+                error = ""
             except Exception as e:
                 code = codes.METHOD_ERROR
                 error = repr(e)

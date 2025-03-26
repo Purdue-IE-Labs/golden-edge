@@ -11,10 +11,13 @@ from gedge.node.node import NodeConfig, NodeSession
 from gedge.node.remote import RemoteConfig, RemoteConnection
 from gedge.node.tag import Tag, WriteResponse
 
+import logging
+
+logger = logging.getLogger(__file__)
+
 # inherit at some point but not now?
 class SubnodeConfig(NodeConfig):
     def __init__(self, name: str, parent: NodeKeySpace, tags: dict[str, Tag], methods: dict[str, Method], subnodes: dict[str, SubnodeConfig]):
-        # super().__init__(name)
         self.name = name
         self.tags = tags
         self.methods = methods
@@ -70,7 +73,7 @@ class SubnodeSession(NodeSession):
         self.ks = config.ks
         self.id = str(uuid.uuid4())
 
-        # parent node already connected
+        # parent node already connected, don't call comm.connect here
 
         self.tags: dict[str, Tag] = self.config.tags
         self.tag_write_responses: dict[str, dict[int, WriteResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
@@ -123,3 +126,6 @@ class RemoteSubConnection(RemoteConnection):
         curr_node = self.subnodes[name]
         r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r
+    
+    def close(self):
+        logger.warning("Cannot close a remote subnode connection. Close the root remote connection instead.")
