@@ -6,6 +6,8 @@ from gedge.node.prop import Props
 from gedge import proto
 
 from typing import Any, Self, TYPE_CHECKING
+
+from gedge.node.tag_data import TagData
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagValue
 
@@ -43,3 +45,11 @@ class Param:
 class ParamData:
     value: TagValue
     props: dict[str, TagValue]
+
+
+def params_proto_to_py(proto: dict[str, proto.TagData], params_config: dict[str, Param]) -> dict[str, Any]:
+    params: dict[str, Any] = {}
+    for key, value in proto.items():
+        data_type = params_config[key].type
+        params[key] = TagData.proto_to_py(value, data_type)
+    return params

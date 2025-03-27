@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from dataclasses import dataclass
 from multiprocessing import Value
 import zenoh
 import json
@@ -17,6 +18,7 @@ from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, M
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import MethodResponse
+from gedge.node.param import params_proto_to_py
 from gedge.node.prop import Props
 from gedge.node.query import MethodQuery
 from gedge.node.tag import Tag, WriteResponse
@@ -217,29 +219,29 @@ class Comm:
     
     def _on_method_query(self, method: Method):
         def _on_query(sample: zenoh.Sample) -> None:
-            m: proto.MethodQueryData = self.deserialize(proto.MethodQueryData(), sample.payload.to_bytes())
-            params: dict[str, Any] = {}
-            for key, value in m.params.items():
-                data_type = method.params[key].type
-                params[key] = TagData.proto_to_py(value, data_type)
-            
-            key_expr = method_response_from_call(str(sample.key_expr))
-            reply = self._method_reply(key_expr, method)
-            q = MethodQuery(str(sample.key_expr), params, reply, method.responses)
-            name = NodeKeySpace.user_key_from_key(str(sample.key_expr))
-            try:
-                logger.info(f"Node {name} method call at path '{method.path}' with params {params}")
-                logger.debug(f"Received from {str(sample.key_expr)}")
-                assert method.handler is not None, "No method handler provided"
-                method.handler(q)
-                code = codes.DONE
-                error = ""
-            except Exception as e:
-                code = codes.METHOD_ERROR
-                error = repr(e)
-            finally:
-                reply(code, error=error)
+            m = self.deserialize(proto.MethodQueryData(), sample.payload.to_bytes())
+            self._handle_method_query(method, str(sample.key_expr), m)
         return _on_query
+
+    def _handle_method_query(self, method: Method, key_expr: str, value: proto.MethodQueryData):
+        params: dict[str, Any] = params_proto_to_py(dict(value.params), method.params)
+        
+        key_expr = method_response_from_call(key_expr)
+        reply = self._method_reply(key_expr, method)
+        q = MethodQuery(key_expr, params, reply, method.responses)
+        try:
+            name = NodeKeySpace.user_key_from_key(key_expr)
+            logger.info(f"Node {name} method call at path '{method.path}' with params {params}")
+            logger.debug(f"Received from {key_expr}")
+            assert method.handler is not None, "No method handler provided"
+            method.handler(q)
+            code = codes.DONE
+            error = ""
+        except Exception as e:
+            code = codes.METHOD_ERROR
+            error = repr(e)
+        finally:
+            reply(code, error=error)
 
     def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> None:
         key_expr = ks.liveliness_key_prefix
