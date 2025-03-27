@@ -7,7 +7,7 @@ authors = [
 description = "A replacement for MQTT Sparkplug"
 readme = "README.md"
 dependencies = [
-    "protobuf",
+    "protobuf==6.30.2",
     "eclipse-zenoh",
     "json5",
 ]
