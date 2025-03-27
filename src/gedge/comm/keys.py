@@ -171,10 +171,10 @@ class NodeKeySpace:
         self.subnodes_key_prefix = subnodes_key_prefix(prefix, name)
     
     def tag_data_path(self, path: str):
-        return tag_data_key(self.prefix, self.name, path)
+        return key_join(self.tag_data_key_prefix, path)
     
     def tag_write_path(self, path: str):
-        return tag_write_key(self.prefix, self.name, path)
+        return key_join(self.tag_write_key_prefix, path)
     
     def method_path(self, path: str):
         return key_join(self.method_key_prefix, path)
@@ -228,24 +228,5 @@ class SubnodeKeySpace(NodeKeySpace):
         self.method_key_prefix = key_join(key_prefix, METHODS)
         self.subnodes_key_prefix = key_join(key_prefix, SUBNODES)
 
-    def tag_data_path(self, path: str):
-        return key_join(self.tag_data_key_prefix, path)
-    
-    def tag_write_path(self, path: str):
-        return key_join(self.tag_write_key_prefix, path)
-    
-    def method_path(self, path: str):
-        return key_join(self.method_key_prefix, path)
-        
-    def method_query(self, path: str, caller_id: str, method_query_id: str):
-        return key_join(self.method_path(path), caller_id, method_query_id)
-    
-    def method_response(self, path: str, caller_id: str, method_query_id: str):
-        return key_join(self.method_path(path), caller_id, method_query_id, RESPONSE)
-    
-    def method_query_listen(self, path: str):
-        # the two * signify caller_id and method_query_id, but we should not subscribe to responses
-        return key_join(self.method_path(path), "*", "*")
-    
     def __repr__(self) -> str:
         return self.subnode_key_prefix
