@@ -20,6 +20,7 @@ from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagValue, Zeno
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import MethodResponse
+from gedge.node.param import params_proto_to_py
 from gedge.node.prop import Props
 from gedge.node.query import MethodQuery
 from gedge.node.tag import Tag, WriteResponse
@@ -50,9 +51,7 @@ It would be maybe nice to subclass from zenoh.Subscriber, but it is marked as
 final so we cannot do that. Need to find another workaround
 '''
 
-# handle Zenoh communications
-# The user will not interact with this item
-# TODO: should this hold a key_space? and allow for a context manager when we want to change it
+# TODO: handle Zenoh queries
 class MockComm(Comm):
     def __init__(self):
         # just maps key expressions to functions
@@ -77,6 +76,7 @@ class MockComm(Comm):
     def _subscriber(self, key_expr: str, handler: MockCallback):
         self.subscribers[key_expr].append(handler)
     
+    # TODO: combine this function with comm
     def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> MockCallback:
         responses = {r.code: r for r in method.responses}
         def _on_reply(reply: MockSample) -> None:
@@ -96,6 +96,7 @@ class MockComm(Comm):
             on_reply(r)
         return _on_reply
     
+    # TODO: combine this function with comm
     def _tag_write_reply(self, query: zenoh.Query) -> Callable[[int, str], None]:
         def _reply(code: int, error: str = ""):
             write_response = proto.WriteResponseData(code=code, error=error)
@@ -103,6 +104,7 @@ class MockComm(Comm):
             query.reply(key_expr=str(query.key_expr), payload=b)
         return _reply
 
+    # TODO: combine this function with comm
     def _on_tag_write(self, tag: Tag) -> ZenohQueryCallback:
         def _on_write(query: zenoh.Query) -> None:
             reply = self._tag_write_reply(query)
@@ -135,6 +137,7 @@ class MockComm(Comm):
                 reply(*response)
         return _on_write
     
+    # TODO: combine this function with comm
     def _method_reply(self, key_expr: str, method: Method):
         responses = method.responses
         def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
@@ -153,35 +156,17 @@ class MockComm(Comm):
     def _on_method_query(self, method: Method):
         def _on_query(sample: MockSample) -> None:
             assert type(sample.value) == proto.MethodQueryData
-            m: proto.MethodQueryData = sample.value
-            params: dict[str, Any] = {}
-            for key, value in m.params.items():
-                data_type = method.params[key].type
-                params[key] = TagData.proto_to_py(value, data_type)
-            
-            key_expr = method_response_from_call(str(sample.key_expr))
-            reply = self._method_reply(key_expr, method)
-            q = MethodQuery(sample.key_expr, params, reply, method.responses)
-            try:
-                logger.info(f"Node {NodeKeySpace.user_key_from_key(sample.key_expr)} method call at path '{method.path}' with params {params}")
-                logger.debug(f"Received from {str(sample.key_expr)}")
-                assert method.handler is not None, "No method handler provided"
-                method.handler(q)
-                code = codes.DONE
-                error = ""
-            except Exception as e:
-                code = codes.METHOD_ERROR
-                error = repr(e)
-            finally:
-                reply(code, error=error)
+            self._handle_method_query(method, sample.key_expr, sample.value)
         return _on_query
     
+    # TODO: combine with comm
     def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
         key_expr = ks.method_query_listen(method.path)
         logger.info(f"Setting up method at path: {method.path} on node {ks.name}")
         handler = self._on_method_query(method)
         self._subscriber(key_expr, handler)
     
+    # TODO: combine with comm
     def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> None:
         key_expr = ks.tag_write_path(tag.path)
         zenoh_handler = self._on_tag_write(tag)
