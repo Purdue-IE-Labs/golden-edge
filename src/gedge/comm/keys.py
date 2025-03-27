@@ -215,6 +215,10 @@ class SubnodeKeySpace(NodeKeySpace):
         self._subnode_name = value
         self._set_sub_keys(value)
 
+    def _set_keys(self, prefix: str, name: str):
+        self._parent._set_keys(prefix, name)
+        self._set_sub_keys(self.subnode_name)
+
     def _set_sub_keys(self, subnode_name: str):
         key_prefix = key_join(self._parent.__repr__(), SUBNODES, subnode_name)
         self.subnode_key_prefix = key_prefix
@@ -245,36 +249,3 @@ class SubnodeKeySpace(NodeKeySpace):
     
     def __repr__(self) -> str:
         return self.subnode_key_prefix
-
-if __name__ == "__main__":
-    root = NodeKeySpace("hi", "mom")
-    print(root.node_key_prefix)
-    print(root.state_key_prefix)
-    print(root.tag_data_path("hello"))
-    print(root.tag_write_path("hello"))
-    print(root.method_key_prefix)
-    print()
-
-    l1 = SubnodeKeySpace(root, subnode_name="dad")
-    print(l1.subnode_key_prefix)
-    print(l1.state_key_prefix)
-    print(l1.tag_data_path("hello"))
-    print(l1.tag_write_path("hello"))
-    print(l1.method_key_prefix)
-    print()
-
-    l2 = SubnodeKeySpace(l1, subnode_name="child")
-    print(l2.subnode_key_prefix)
-    print(l2.state_key_prefix)
-    print(l2.tag_data_path("hello"))
-    print(l2.tag_write_path("hello"))
-    print(l2.method_key_prefix)
-    print()
-
-    l2.subnode_name = "children"
-    print(l2.subnode_key_prefix)
-    print(l2.state_key_prefix)
-    print(l2.tag_data_path("hello"))
-    print(l2.tag_write_path("hello"))
-    print(l2.method_key_prefix)
-    print()
