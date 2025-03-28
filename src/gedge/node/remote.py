@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from queue import Queue, Empty
+import time
 from gedge.node.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
@@ -170,7 +171,7 @@ class RemoteConnection:
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, on_reply, self.methods[path])
     
-    def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Iterator[MethodReply]:
+    def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
         # appparently, Generator[Reply, None, None] == Iterator[Reply]?
         # TODO: we can probably merge this with call_method eventually
         if path not in self.methods:
@@ -193,11 +194,15 @@ class RemoteConnection:
 
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
         # TODO: this function definition is longggggg, so many arguments
+        start = time.time()
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, _on_reply, self.methods[path])
         while True:
             try:
-                res = replies.get(block=True, timeout=timeout)
+                elapsed = time.time() - start
+                res = replies.get(block=True, timeout=max(0, (timeout - elapsed)) if timeout else None)
             except Empty:
+                key_expr = self.ks.method_response(path, self.node_id, method_query_id)
+                self._comm.cancel_subscription(key_expr)
                 raise TimeoutError(f"Timeout of method call at path {method.path} exceeded")
             # Design decision: we don't give a codes.DONE to the iterator that the user uses
             # However, we do give them method and tag errors because they could be useful

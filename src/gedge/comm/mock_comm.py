@@ -76,6 +76,9 @@ class MockComm(Comm):
     def _subscriber(self, key_expr: str, handler: MockCallback):
         self.subscribers[key_expr].append(handler)
     
+    def cancel_subscription(self, key_expr: str):
+        self.subscribers[key_expr] = []
+    
     # TODO: combine this function with comm
     def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> MockCallback:
         responses = {r.code: r for r in method.responses}
