@@ -46,3 +46,14 @@ with gedge.connect(config, "tcp/localhost:7447") as session:
                 print(response.code, response.props, response.body)
     except:
         print(f"Incorrect parameters")
+
+    print("\n\nSIXTH METHOD CALL")
+    try:
+        responses6 = remote.call_method_iter("call/method", timeout=1, name="hello world", speed=40)
+        for response in responses6:
+            if response.error:
+                print(response.code, response.error)
+            else:
+                print(response.code, response.props, response.body)
+    except TimeoutError:
+        print("Timeout")
