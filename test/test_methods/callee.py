@@ -1,5 +1,6 @@
 import gedge
 import pathlib
+import time
 
 EXCEPTION = 'EXCEPTION'
 
@@ -14,6 +15,8 @@ def handler(query: gedge.MethodQuery):
         return
     if name == EXCEPTION:
         raise ValueError("exception thrown in method handler")
+    query.reply(200, body={"res1": speed})
+    time.sleep(2)
     query.reply(200, body={"res1": speed})
 
 here = pathlib.Path(__file__).parent

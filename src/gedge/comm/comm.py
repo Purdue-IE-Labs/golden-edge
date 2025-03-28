@@ -257,6 +257,11 @@ class Comm:
         logger.debug(f"declaring subscriber on key expression '{key_expr}'")
         subscriber = self.session.declare_subscriber(key_expr, handler)
         self.subscriptions.append(subscriber)
+
+    def cancel_subscription(self, key_expr: str):
+        subs = [s for s in self.subscriptions if str(s.key_expr) == key_expr]
+        for s in subs:
+            s.undeclare()
     
     def _queryable(self, key_expr: str, handler: ZenohQueryCallback) -> zenoh.Queryable:
         return self.session.declare_queryable(key_expr, handler)
