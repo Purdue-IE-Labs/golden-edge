@@ -45,7 +45,7 @@ class TestNodeSession(NodeSession):
         pass
 
     # This call is exactly the same as remote, just on the session itself and not remote
-    def call_method_iter(self, path: str, timeout: int | None = None, **kwargs) -> Iterator[MethodReply]:
+    def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
         # connect to self
         remote = self.connect_to_remote(self.ks.user_key)
         return remote.call_method_iter(path, timeout, **kwargs)
