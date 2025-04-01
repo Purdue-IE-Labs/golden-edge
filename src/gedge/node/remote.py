@@ -171,6 +171,8 @@ class RemoteConnection:
         logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, on_reply, self.methods[path])
     
+    # CAUTION: because this is a generator, just calling it (session.call_method_iter(...)) will do nothing,
+    # it must be iterated upon to actually run
     def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
         # appparently, Generator[Reply, None, None] == Iterator[Reply]?
         # TODO: we can probably merge this with call_method eventually
@@ -206,8 +208,6 @@ class RemoteConnection:
                 raise TimeoutError(f"Timeout of method call at path {method.path} exceeded")
             # Design decision: we don't give a codes.DONE to the iterator that the user uses
             # However, we do give them method and tag errors because they could be useful
-            if res.code == codes.DONE:
-                return
             yield res
-            if res.code in {codes.METHOD_ERROR, codes.TAG_ERROR}:
+            if res.code in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
                 return
