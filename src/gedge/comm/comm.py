@@ -150,6 +150,7 @@ class Comm:
         there permission. Or maybe we just never show the user any of these. But also 
         they need to see the error ones to know that something went terribly wrong.
         '''
+        logger.info(f"Received reply from method at path '{method.path}' with code {r.code}")
         if r.code in {codes.DONE, codes.METHOD_ERROR}:
             response: MethodResponse = MethodResponse(r.code, Props.empty(), {})
         else:
@@ -209,9 +210,7 @@ class Comm:
     
     def _method_reply(self, key_expr: str, method: Method) -> Callable[[int, dict[str, TagValue], str], None]:
         responses = method.responses
-        path = NodeKeySpace.method_path_from_response_key(key_expr)
         def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
-            logger.info(f"Replying to method with code {code} on path {path}")
             if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
                 raise ValueError(f"invalid repsonse code {code}")
             new_body: dict[str, proto.TagData] = {}
@@ -269,6 +268,7 @@ class Comm:
         logger.debug(f"canceling {len(subs)} subscriptions at key_expr = {key_expr}")
         for s in subs:
             s.undeclare()
+            self.subscriptions.remove(s)
     
     def _queryable(self, key_expr: str, handler: ZenohQueryCallback) -> zenoh.Queryable:
         logger.debug(f"declaring queryable on key_expr = {key_expr}")

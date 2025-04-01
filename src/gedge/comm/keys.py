@@ -125,13 +125,13 @@ class NodeKeySpace:
             i = components.index(METHODS)
         except:
             raise ValueError(f"No method path found in {key_expr}")
-        return key_join(*components[(i + 1):])
+        return key_join(*components[(i + 1):(len(components) - 3)])
 
     @staticmethod
     def method_path_from_response_key(key_expr: str):
         key_expr = NodeKeySpace.method_path_from_call_key(key_expr)
-        key_expr = key_expr.rstrip(f"/{RESPONSE}")
-        return key_expr
+        components = key_expr.split("/")
+        return key_join(*components[:-1])
     
     @staticmethod
     def user_key_from_key(key_expr: str):

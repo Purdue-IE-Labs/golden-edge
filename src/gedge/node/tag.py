@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 
 from gedge.node.data_type import DataType
 from gedge import proto
@@ -8,10 +9,10 @@ from typing import Any, Self, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagWriteHandler
 
+@dataclass
 class WriteResponse:
-    def __init__(self, code: int, props: Props):
-        self.code = code
-        self.props: Props = props
+    code: int
+    props: Props
     
     def to_proto(self) -> proto.WriteResponse:
         code = self.code
@@ -37,8 +38,6 @@ class WriteResponse:
         props = Props.from_json5(json.get("props", {}))
         return cls(code, props)
     
-    def __repr__(self) -> str:
-        return f"WriteResponse(code={self.code}, props={self.props})"
 
 class Tag:
     def __init__(self, path: str, type: DataType, props: Props, writable: bool, responses: list[WriteResponse], write_handler: TagWriteHandler | None):
