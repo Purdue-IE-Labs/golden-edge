@@ -11,7 +11,7 @@ from gedge.node.body import BodyData
 from gedge.node.error import NodeLookupError, TagLookupError
 from gedge import proto
 from gedge.comm import keys
-from gedge.comm.keys import NodeKeySpace, method_response_from_call
+from gedge.comm.keys import NodeKeySpace, internal_to_user_key, method_response_from_call
 
 from typing import Any, TYPE_CHECKING, Callable
 
@@ -52,13 +52,13 @@ class Comm:
         self.__enter__()
     
     def close(self):
-        # or self.__exit__()?
-        self.session.close()
+        self.__exit__()
 
     def __enter__(self):
-        logger.info(f"Attemping to connect to: {self.connections}")
+        logger.debug(f"Attemping to connect to: {self.connections}")
         config = zenoh.Config.from_json5(self.config)
         session = zenoh.open(config)
+        logger.info(f"Connected to one of: {self.connections}")
         self.session = session
         return self
     
@@ -66,6 +66,7 @@ class Comm:
         self.session.close()
     
     def close_remote(self, ks: NodeKeySpace):
+        logger.info(f"Closing remote connection to {ks.user_key}")
         subscriptions = [s for s in self.subscriptions if ks.contains(str(s.key_expr))]
         for s in subscriptions:
             s.undeclare()
@@ -95,34 +96,37 @@ class Comm:
         def _on_liveliness(sample: zenoh.Sample):
             is_online = sample.kind == zenoh.SampleKind.PUT
             online = "online" if is_online else "offline"
-            logger.info(f"Liveliness of remote node {sample.key_expr} changed: {online}")
+            
+            ks = NodeKeySpace.from_internal_key(str(sample.key_expr))
+            logger.info(f"Liveliness of remote node {ks.user_key} changed: {online}")
             on_liveliness_change(str(sample.key_expr), is_online)
         return _on_liveliness
 
     def _on_tag_data(self, on_tag_data: TagDataCallback, tags: dict[str, Tag]) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
             tag_data: proto.TagData = self.deserialize(proto.TagData(), sample.payload.to_bytes())
+            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {tag_data}")
             path: str = NodeKeySpace.tag_path_from_key(str(sample.key_expr))
             if path not in tags:
                 node: str = NodeKeySpace.name_from_key(str(sample.key_expr))
                 raise TagLookupError(path, node)
             tag_config = tags[path]
             value = TagData.proto_to_py(tag_data, tag_config.type)
-            logger.info(f"Remote node {sample.key_expr} updating tag {path} with value {value}")
+            logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
 
     def _on_state(self, on_state: StateCallback) -> ZenohCallback:
         def _on_state(sample: zenoh.Sample):
             state: proto.State = self.deserialize(proto.State(), sample.payload.to_bytes())
-            logger.info(f"Remote node {sample.key_expr} publishing state message")
+            logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received state message: online = {state.online}")
             on_state(str(sample.key_expr), state)
         return _on_state
 
     def _on_meta(self, on_meta: MetaCallback) -> ZenohCallback:
         def _on_meta(sample: zenoh.Sample):
             meta: proto.Meta = self.deserialize(proto.Meta(), sample.payload.to_bytes())
-            logger.info(f"Remote node {sample.key_expr} publishing meta message")
+            logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received meta message")
             on_meta(str(sample.key_expr), meta)
         return _on_meta
 
@@ -133,7 +137,6 @@ class Comm:
                 return
             r: proto.ResponseData = self.deserialize(proto.ResponseData(), sample.payload.to_bytes())
             self._handle_on_method_reply(method, str(sample.key_expr), r, on_reply)
-
         return _on_reply
     
     def _handle_on_method_reply(self, method: Method, key_expr: str, r: proto.ResponseData, on_reply: MethodReplyCallback) -> None:
@@ -160,11 +163,10 @@ class Comm:
         reply = MethodReply(key_expr, r.code, body, r.error, props)
         on_reply(reply)
         if r.code in {codes.DONE, codes.METHOD_ERROR}:
-            # remove subscription after we are done
-            logger.debug(f"remove subscription for key expr {key_expr}")
-            # self._subscriptions.remove([x for x in self._subscriptions if x.key_expr == sample.key_expr][0])
             # TODO: we need to unsubcribe here because we are closing this method connection, does this mean we should move comm connections
             # to this function
+            logger.debug(f"remove subscription for key expr {key_expr}")
+            self.cancel_subscription(key_expr)
     
     def _tag_write_reply(self, query: zenoh.Query) -> Callable[[int, str], None]:
         def _reply(code: int, error: str = ""):
@@ -264,10 +266,12 @@ class Comm:
 
     def cancel_subscription(self, key_expr: str):
         subs = [s for s in self.subscriptions if str(s.key_expr) == key_expr]
+        logger.debug(f"canceling {len(subs)} subscriptions at key_expr = {key_expr}")
         for s in subs:
             s.undeclare()
     
     def _queryable(self, key_expr: str, handler: ZenohQueryCallback) -> zenoh.Queryable:
+        logger.debug(f"declaring queryable on key_expr = {key_expr}")
         return self.session.declare_queryable(key_expr, handler)
     
     def _query_sync(self, key_expr: str, payload: bytes) -> zenoh.Reply:
@@ -276,9 +280,6 @@ class Comm:
         except Exception:
             raise LookupError(f"No queryable defined at {key_expr}")
         return reply
-    
-    def _query_callback(self, key_expr: str, payload: bytes, handler: ZenohReplyCallback) -> None:
-        self.session.get(key_expr, payload=payload, handler=handler)
     
     def meta_subscriber(self, ks: NodeKeySpace, handler: MetaCallback) -> None:
         key_expr = ks.meta_key_prefix
@@ -308,7 +309,7 @@ class Comm:
     
     def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
         key_expr = ks.method_query_listen(method.path)
-        logger.info(f"Setting up method at path: {method.path} on node {ks.name}")
+        logger.info(f"Setting up method at path {method.path} on node {ks.name}")
         zenoh_handler = self._on_method_query(method)
         self._subscriber(key_expr, zenoh_handler)
     
@@ -331,7 +332,8 @@ class Comm:
             d: proto.WriteResponseData = self.deserialize(proto.WriteResponseData(), reply.result.payload.to_bytes())
             return d
         else:
-            raise Exception("reply super not ok")
+            # TODO: more granular exception?
+            raise Exception(f"Failure in receiving tag write reply for tag at path {path}")
 
     def send_state(self, ks: NodeKeySpace, state: proto.State):
         key_expr = ks.state_key_prefix

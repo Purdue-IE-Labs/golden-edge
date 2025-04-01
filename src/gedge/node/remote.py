@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 import logging
 logger = logging.getLogger(__name__)
 
+# TODO: either remove this or use it
 class RemoteConfig:
     def __init__(self, key: str, read_tags: list[str] = [], read_write_tags: list[str] = [], method_calls: list[str] = []):
         self.key = key
