@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 
 from gedge.node.body import Body
 from gedge.node.data_type import DataType
@@ -11,14 +12,14 @@ from typing import Any, Self, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagValue, Type, MethodHandler
 
+@dataclass
 class Method:
-    def __init__(self, path: str, handler: MethodHandler | None, props: Props, params: dict[str, Param], responses: list[MethodResponse]):
-        self.path = path
-        self.handler = handler
-        self.props = props
-        self.params = params
-        self.responses = responses
-    
+    path: str
+    handler: MethodHandler | None
+    props: Props
+    params: dict[str, Param]
+    responses: list[MethodResponse]
+
     def to_proto(self) -> proto.Method:
         params = {key:value.to_proto() for key, value in self.params.items()}
         responses = [r.to_proto() for r in self.responses]
@@ -60,6 +61,3 @@ class Method:
         response = MethodResponse(code, props_, body_)
         self.responses.append(response)
         return response
-
-    def __repr__(self):
-        return f"Method(path={self.path}, props={self.props}, params={self.params}, responses={self.responses})"

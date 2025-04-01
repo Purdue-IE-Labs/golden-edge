@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dataclasses import dataclass
 
 from gedge.node.body import Body
 from gedge.node.data_type import DataType
@@ -10,11 +11,11 @@ if TYPE_CHECKING:
     from gedge.node.gtypes import Type
 
 # CONFIG object
+@dataclass
 class MethodResponse:
-    def __init__(self, code: int, props: Props, body: dict[str, Body]):
-        self.code = code
-        self.props = props
-        self.body = body
+    code: int
+    props: Props
+    body: dict[str, Body]
     
     def to_proto(self) -> proto.Response:
         props = self.props.to_proto()
@@ -44,7 +45,4 @@ class MethodResponse:
     
     def add_prop(self, key: str, value: Any):
         self.props.add_prop(key, value)
-    
-    def __repr__(self):
-        return f"Response(code={self.code}, body={self.body})"
     
