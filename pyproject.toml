@@ -22,7 +22,7 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Purdue-IE-Labs/build-at-zenoh"
+Homepage = "https://github.com/Purdue-IE-Labs/golden-edge"
 
 [build-system]
 requires = ["setuptools"]
