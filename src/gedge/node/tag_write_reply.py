@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from gedge.node import codes
 from gedge.node.tag import Tag
 from typing import Any
 
@@ -12,3 +13,6 @@ class TagWriteReply:
     attempted_write_value: Any
     # tag_config: Tag
     props: dict[str, Any]
+
+    def is_error(self):
+        return self.code == codes.TAG_ERROR
