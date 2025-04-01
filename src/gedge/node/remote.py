@@ -173,9 +173,18 @@ class RemoteConnection:
     
     # CAUTION: because this is a generator, just calling it (session.call_method_iter(...)) will do nothing,
     # it must be iterated upon to actually run
+    # timeout in milliseconds
     def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
+        '''
+        timeout in ms 
+        '''
+
         # appparently, Generator[Reply, None, None] == Iterator[Reply]?
         # TODO: we can probably merge this with call_method eventually
+
+        if timeout:
+            timeout /= 1000
+
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
 
@@ -200,8 +209,16 @@ class RemoteConnection:
         self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, _on_reply, self.methods[path])
         while True:
             try:
-                elapsed = time.time() - start
-                res = replies.get(block=True, timeout=max(0, (timeout - elapsed)) if timeout else None)
+                elapsed = (time.time() - start)
+                if timeout and elapsed >= timeout:
+                    # timeout exceeded, we need an item ASAP
+                    res = replies.get(block=False)
+                elif timeout:
+                    # we can wait timeout - elapsed more seconds
+                    res = replies.get(block=True, timeout=(timeout - elapsed))
+                else:
+                    # if no timeout, we block forever
+                    res = replies.get(block=True)
             except Empty:
                 key_expr = self.ks.method_response(path, self.node_id, method_query_id)
                 self._comm.cancel_subscription(key_expr)
