@@ -36,6 +36,9 @@ class SubnodeConfig(NodeConfig):
             raise ValueError(f"subnode must have name")
         
         name = json["name"]
+        if "/" in name:
+            raise ValueError(f"subnode name cannot have '/' but subnode '{name}' found in json config")
+
         tags = dict()
         methods = dict()
         subnodes = dict()
