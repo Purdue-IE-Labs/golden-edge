@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ast import Call
 import base64
 from dataclasses import dataclass
 from multiprocessing import Value
@@ -126,41 +127,44 @@ class Comm:
         return _on_meta
 
     def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> ZenohCallback:
-        responses = {r.code: r for r in method.responses}
         def _on_reply(sample: zenoh.Sample) -> None:
             if not sample:
                 logger.warning(f"reply from method failed")
                 return
             r: proto.ResponseData = self.deserialize(proto.ResponseData(), sample.payload.to_bytes())
+            self._handle_on_method_reply(method, str(sample.key_expr), r, on_reply)
 
-            '''
-            Design decision here. The problem is that golden-edge reserved codes do not have a 
-            config backing (we could add one if we wanted), so we have to create a config on 
-            the fly to give back to the user for them to look at. For now, it's empty. At config 
-            initialization, we could (and maybe should) inject these. But then if the users 
-            goes len(responses) they may be confused to find that we have added some without 
-            there permission. Or maybe we just never show the user any of these. But also 
-            they need to see the error ones to know that something went terribly wrong.
-            '''
-            if r.code in {codes.DONE, codes.METHOD_ERROR}:
-                response: MethodResponse = MethodResponse(r.code, Props.empty(), {})
-            else:
-                response: MethodResponse = responses[r.code]
-            body: dict[str, BodyData] = {}
-            for key, value in r.body.items():
-                data_type = response.body[key].type
-                props = response.body[key].props
-                body[key] = BodyData(TagData.proto_to_py(value, data_type), props.to_value())
-            props = response.props.to_value()
-            reply = MethodReply(str(sample.key_expr), r.code, body, r.error, props)
-            on_reply(reply)
-            if r.code in {codes.DONE, codes.METHOD_ERROR}:
-                # remove subscription after we are done
-                logger.debug(f"remove subscription for key expr {sample.key_expr}")
-                # self._subscriptions.remove([x for x in self._subscriptions if x.key_expr == sample.key_expr][0])
-                # TODO: we need to unsubcribe here because we are closing this method connection, does this mean we should move comm connections
-                # to this function
         return _on_reply
+    
+    def _handle_on_method_reply(self, method: Method, key_expr: str, r: proto.ResponseData, on_reply: MethodReplyCallback) -> None:
+        responses = {r.code: r for r in method.responses}
+        '''
+        Design decision here. The problem is that golden-edge reserved codes do not have a 
+        config backing (we could add one if we wanted), so we have to create a config on 
+        the fly to give back to the user for them to look at. For now, it's empty. At config 
+        initialization, we could (and maybe should) inject these. But then if the users 
+        goes len(responses) they may be confused to find that we have added some without 
+        there permission. Or maybe we just never show the user any of these. But also 
+        they need to see the error ones to know that something went terribly wrong.
+        '''
+        if r.code in {codes.DONE, codes.METHOD_ERROR}:
+            response: MethodResponse = MethodResponse(r.code, Props.empty(), {})
+        else:
+            response: MethodResponse = responses[r.code]
+        body: dict[str, BodyData] = {}
+        for key, value in r.body.items():
+            data_type = response.body[key].type
+            props = response.body[key].props
+            body[key] = BodyData(TagData.proto_to_py(value, data_type), props.to_value())
+        props = response.props.to_value()
+        reply = MethodReply(key_expr, r.code, body, r.error, props)
+        on_reply(reply)
+        if r.code in {codes.DONE, codes.METHOD_ERROR}:
+            # remove subscription after we are done
+            logger.debug(f"remove subscription for key expr {key_expr}")
+            # self._subscriptions.remove([x for x in self._subscriptions if x.key_expr == sample.key_expr][0])
+            # TODO: we need to unsubcribe here because we are closing this method connection, does this mean we should move comm connections
+            # to this function
     
     def _tag_write_reply(self, query: zenoh.Query) -> Callable[[int, str], None]:
         def _reply(code: int, error: str = ""):
@@ -201,7 +205,7 @@ class Comm:
                 reply(*response)
         return _on_write
     
-    def _method_reply(self, key_expr: str, method: Method):
+    def _method_reply(self, key_expr: str, method: Method) -> Callable[[int, dict[str, TagValue], str], None]:
         responses = method.responses
         path = NodeKeySpace.method_path_from_response_key(key_expr)
         def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
@@ -241,7 +245,7 @@ class Comm:
             code = codes.METHOD_ERROR
             error = repr(e)
         finally:
-            reply(code, error=error)
+            reply(code, {}, error)
 
     def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> None:
         key_expr = ks.liveliness_key_prefix
