@@ -39,12 +39,16 @@ def method_key_prefix(prefix: str, name: str):
 
 def liveliness_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name)
-
 def subnodes_key_prefix(prefix: str, node_name: str):
     return key_join(node_key_prefix(prefix, node_name), SUBNODES)
 
 def method_response_from_call(key_expr: str):
     return key_join(key_expr, RESPONSE)
+
+def internal_to_user_key(key_expr: str):
+    prefix = NodeKeySpace.prefix_from_key(key_expr)
+    name = NodeKeySpace.name_from_key(key_expr)
+    return key_join(prefix, name)
 
 def overlap(key1: str, key2: str):
     # incredibly simple algorithm to handle * semantics like zenoh does
@@ -95,6 +99,12 @@ class NodeKeySpace:
     def prefix_from_key(key_expr: str):
         components = key_expr.split(NODE)
         return components[0]
+    
+    @staticmethod
+    def internal_to_user_key(key_expr: str):
+        prefix = NodeKeySpace.prefix_from_key(key_expr)
+        name = NodeKeySpace.name_from_key(key_expr)
+        return key_join(prefix, name)
     
     @staticmethod
     def tag_path_from_key(key_expr: str):
