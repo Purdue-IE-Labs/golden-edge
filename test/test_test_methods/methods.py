@@ -49,7 +49,7 @@ for response in responses3:
     if response.error:
         print(response.code, response.error)
     else:
-        print(response.code, response.props, response.body['res1'].value, response.body['res1'].props)
+        print(response.code, response.props, response.body, response)
 
 print("\n\nFOURTH METHOD CALL")
 responses4 = node.call_method_iter("call/method", name=EXCEPTION, speed=40)
