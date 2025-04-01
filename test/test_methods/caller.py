@@ -26,7 +26,7 @@ with gedge.connect(config, "tcp/localhost:7447") as session:
         if response.error:
             print(response.code, response.error)
         else:
-            print(response.code, response.props, response.body['res1'].value, response.body['res1'].props)
+            print(response.code, response.props, response.body)
 
     print("\n\nFOURTH METHOD CALL")
     responses4 = remote.call_method_iter("call/method", name=EXCEPTION, speed=40)
@@ -49,7 +49,7 @@ with gedge.connect(config, "tcp/localhost:7447") as session:
 
     print("\n\nSIXTH METHOD CALL")
     try:
-        responses6 = remote.call_method_iter("call/method", timeout=1, name="hello world", speed=40)
+        responses6 = remote.call_method_iter("call/method", timeout=100, name="hello world", speed=40)
         for response in responses6:
             if response.error:
                 print(response.code, response.error)
