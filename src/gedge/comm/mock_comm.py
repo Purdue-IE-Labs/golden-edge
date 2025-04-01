@@ -52,6 +52,8 @@ final so we cannot do that. Need to find another workaround
 '''
 
 # TODO: handle Zenoh queries
+# for now, we will not worry about Zenoh queries, because we 
+# may be removing them from Comm soon, anyway, due to timeout issues
 class MockComm(Comm):
     def __init__(self):
         # just maps key expressions to functions
