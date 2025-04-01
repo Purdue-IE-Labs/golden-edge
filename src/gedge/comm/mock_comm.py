@@ -82,24 +82,10 @@ class MockComm(Comm):
     def cancel_subscription(self, key_expr: str):
         self.subscribers[key_expr] = []
     
-    # TODO: combine this function with comm
     def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> MockCallback:
-        responses = {r.code: r for r in method.responses}
         def _on_reply(reply: MockSample) -> None:
             assert type(reply.value) == proto.ResponseData
-            code, body, error = reply.value.code, reply.value.body, reply.value.error
-            if code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
-                response = responses[code]
-            else:
-                response = MethodResponse(code, Props.empty(), {})
-            new_body: dict[str, BodyData] = {}
-            for key, value in body.items():
-                data_type = response.body[key].type
-                props = response.body[key].props
-                new_body[key] = BodyData(TagData.proto_to_py(value, data_type), props.to_value())
-            props = response.props.to_value()
-            r = MethodReply(reply.key_expr, code, new_body, error, props)
-            on_reply(r)
+            self._handle_on_method_reply(method, reply.key_expr, reply.value, on_reply)
         return _on_reply
     
     # TODO: combine this function with comm
@@ -143,21 +129,8 @@ class MockComm(Comm):
                 reply(*response)
         return _on_write
     
-    # TODO: combine this function with comm
     def _method_reply(self, key_expr: str, method: Method):
-        responses = method.responses
-        def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
-            logger.info(f"Replying to method with code {code} on path {NodeKeySpace.method_path_from_response_key(key_expr)}")
-            if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
-                raise ValueError(f"invalid repsonse code {code}")
-            new_body: dict[str, proto.TagData] = {}
-            for key, value in body.items():
-                response = [i for i in responses if i.code == code][0]
-                data_type = response.body[key].type
-                new_body[key] = TagData.py_to_proto(value, data_type)
-            r = proto.ResponseData(code=code, body=new_body, error=error)
-            self._send_proto(key_expr=key_expr, value=r)
-        return _reply
+        return super()._method_reply(key_expr, method)
     
     def _on_method_query(self, method: Method):
         def _on_query(sample: MockSample) -> None:
@@ -165,12 +138,8 @@ class MockComm(Comm):
             self._handle_method_query(method, sample.key_expr, sample.value)
         return _on_query
     
-    # TODO: combine with comm
     def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
-        key_expr = ks.method_query_listen(method.path)
-        logger.info(f"Setting up method at path: {method.path} on node {ks.name}")
-        handler = self._on_method_query(method)
-        self._subscriber(key_expr, handler)
+        super().method_queryable(ks, method)
     
     # TODO: combine with comm
     def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> None:
