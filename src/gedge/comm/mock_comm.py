@@ -36,9 +36,6 @@ ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.Stat
 import logging
 logger = logging.getLogger(__name__)
 
-TAG_WRITE = [TagWriteQuery, TagWriteReply]
-METHOD_CALL = [MethodQuery, MethodReply]
-
 @dataclass
 class MockSample:
     key_expr: str
@@ -164,5 +161,5 @@ class MockComm(Comm):
         pass
     
     def liveliness_token(self, ks: NodeKeySpace) -> None:
-        # MockComm doesn't worry about this for now
+        # MockComm doesn't worry about this for now, but we need to override Comm
         pass

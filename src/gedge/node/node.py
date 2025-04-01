@@ -273,6 +273,7 @@ class NodeSession:
     def startup(self):
         logger.debug(f"Verifying node collisions...")
         self._verify_node_collision()
+        logger.info("Publishing node's meta")
         self._comm.send_meta(self.ks, self.meta)
         self.update_state(True)
         self.node_liveliness = self._comm.liveliness_token(self.ks)
@@ -319,10 +320,12 @@ class NodeSession:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        # logger.info(f"Updating tag at path {path}")
+        logger.info(f"Updating tag at path {path} with value {value}")
         self._comm.update_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
     
     def update_state(self, online: bool):
+        online_str = "online" if online else "offline"
+        logger.info(f"Updating node state: {online_str}")
         self._comm.send_state(self.ks, State(online=online))
 
     def subnode(self, name: str) -> SubnodeSession:
