@@ -193,7 +193,7 @@ class NodeSession:
         # connect
         self._comm.connect()
 
-        self.startup()
+        self._startup()
         self.tags: dict[str, Tag] = self.config.tags
         self.tag_write_responses: dict[str, dict[int, WriteResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
         self.methods: dict[str, Method] = self.config.methods
@@ -270,7 +270,7 @@ class NodeSession:
         metas = self._comm.pull_meta_messages(only_online=True)
         assert not any([x.key == self.ks.user_key for x in metas]), f"{[x.key for x in metas]} are online, and {self.ks.user_key} match!"
 
-    def startup(self):
+    def _startup(self):
         logger.debug(f"Verifying node collisions...")
         self._verify_node_collision()
         logger.info("Publishing node's meta")
