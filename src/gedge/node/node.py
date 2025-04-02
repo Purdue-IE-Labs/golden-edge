@@ -243,6 +243,8 @@ class NodeSession:
 
     def connect_to_remote(self, key: str, on_state: StateCallback | None = None, on_meta: MetaCallback | None = None, on_liveliness_change: LivelinessCallback | None = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
         logger.info(f"Node {self.config.key} connecting to remote node {key}")
+
+        # TODO: should remote and node have different Comm or the same?
         connection = RemoteConnection(RemoteConfig(key), NodeKeySpace.from_user_key(key), self._comm, self.id, self._on_remote_close)
         if on_state:
             connection.add_state_callback(on_state)
