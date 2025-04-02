@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from ast import Call
 import base64
-from dataclasses import dataclass
-from multiprocessing import Value
 import zenoh
 import json
+from gedge.comm.sequence_number import SequenceNumber
 from gedge.node import codes
 from gedge.node.body import BodyData
 from gedge.node.error import NodeLookupError, TagLookupError
@@ -47,6 +45,7 @@ class Comm:
         self.config = config
         self.connections = connections
         self.subscriptions: list[zenoh.Subscriber] = []
+        self.sequence_number = SequenceNumber()
     
     def connect(self):
         self.__enter__()
@@ -86,7 +85,10 @@ class Comm:
     def _send_proto(self, key_expr: str, value: ProtoMessage):
         logger.debug(f"putting proto on key_expr '{key_expr}'")
         b = self.serialize(value)
-        self.session.put(key_expr, b, encoding="application/protobuf")
+
+        # TODO: how should sequence numbers be handled with queries and all that
+        self.session.put(key_expr, b, encoding="application/protobuf", attachment=bytes(self.sequence_number))
+        self.sequence_number.increment()
     
     def liveliness_token(self, ks: NodeKeySpace) -> zenoh.LivelinessToken:
         key_expr = ks.liveliness_key_prefix
@@ -105,7 +107,7 @@ class Comm:
     def _on_tag_data(self, on_tag_data: TagDataCallback, tags: dict[str, Tag]) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
             tag_data: proto.TagData = self.deserialize(proto.TagData(), sample.payload.to_bytes())
-            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {tag_data}")
+            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {tag_data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
             path: str = NodeKeySpace.tag_path_from_key(str(sample.key_expr))
             if path not in tags:
                 node: str = NodeKeySpace.name_from_key(str(sample.key_expr))
