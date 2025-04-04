@@ -1,0 +1,90 @@
+{
+  // TODO: get influx access tokens out of this config
+  metadata: {
+    name: "zenoh router",
+    location: "build at scale",
+  },
+  adminspace: {
+    enabled: true,
+    permissions: {
+      read: true,
+      write: false
+    }
+  },
+  mode: "router",
+  scouting: {
+    multicast: {
+      enabled: false,
+    },
+    gossip: {
+      enabled: false,
+    }
+  },
+  listen: {
+    endpoints: { router: ["tcp/192.168.4.60:7447"]},
+  },
+  plugins: {
+    storage_manager: {
+      __required__: true,
+      backend_search_dirs: "./config/",
+      volumes: {
+        influxdb2: {
+          url: "http://localhost:8086/api/v2/",
+          private: {
+            org_id: "ielabs",
+            token: "buLl_XsgWhqxHg4lzGHQnnUSz_sHZT2deY8L9fkNOV825w0uXimwLQ077QlgkQ52ouad4UmQ80WhHSwb8ftESQ=="
+          }
+        }
+      },
+      storages: {
+        meta: {
+          key_expr: "**/NODE/*/META",
+          volume: {
+            id: "influxdb2",
+            db: "meta",
+            create_db: true,
+          }
+        },
+        state: {
+          key_expr: "**/NODE/*/STATE",
+          volume: {
+            id: "influxdb2",
+            db: "state",
+            create_db: true,
+          }
+        },
+        tag_data: {
+          key_expr: "**/NODE/*/TAGS/DATA/**",
+          volume: {
+            id: "influxdb2",
+            db: "tag_data",
+            create_db: true,
+          }
+        },
+        tag_write: {
+          key_expr: "**/NODE/*/TAGS/WRITE/**",
+          volume: {
+            id: "influxdb2",
+            db: "tag_write",
+            create_db: true,
+          }
+        },
+        // TODO: methods are actually gross under the hood, should we 
+        // create some sort of hook that cleans up a method call to put 
+        // into influxdb or let future people look into that
+        method: {
+          key_expr: "**/NODE/*/METHODS/**",
+          volume: {
+            id: "influxdb2",
+            db: "method",
+            create_db: true,
+          }
+        }
+      }
+    },
+    rest: { 
+      __required__: true,
+      http_port: 8000,
+    }
+  },
+}
