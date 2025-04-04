@@ -66,11 +66,24 @@ class RemoteConnection:
         self._comm.__exit__(*exc)
     
     def close(self):
+        '''
+        Closes the current remote connection
+        '''
         self._comm.close_remote(self.ks)
         if self.on_close is not None:
             self.on_close(self.key)
     
     def add_tag_data_callback(self, path: str, on_tag_data: TagDataCallback) -> None:
+        '''
+        Adds the passed TagDataCallback to the current node on the passed path
+
+        Arguments:
+            path (str): The path of the node recieving the new tag data callback
+            on_tag_data (TagDataCallbacks): The new TagDataCallback being added
+
+        Returns:
+            None
+        '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
 
@@ -78,18 +91,64 @@ class RemoteConnection:
         self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tags)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
+        '''
+        Adds the passed StateCallback to the current node
+
+        Arguments:
+            on_state (StateCallback): The handler being added to the node
+
+        Returns:
+            None
+        '''
         self._comm.state_subscriber(self.ks, on_state)
 
     def add_meta_callback(self, on_meta: MetaCallback) -> None:
+        '''
+        Adds the passed MetaCallback to the current node
+
+        Arguments:
+            on_meta (MetaCallback): The handler being added to the node
+
+        Returns:
+            None
+        '''
         self._comm.meta_subscriber(self.ks, on_meta)
 
     def add_liveliness_callback(self, on_liveliness_change: LivelinessCallback) -> None:
+        '''
+        Adds the passed LivelinessCallback to the current node
+
+        Arguments:
+            on_liveliness_change (LivelinessCallback): The handler being added to the node
+
+        Returns:
+            None
+        '''
         self._comm.liveliness_subscriber(self.ks, on_liveliness_change)
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
+        '''
+        Binds the passed list of paths to Tags
+
+        Arguments:
+            paths (list[str]): The list of paths for the tags to be bound
+
+        Returns:
+            list[TagBind]: The list of the bound tags
+        '''
         return [self.tag_bind(path) for path in paths]
 
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
+        '''
+        Binds a single tag to the passed path and assigns the passed value
+
+        Arguments:
+            path (str): The path of the tag
+            value (Any): The value for the TagBind
+
+        Returns:
+            TagBind: The new TagBind
+        '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
@@ -97,6 +156,15 @@ class RemoteConnection:
         return bind
     
     def subnode(self, name: str) -> RemoteSubConnection:
+        '''
+        Creates a RemoteSubConnection for the subnode that has the passed name
+
+        Arguments:
+            name (str): The name of subnode
+
+        Returns:
+            RemoteSubConnection: The new connection for the subnode
+        '''
         from gedge.node.subnode import RemoteSubConnection
         def on_close(key):
             pass
@@ -122,6 +190,16 @@ class RemoteConnection:
         return r
 
     def _write_tag(self, path: str, value: Any) -> TagWriteReply:
+        '''
+        Writes the passed value to the tag at the passed path and returns the reply
+
+        Arguments:
+            path (str): The path of the tag being written to
+            value (Any): The value being written to the tag
+
+        Returns:
+            TagWriteReply: The reply from the tag write
+        '''
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -146,13 +224,44 @@ class RemoteConnection:
         return reply
 
     def write_tag(self, path: str, value: Any) -> TagWriteReply:
+        '''
+        Writes the passed value to the tag at the passed path and returns the reply
+
+        Arguments:
+            path (str): The path of the tag being written to
+            value (Any): The value being written to the tag
+
+        Returns:
+            TagWriteReply: The reply from the tag write
+        '''
         return self._write_tag(path, value)
 
     async def write_tag_async(self, path: str, value: Any) -> TagWriteReply:
+        '''
+        Writes the passed value to the tag at the passed path and returns the reply
+
+        Arguments:
+            path (str): The path of the tag being written to
+            value (Any): The value being written to the tag
+
+        Returns:
+            TagWriteReply: The reply from the tag write
+        '''
         return self._write_tag(path, value)
     
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
     def call_method(self, path: str, on_reply: MethodReplyCallback, **kwargs) -> None:
+        '''
+        Calls the method along the passed path using the passed MethodReplyCallback
+
+        Arguments:
+            path (str): The path of the method
+            on_reply (MethodReplyCallback): The MethodReplyCallback for the query
+            kwargs (dict[str, Any]): ?
+
+        Returns:
+            None
+        '''
         # TODO: this setup may limit the user if they want to have a parameter "path" passed into 
         # their method because it conflicts with this function's arguments, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
 
@@ -177,7 +286,15 @@ class RemoteConnection:
     # timeout in milliseconds
     def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
         '''
-        timeout in ms 
+        Calls the method along the passed path with an optional timeout
+
+        Arguments:
+            path (str): The path to the method being called
+            timeout (flout | None): Optional timeout in milliseconds
+            kwargs (dict[str, Any]): ?
+
+        Returns:
+            Iterator[MethodReply]: The generator corresponding to the replies from the method
         '''
 
         # appparently, Generator[Reply, None, None] == Iterator[Reply]?
