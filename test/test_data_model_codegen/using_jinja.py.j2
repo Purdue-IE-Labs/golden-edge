@@ -1,0 +1,9 @@
+from dataclasses import dataclass
+
+@dataclass
+class {{model}}:
+    {{tag_name}}: {{base_type}}
+
+    def my_method(self):
+        print("hello, world")
+        print(self.{{tag_name}})
