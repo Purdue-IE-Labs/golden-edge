@@ -25,19 +25,10 @@ if TYPE_CHECKING:
 import logging
 logger = logging.getLogger(__name__)
 
-# TODO: either remove this or use it
-class RemoteConfig:
-    def __init__(self, key: str, read_tags: list[str] = [], read_write_tags: list[str] = [], method_calls: list[str] = []):
-        self.key = key
-        self.read_tags = read_tags
-        self.read_write_tags = read_write_tags
-        self.method_calls = method_calls
-
 class RemoteConnection:
-    def __init__(self, config: RemoteConfig, ks: NodeKeySpace, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
-        self.config = config
+    def __init__(self, ks: NodeKeySpace, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
         self._comm = comm 
-        self.key = self.config.key
+        self.key = ks.user_key
         self.ks = ks
         self.on_close = on_close
 
@@ -74,7 +65,6 @@ class RemoteConnection:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
 
-        self.config.read_write_tags.append(path)
         self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tags)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
@@ -111,14 +101,14 @@ class RemoteConnection:
             # different uuid or same?
             from gedge.node.subnode import SubnodeConfig
             assert isinstance(curr_node, SubnodeConfig)
-            r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+            r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
             return r
 
         if name not in self.subnodes:
             raise ValueError(f"No subnode {name}") 
         curr_node = self.subnodes[name]
         logger.debug(self._comm.session.is_closed())
-        r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+        r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r
 
     def _write_tag(self, path: str, value: Any) -> TagWriteReply:
@@ -151,50 +141,38 @@ class RemoteConnection:
     async def write_tag_async(self, path: str, value: Any) -> TagWriteReply:
         return self._write_tag(path, value)
     
-    # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
-    def call_method(self, path: str, on_reply: MethodReplyCallback, **kwargs) -> None:
-        # TODO: this setup may limit the user if they want to have a parameter "path" passed into 
-        # their method because it conflicts with this function's arguments, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
-
-        if path not in self.methods:
-            raise MethodLookupError(path, self.ks.name)
+    def call_method(self, _path: str, _on_reply: MethodReplyCallback, **kwargs) -> None:
+        if _path not in self.methods:
+            raise MethodLookupError(_path, self.ks.name)
         
-        # TODO: should this be a queryable with selectors? 
-        # TODO: should this be in comm?
-        method_query_id = str(uuid.uuid4())
-        method = self.methods[path]
+        method = self.methods[_path]
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
             data_type = method.params[key].type
             params[key] = TagData.py_to_proto(value, data_type)
 
-        # TODO: we need a subscriber for /** and for /caller_id/method_query_id
-        logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
-        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, on_reply, self.methods[path])
+        logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
+        self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
     
     # CAUTION: because this is a generator, just calling it (session.call_method_iter(...)) will do nothing,
     # it must be iterated upon to actually run
     # timeout in milliseconds
-    def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
+    def call_method_iter(self, _path: str, _timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
         '''
         timeout in ms 
         '''
 
-        # appparently, Generator[Reply, None, None] == Iterator[Reply]?
-        # TODO: we can probably merge this with call_method eventually
+        if _timeout:
+            _timeout /= 1000
 
-        if timeout:
-            timeout /= 1000
+        if _path not in self.methods:
+            raise MethodLookupError(_path, self.ks.name)
 
-        if path not in self.methods:
-            raise MethodLookupError(path, self.ks.name)
-
-        method = self.methods[path]
+        method = self.methods[_path]
         for param in method.params:
             if param not in kwargs:
                 raise LookupError(f"Parameter {param} defined in config but not included in method call for method {method.path}")
         
-        method_query_id = str(uuid.uuid4())
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
             data_type = method.params[key].type
@@ -204,24 +182,23 @@ class RemoteConnection:
         def _on_reply(reply: MethodReply) -> None:
             replies.put(reply)
 
-        logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
-        # TODO: this function definition is longggggg, so many arguments
+        logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
         start = time.time()
-        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, _on_reply, self.methods[path])
+        key_expr = self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
         while True:
             try:
                 elapsed = (time.time() - start)
-                if timeout and elapsed >= timeout:
+                if _timeout and elapsed >= _timeout:
                     # timeout exceeded, we need an item ASAP
                     res = replies.get(block=False)
-                elif timeout:
+                elif _timeout:
                     # we can wait timeout - elapsed more seconds
-                    res = replies.get(block=True, timeout=(timeout - elapsed))
+                    res = replies.get(block=True, timeout=(_timeout - elapsed))
                 else:
                     # if no timeout, we block forever
                     res = replies.get(block=True)
             except Empty:
-                key_expr = self.ks.method_response(path, self.node_id, method_query_id)
+                key_expr = method_response_from_call(key_expr)
                 self._comm.cancel_subscription(key_expr)
                 raise TimeoutError(f"Timeout of method call at path {method.path} exceeded")
             # Design decision: we don't give a codes.DONE to the iterator that the user uses

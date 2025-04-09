@@ -12,7 +12,6 @@ from gedge.node.method_response import MethodResponse
 from gedge.node.node import NodeConfig, NodeSession
 from gedge.node.prop import Props
 from gedge.node.query import MethodQuery
-from gedge.node.remote import RemoteConfig
 from gedge.node.tag_data import TagData
 
 from typing import TYPE_CHECKING, Any, Iterator
