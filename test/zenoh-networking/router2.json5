@@ -1,0 +1,14 @@
+{
+  metadata: {
+    key: "Build/Scale/Router/2",
+  },
+  mode: "router",
+  transport: {
+    unicast: {
+      max_links: 10,
+    }
+  },
+//   listen: {
+//     endpoints: { router: ["tcp/192.168.4.60:7447"]},
+//   },
+}
