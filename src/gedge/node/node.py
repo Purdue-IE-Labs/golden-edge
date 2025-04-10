@@ -529,7 +529,7 @@ class NodeSession:
             on_state (StateCallback | None): Optional StateCallback for the connection
             on_meta (MetaCallback | None): Optional MetaCallback for the connection
             on_liveliness_change (LivelinessCallback | None): Optional LivelinessCallback for the connection
-            tag_data_callbacks (dict[str, TagDataCallbacks] = {}): Optional Dictionary of all the TagDataCallbacks
+            tag_data_callbacks (dict[str, TagDataCallbacks] = {}): Optional Dictionary of TagDataCallbacks
 
         Returns:
             RemoteConnection: The new connection between the current node and remote node
