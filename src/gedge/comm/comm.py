@@ -172,6 +172,7 @@ class Comm:
             value = TagData.proto_to_py(tag_data, tag_config.type)
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
+        print("ON TAG DATA CALLED")
         return _on_tag_data
 
     def _on_state(self, on_state: StateCallback) -> ZenohCallback:
@@ -429,7 +430,7 @@ class Comm:
     
     def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, Tag]) -> None:
         '''
-        Creates a new State subscriber for the passed node
+        Creates a new tag data subscriber for the passed node
 
         Arguments:
             ks (NodeKeySpace): The key space of the node recieving the State handler
@@ -499,11 +500,11 @@ class Comm:
         Arguments:
             ks (NodeKeySpace): The key space of the node that method queries are being handled on
             path (str): The path of the tag which is being queried
-            caller_id (str): The id of the caller of the method?
+            caller_id (str): The id of the caller of the method
             method_query_id (str): The id of the method query
             params (dict[str, proto.TagData]): The passed parameters for the Method Query Data
             on_reply (MethodReplyCallback): The MethodReplyCallback for the query
-            method (Method): The method being queried?
+            method (Method): The method being queried
         
         Returns:
             None

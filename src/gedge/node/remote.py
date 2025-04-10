@@ -260,7 +260,7 @@ class RemoteConnection:
 
         Example Implementation:
             remote = session.connect_to_remote(...)
-            reply = remote.write_tag_async("example/path", param=n)
+            reply = await remote.write_tag_async("example/path", param=n)
             print(f"got reply: {reply}")
             print(f"reply props: {reply.props}")
 

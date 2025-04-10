@@ -16,7 +16,7 @@ def my_callback(reply):
     else:
         print(f"Success: {reply.code}, {reply.props}, {reply.body}")
 
-with gedge.connect(config, "tcp/192.168.4.60:7447") as session:
+with gedge.connect(config, "192.168.4.60") as session:
     remote = session.connect_to_remote("test/method/calls/callee") 
 
     print("FIRST METHOD CALL")

@@ -67,15 +67,6 @@ class NodeConfig:
 
     @staticmethod
     def _config_from_json5_obj(obj: dict[str, Any]):
-        '''
-        Configures a passed node(?) and returns the NodeConfig
-        
-        Arguments:
-            obj (dict[str, Any]): The node being configured
-        
-        Returns:
-            NodeConfig
-        '''
         if "key" not in obj:
             raise LookupError(f"Node must have a key")
         config = NodeConfig(obj["key"])
@@ -511,14 +502,34 @@ class NodeSession:
 
     def connect_to_remote(self, key: str, on_state: StateCallback | None = None, on_meta: MetaCallback | None = None, on_liveliness_change: LivelinessCallback | None = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
         '''
-        Connects the current node to a remote node corresponding to the passed key, allows for optional inclusion of StateCallback, MetaCallback, LivelinessCallback, and a required dictionary of TagDataCallbacks
+        Connects the current node to a remote node corresponding to the passed key, allows for optional inclusion of StateCallback, MetaCallback, LivelinessCallback, and dictionary of TagDataCallbacks
+
+        Example Implementation:
+            def state_callback(str, state):
+                print(f"State changed: {state} for {str}")
+
+            def meta_callback(meta_data):
+                print(f"Received metadata: {meta_data}")
+
+            def liveliness_callback(str, liveliness_status):
+                print(f"Liveliness status: {liveliness_status}, {str}")
+
+            def tag_data_callback(path, data):
+                print(f"Tag data at {path}: {data}")
+            
+                remote = session.connect_to_remote(
+                    key="path", 
+                    on_state=state_callback, 
+                    on_meta=meta_callback, 
+                    on_liveliness_change=liveliness_callback, 
+                    tag_data_callbacks={"tag": tag_data_callback})
 
         Arguments:
             key (str): The key of the remote node
             on_state (StateCallback | None): Optional StateCallback for the connection
             on_meta (MetaCallback | None): Optional MetaCallback for the connection
             on_liveliness_change (LivelinessCallback | None): Optional LivelinessCallback for the connection
-            tag_data_callbacks (dict[str, TagDataCallbacks]): Dictionary of all the TagDataCallbacks
+            tag_data_callbacks (dict[str, TagDataCallbacks] = {}): Optional Dictionary of all the TagDataCallbacks
 
         Returns:
             RemoteConnection: The new connection between the current node and remote node
@@ -688,7 +699,7 @@ class NodeSession:
 
     def subnode(self, name: str) -> SubnodeSession:
         '''
-        Creates a SubnodeSession for the subnode that has the passed name?
+        Creates a SubnodeSession for the subnode that has the passed name
 
         Arguments:
             name (str): The name of subnode

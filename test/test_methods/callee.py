@@ -23,6 +23,6 @@ here = pathlib.Path(__file__).parent
 config = gedge.NodeConfig.from_json5(str(here / "callee.json5"))
 config.add_method_handler("call/method", handler=handler)
 
-with gedge.connect(config, "tcp/192.168.4.60:7447") as session:
+with gedge.connect(config, "192.168.4.60") as session:
     while True:
         pass
