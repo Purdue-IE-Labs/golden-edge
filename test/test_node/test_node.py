@@ -10,6 +10,7 @@ from gedge.node.subnode import SubnodeConfig
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
 from gedge.node.tag import WriteResponse
+from gedge.node.error import MethodLookupError, TagLookupError
 
 # Begin NodeConfig testing
 
@@ -66,7 +67,7 @@ def test_add_tag():
 
     assert nodeConfig_instance.tags['test_path'].path == expected_tag.path
     assert nodeConfig_instance.tags['test_path'].type == expected_tag.type
-    assert str(nodeConfig_instance.tags['test_path'].props.to_value) == str(expected_tag.props.to_value)
+    assert nodeConfig_instance.tags['test_path'].props.to_value() == expected_tag.props.to_value()
     assert nodeConfig_instance.tags['test_path']._writable == expected_tag._writable
     assert nodeConfig_instance.tags['test_path'].write_handler == expected_tag.write_handler
 
@@ -171,7 +172,7 @@ def test_add_writetable_tag():
 
     assert nodeConfig_instance.tags['test_path'].path == expected_tag.path
     assert nodeConfig_instance.tags['test_path'].type == expected_tag.type
-    assert str(nodeConfig_instance.tags['test_path'].props.to_value) == str(expected_tag.props.to_value)
+    assert nodeConfig_instance.tags['test_path'].props.to_value() == expected_tag.props.to_value()
     assert nodeConfig_instance.tags['test_path']._writable == expected_tag._writable
     assert nodeConfig_instance.tags['test_path'].write_handler == expected_tag.write_handler
 
@@ -209,92 +210,309 @@ class TestWriteResponses:
             "message": "Request was successful"
         }
 
-        assert str(nodeConfig_instance.tags['test_path'].props.to_value) == str(expected_tag.props.to_value)
+        assert nodeConfig_instance.tags['test_path'].props.to_value() == expected_tag.props.to_value()
 
         nodeConfig_instance.add_write_response("test_path", 300, additional_response)
 
         expected_tag.add_write_response(300, Props.from_value(additional_response))
 
-        assert str(nodeConfig_instance.tags['test_path'].props.to_value) == str(expected_tag.props.to_value)
-
-    def test_add_write_response_no_tag(self):
-        '''
-        Dependencies: (tag.py) add_write_response
-        '''
-        #TODO:
-        pytest.fail("Test has not been created")
+        assert nodeConfig_instance.tags['test_path'].props.to_value() == expected_tag.props.to_value()
     
+    def test_add_write_response_no_tag(self):
+        instance_str = "instance/str"
+        nodeConfig_instance = NodeConfig(instance_str)
+
+        additional_response = {
+            "message": "Request was successful"
+        }
+
+        with pytest.raises(TagLookupError, match="Tag test_path not found on node str"):
+            nodeConfig_instance.add_write_response("test_path", 300, additional_response)
+        
     def test_add_write_responses(self):
-        #TODO
-        pytest.fail("Test has not been created")
+        '''
+        Dependencies: 
+            (tag.py) add_write_response
+            (node.py) add_writable_tag
+        '''
+
+        instance_str = "instance/str"
+        nodeConfig_instance = NodeConfig(instance_str)
+
+        properties = {
+            'tag1': 'int',
+            'tag2': 'float',
+            'tag3': 'str'
+        }
+
+        responses = [
+            (200, {"status": "success", "message": "Request was successful"}),
+            (404, {"status": "error", "message": "Not Found"}),
+            (500, {"status": "error", "message": "Internal Server Error"}),
+        ]
+
+        nodeConfig_instance.add_writable_tag("test_path", int, tag_handler, responses, properties)
+
+        expected_tag = Tag("test_path", DataType.INT, Props.from_value(properties), False, [], None)
+
+        expected_tag.writable(tag_handler, responses)
+
+        additional_responses = [
+            (300, {"status": "Success", "message": "Request was also successful"}),
+            (600, {"status": "error", "message": "uh oh"})
+        ]
+
+        assert str(nodeConfig_instance.tags['test_path'].responses) == str(expected_tag.responses)
+
+        nodeConfig_instance.add_write_responses("test_path", additional_responses)
+
+        expected_tag.add_write_response(300, Props.from_value({"status": "Success", "message": "Request was also successful"}))
+        expected_tag.add_write_response(600, Props.from_value({"status": "error", "message": "uh oh"}))
+
+        assert str(nodeConfig_instance.tags['test_path'].responses) == str(expected_tag.responses)
     
     def test_add_write_responses_no_tag(self):
-        #TODO
-        pytest.fail("Test has not been created")
+        instance_str = "instance/str"
+        nodeConfig_instance = NodeConfig(instance_str)
+
+        additional_responses = [
+            (300, {"message": "Request was successful"}),
+            (400, {"message": "Request was not successful"})
+        ]
+
+        with pytest.raises(TagLookupError, match="Tag test_path not found on node str"):
+            nodeConfig_instance.add_write_responses("test_path", additional_responses)
 
 def test_add_tag_write_handler():
-    #TODO
-    pytest.fail("Test has not been created")
+    '''
+    Dependencies:
+        (node.py) add_tag
+        (tag.py) add_write_handler
+    '''
+    instance_str = "instance/str"
+    nodeConfig_instance = NodeConfig(instance_str)
+
+    properties = {
+        'tag1': 'int',
+        'tag2': 'float',
+        'tag3': 'str'
+    }
+
+    responses = [
+        (200, {"status": "success", "message": "Request was successful"}),
+        (404, {"status": "error", "message": "Not Found"}),
+        (500, {"status": "error", "message": "Internal Server Error"}),
+    ]
+
+    nodeConfig_instance.add_tag("test_path", int, properties)
+
+    expected_tag = Tag("test_path", int, Props.from_value(properties), False, [], None)
+
+    assert str(nodeConfig_instance.tags['test_path'].write_handler) == str(expected_tag.write_handler)
+
+    expected_tag.writable(tag_handler, responses)
+
+    nodeConfig_instance.add_tag_write_handler("test_path", tag_handler)
+
+    assert nodeConfig_instance.tags['test_path'].write_handler == expected_tag.write_handler
+
 
 def test_add_tag_write_handler_no_tag():
-    #TODO
-    pytest.fail("Test has not been created")
+    instance_str = "instance/str"
+    nodeConfig_instance = NodeConfig(instance_str)
+    
+    with pytest.raises(TagLookupError, match="Tag test_path not found on node str"):
+        nodeConfig_instance.add_tag_write_handler("test_path", tag_handler)
+
+
+def method_handler():
+    print("Yeah! Testing!!!")
 
 def test_add_method_handler():
-    #TODO
-    pytest.fail("Test has not been created")
+    instance_str = "instance/str"
+    nodeConfig_instance = NodeConfig(instance_str)
+
+    properties = {
+        'method1': 'int',
+        'method2': 'float',
+        'method3': 'str'
+    }
+
+    nodeConfig_instance.add_method("test_path", None, properties)
+
+    expected_method = Method("test_path", method_handler, Props.from_value(properties), None, None)
+
+    assert nodeConfig_instance.methods["test_path"].handler != expected_method.handler
+
+    nodeConfig_instance.add_method_handler("test_path", method_handler)
+
+    assert nodeConfig_instance.methods["test_path"].handler == expected_method.handler
 
 def test_add_method_handler_no_tag():
-    #TODO
-    pytest.fail("Test has not been created")
+    instance_str = "instance/str"
+    nodeConfig_instance = NodeConfig(instance_str)
+
+    with pytest.raises(MethodLookupError, match="Method test_path not found on node str"):
+        nodeConfig_instance.add_method_handler("test_path", method_handler)
 
 def test_add_props():
-    #TODO
-    pytest.fail("Test has not been created")
+    instance_str = "instance/str"
+    nodeConfig_instance = NodeConfig(instance_str)
+
+    properties = {
+        'method1': 'int',
+        'method2': 'float',
+        'method3': 'str'
+    }
+
+    nodeConfig_instance.add_tag("test_path", int, {})
+
+    expected_tag = Tag("test_path", int, Props.from_value(properties), False, [], None)
+
+    assert nodeConfig_instance.tags['test_path'].props != expected_tag.props
+
+    nodeConfig_instance.add_props("test_path", properties)
+
+    assert nodeConfig_instance.tags['test_path'].props.to_value() == expected_tag.props.to_value()
+
 
 def test_add_props_no_tag():
-    #TODO
-    pytest.fail("Test has not been created")
+    instance_str = "instance/str"
+    nodeConfig_instance = NodeConfig(instance_str)
+
+    properties = {
+        'method1': 'int',
+        'method2': 'float',
+        'method3': 'str'
+    }
+
+    with pytest.raises(TagLookupError, match="Tag test_path not found on node str"):
+        nodeConfig_instance.add_props("test_path", properties)
+
+# Note: Maybe some more in-depth testing of delete tag would be good
+# Example Cases:
+#   1) First Tag
+#   2) Middle Tag
+#   3) Last Tag
 
 def test_delete_tag():
-    #TODO
-    pytest.fail("Test has not been created")
+    instance_str = "instance/str"
+    nodeConfig_instance = NodeConfig(instance_str)
+
+    properties = {
+        'tag1': 'int',
+        'tag2': 'float',
+        'tag3': 'str'
+    }
+
+    nodeConfig_instance.add_tag("test_path", int, properties)
+
+    assert nodeConfig_instance.tags['test_path'] != None
+
+    nodeConfig_instance.delete_tag("test_path")
+
+    assert nodeConfig_instance.tags == {}
 
 def test_delete_tag_no_tag():
-    #TODO
-    pytest.fail("Test has not been created")
+    instance_str = "instance/str"
+    nodeConfig_instance = NodeConfig(instance_str)
+
+    with pytest.raises(TagLookupError, match="Tag test_path not found on node str"):
+        nodeConfig_instance.delete_tag("test_path")
 
 def test_add_method():
-    #TODO
-    pytest.fail("Test has not been created")
+    nodeConfig_instance = NodeConfig("instance/str")
+
+    properties = {
+        'method1': 'int',
+        'method2': 'float',
+        'method3': 'str'
+    }
+
+    assert nodeConfig_instance.methods == {}
+    
+    nodeConfig_instance.add_method("test_path", method_handler, properties)
+
+    assert len(nodeConfig_instance.methods) == 1
+
+    expected_method = Method("test_path", method_handler, Props.from_value(properties), {}, [])
+
+    assert nodeConfig_instance.methods['test_path'].props.to_value() == expected_method.props.to_value()
+    assert nodeConfig_instance.methods['test_path'].params == expected_method.params
+    assert nodeConfig_instance.methods['test_path'].responses == expected_method.responses
 
 def test_delete_method():
-    #TODO
-    pytest.fail("Test has not been created")
+    '''
+    Dependencies:
+        (node.py) add_method
+    '''
+    nodeConfig_instance = NodeConfig("instance/str")
+
+    properties = {
+        'method1': 'int',
+        'method2': 'float',
+        'method3': 'str'
+    }
+    
+    nodeConfig_instance.add_method("test_path", method_handler, properties)
+
+    expected_method = Method("test_path", method_handler, Props.from_value(properties), {}, [])
+
+    assert nodeConfig_instance.methods != {}
+
+    nodeConfig_instance.delete_method("test_path")
+
+    assert nodeConfig_instance.methods == {}
 
 def test_delete_method_no_method():
-    #TODO
-    pytest.fail("Test has not been created")
+    nodeConfig_instance = NodeConfig("instance/str")
 
-def test_verify_tags():
-    #TODO
-    pytest.fail("Test has not been created")
+    with pytest.raises(MethodLookupError, match="Method test_path not found on node str"):
+        nodeConfig_instance.delete_method("test_path")
 
 def test_verify_tags_no_handler():
-    #TODO
-    pytest.fail("Test has not been created")
+    nodeConfig_instance = NodeConfig("instance/str")
+
+    properties = {
+        'tag1': 'int',
+        'tag2': 'float',
+        'tag3': 'str'
+    }
+
+    nodeConfig_instance.add_tag("test_path", int, properties)
+
+    nodeConfig_instance.tags['test_path']._writable = True
+
+    with pytest.raises(AssertionError, match="Tag test_path declared as writable but no write handler was provided"):
+        nodeConfig_instance._verify_tags()
 
 def test_verify_tags_no_responses():
-    #TODO
-    pytest.fail("Test has not been created")
+    nodeConfig_instance = NodeConfig("instance/str")
 
-def test_verify_methods():
-    #TODO
-    pytest.fail("Test has not been created")
+    properties = {
+        'tag1': 'int',
+        'tag2': 'float',
+        'tag3': 'str'
+    }
+
+    nodeConfig_instance.add_writable_tag("test_path", int, tag_handler, [], properties)
+
+    with pytest.raises(AssertionError, match="Tag test_path declared as writable but no responses registered for write handler"):
+        nodeConfig_instance._verify_tags()
 
 def test_verify_methods_no_handler():
-    #TODO
-    pytest.fail("Test has not been created")
+    nodeConfig_instance = NodeConfig("instance/str")
+
+    properties = {
+        'tag1': 'int',
+        'tag2': 'float',
+        'tag3': 'str'
+    }
+
+    nodeConfig_instance.add_method("test_path", None, properties)
+
+    with pytest.raises(AssertionError, match="Method test_path has no handler"):
+        nodeConfig_instance._verify_methods()
 
 def test_build_meta():
     #TODO
