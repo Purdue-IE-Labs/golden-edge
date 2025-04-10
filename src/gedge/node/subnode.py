@@ -8,7 +8,7 @@ from gedge.comm.keys import NodeKeySpace, SubnodeKeySpace
 from gedge.node.method import Method
 from gedge.node.method_response import MethodResponse
 from gedge.node.node import NodeConfig, NodeSession
-from gedge.node.remote import RemoteConfig, RemoteConnection
+from gedge.node.remote import RemoteConnection
 from gedge.node.tag import Tag, WriteResponse
 
 import logging
@@ -93,10 +93,9 @@ class SubnodeSession(NodeSession):
         self.update_state(False)
 
 class RemoteSubConnection(RemoteConnection):
-    def __init__(self, config: RemoteConfig, ks: SubnodeKeySpace, subnode_config: SubnodeConfig, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
-        self.config = config
+    def __init__(self, name: str, ks: SubnodeKeySpace, subnode_config: SubnodeConfig, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
         self._comm = comm 
-        self.key = self.config.key
+        self.key = name
         self.ks = ks
         self.on_close = on_close
 
@@ -125,13 +124,13 @@ class RemoteSubConnection(RemoteConnection):
             # we inherit comm
             # different uuid or same?
             assert isinstance(curr_node, SubnodeConfig)
-            r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+            r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
             return r
 
         if name not in self.subnodes:
             raise ValueError(f"No subnode {name}") 
         curr_node = self.subnodes[name]
-        r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+        r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r
     
     def close(self):

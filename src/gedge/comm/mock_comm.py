@@ -69,9 +69,6 @@ class MockComm(Comm):
         for key in self.subscribers:
             if keys.overlap(key, key_expr):
                 for handler in self.subscribers[key]:
-                    # TODO: should this be a daemon thread (zenoh does not treat them as daemon threads)
-                    # this can be tested by making sure a handler on a node goes off, then the node's context 
-                    # manager concludes before the handler finishes running
                     thread = threading.Thread(target=handler, args=[MockSample(key_expr, value)])
                     thread.start()
 

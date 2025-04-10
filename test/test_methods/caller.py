@@ -64,7 +64,7 @@ with gedge.connect(config, "192.168.4.60") as session:
 
     print("\n\nSIXTH METHOD CALL")
     try:
-        responses6 = remote.call_method_iter("call/method", timeout=100, name="hello world", speed=40)
+        responses6 = remote.call_method_iter("call/method", _timeout=100, name="hello world", speed=40)
         for response in responses6:
             if response.error:
                 print(response.code, response.error)

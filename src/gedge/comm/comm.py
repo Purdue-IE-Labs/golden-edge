@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import uuid
 import zenoh
 import json
 from gedge.comm.sequence_number import SequenceNumber
@@ -223,8 +224,6 @@ class Comm:
         reply = MethodReply(key_expr, r.code, body, r.error, props)
         on_reply(reply)
         if r.code in {codes.DONE, codes.METHOD_ERROR}:
-            # TODO: we need to unsubcribe here because we are closing this method connection, does this mean we should move comm connections
-            # to this function
             logger.debug(f"remove subscription for key expr {key_expr}")
             self.cancel_subscription(key_expr)
     
@@ -493,7 +492,7 @@ class Comm:
         zenoh_handler = self._on_method_query(method)
         self._subscriber(key_expr, zenoh_handler)
     
-    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, method_query_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, method: Method) -> None:
+    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, method: Method) -> str:
         '''
         Queries the tag along the passed path between the caller and method query and then sends the response along proto
         
@@ -507,8 +506,9 @@ class Comm:
             method (Method): The method being queried
         
         Returns:
-            None
+            str: The key expression of the query
         '''
+        method_query_id = str(uuid.uuid4())
         query_key_expr = ks.method_query(path, caller_id, method_query_id)
         query_data = proto.MethodQueryData(params=params)
 
@@ -516,6 +516,8 @@ class Comm:
         zenoh_handler = self._on_method_reply(on_reply, method)
         self._subscriber(response_key_expr, zenoh_handler)
         self._send_proto(query_key_expr, query_data)
+
+        return query_key_expr
 
     def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
         '''
