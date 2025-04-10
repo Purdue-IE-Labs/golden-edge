@@ -128,23 +128,33 @@ class RemoteConnection:
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         '''
-        Binds the passed list of paths to Tags
+        Binds all of the tags in the passed paths to the current node
+
+        Note: To understand how an individual tag_bind functions look at the function tag_bind
 
         Arguments:
-            paths (list[str]): The list of paths for the tags to be bound
+            paths (list[str]): The list of paths for the tags
 
         Returns:
-            list[TagBind]: The list of the bound tags
+            list[TagBind]: The list of the newly bound tags
         '''
         return [self.tag_bind(path) for path in paths]
 
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
         '''
-        Binds a single tag to the passed path and assigns the passed value
+        Binds the tag at the passed path to the current node
+
+        Note: This allows users to declare a tag_bind on a tag that belongs to a remote node and then treat the tag as if it were their own.
+
+        Example Implementation:
+            remote = session.connect_to_remote(...)
+            my_tag = remote.tag_bind("my/tag")
+            my_tag.value = False
+            my_tag.value = True
 
         Arguments:
             path (str): The path of the tag
-            value (Any): The value for the TagBind
+            value (Any | Optional): The value for the TagBind
 
         Returns:
             TagBind: The new TagBind
@@ -227,6 +237,12 @@ class RemoteConnection:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
+        Example Implementation:
+            remote = session.connect_to_remote(...)
+            reply = remote.write_tag("example/path", value=n)
+            print(f"got reply: {reply}")
+            print(f"reply props: {reply.props}")
+
         Arguments:
             path (str): The path of the tag being written to
             value (Any): The value being written to the tag
@@ -240,6 +256,14 @@ class RemoteConnection:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
+        Note: As of now this functions is implemented the same as write_tag
+
+        Example Implementation:
+            remote = session.connect_to_remote(...)
+            reply = remote.write_tag_async("example/path", param=n)
+            print(f"got reply: {reply}")
+            print(f"reply props: {reply.props}")
+
         Arguments:
             path (str): The path of the tag being written to
             value (Any): The value being written to the tag
@@ -252,12 +276,22 @@ class RemoteConnection:
     # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
     def call_method(self, path: str, on_reply: MethodReplyCallback, **kwargs) -> None:
         '''
-        Calls the method along the passed path using the passed MethodReplyCallback
+        Registers the passed MethodReplyCallback and then calls the method at the passed path and all replies get routed to the passed Callback
 
+        Example Implementation:
+            def my_callback(reply):
+                if reply.error:
+                    print(f"Error: {reply.code}, {rply.error}")
+                else:
+                    print(f"Success: {reply.code}, {reply.props}, reply.body}")
+            
+            remote = session.connect_to_remote(...)
+            remote.call_method("example/path", my_callback, param0=x, param1=y)
+        
         Arguments:
             path (str): The path of the method
-            on_reply (MethodReplyCallback): The MethodReplyCallback for the query
-            kwargs (dict[str, Any]): ?
+            on_reply (MethodReplyCallback): The MethodReplyCallback for the replies
+            kwargs (dict[str, Any]): Parameters passsed to the method
 
         Returns:
             None
@@ -288,10 +322,18 @@ class RemoteConnection:
         '''
         Calls the method along the passed path with an optional timeout
 
+        Note: The returned object of this function is a generator, not a list
+
+        Example Implementation:
+            remote = session.connect_to_remote("example/path")
+            responses = remote.call_method_iter("example/path", param0=x, param1=y)
+            for response in responses:
+                print(response.code, response.props, response.body)
+
         Arguments:
             path (str): The path to the method being called
             timeout (flout | None): Optional timeout in milliseconds
-            kwargs (dict[str, Any]): ?
+            kwargs (dict[str, Any]): Parameters passsed to the method
 
         Returns:
             Iterator[MethodReply]: The generator corresponding to the replies from the method

@@ -89,6 +89,8 @@ class Comm:
     def serialize(self, proto: ProtoMessage) -> bytes:
         '''
         Converts the passed ProtoMessage to a base 64 encoded bytes object
+        
+        Note: In this instance "ProtoMessage" means proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData
 
         Arguments:
             proto (ProtoMessage): The ProtoMessage being converted to bytes
@@ -451,7 +453,7 @@ class Comm:
             tag (Tag): The tag that is becomeing the queryable in the node
 
         Returns:
-            zenoh.Queryable: A Zenoh router that is able to recieve queries and respond
+            zenoh.Queryable: A Zenoh key expression that is able to recieve queries and has a registered response defined
         '''
         key_expr = ks.tag_write_path(tag.path)
         zenoh_handler = self._on_tag_write(tag)
@@ -579,10 +581,12 @@ class Comm:
     
     def pull_meta_messages(self, only_online: bool = False):
         '''
-        Pulls all Metas in the current Zenoh session
+        Pulls all Metas in the current Zenoh session of online nodes
+
+        Note: The only_online parameter translates to "Only give me meta messages from the historian of nodes that are currently online"
         
         Arguments:
-            only_online (bool): The current online state of a given node (Note this is set to False automatically when the function is called)
+            only_online (bool): The current online state of a given node
         
         Returns:
             list[Meta]: A list of the Meta messages

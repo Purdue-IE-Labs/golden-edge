@@ -619,23 +619,33 @@ class NodeSession:
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         '''
-        Binds the passed list of paths to Tags
+        Binds all of the tags in the passed paths to the current node
+
+        Note: To understand how an individual tag_bind functions look at the function tag_bind
 
         Arguments:
             paths (list[str]): The list of paths for the tags
 
         Returns:
-            list[TagBind]: The list of the bound tags
+            list[TagBind]: The list of the newly bound tags
         '''
         return [self.tag_bind(path) for path in paths]
 
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
         '''
-        Binds a single tag to the passed path and assigns the passed value
+        Binds the tag at the passed path to the current node
+
+        Note: This allows users to declare a tag_bind on a tag that belongs to a remote node and then treat the tag as if it were their own.
+
+        Example Implementation:
+            remote = session.connect_to_remote(...)
+            my_tag = remote.tag_bind("my/tag")
+            my_tag.value = False
+            my_tag.value = True
 
         Arguments:
             path (str): The path of the tag
-            value (Any): The value for the TagBind
+            value (Any | Optional): The value for the TagBind
 
         Returns:
             TagBind: The new TagBind
