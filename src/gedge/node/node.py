@@ -10,6 +10,7 @@ from gedge.proto import Meta, State, WriteResponseData, MethodQueryData
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
+from gedge.comm.mock_comm import MockComm
 from gedge.node.tag import Tag, WriteResponse
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
