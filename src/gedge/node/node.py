@@ -169,6 +169,7 @@ class NodeConfig:
     # essentially to_proto() for the node
     def build_meta(self) -> Meta:
         self._verify_tags()
+        self._verify_methods()
         tags: list[proto.Tag] = [t.to_proto() for t in self.tags.values()]
         methods: list[proto.Method] = [m.to_proto() for m in self.methods.values()]
         subnodes: list[proto.Subnode] = [s.to_proto() for s in self.subnodes.values()]

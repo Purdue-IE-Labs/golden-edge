@@ -39,6 +39,7 @@ def method_key_prefix(prefix: str, name: str):
 
 def liveliness_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name)
+
 def subnodes_key_prefix(prefix: str, node_name: str):
     return key_join(node_key_prefix(prefix, node_name), SUBNODES)
 
