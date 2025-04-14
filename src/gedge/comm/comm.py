@@ -49,9 +49,15 @@ class Comm:
         self.sequence_number = SequenceNumber()
     
     def connect(self):
+        '''
+        Creates and opens the Zenoh session
+        '''
         self.__enter__()
     
     def close(self):
+        '''
+        Closes the current Zenoh session
+        '''
         self.__exit__()
 
     def __enter__(self):
@@ -66,12 +72,33 @@ class Comm:
         self.session.close()
     
     def close_remote(self, ks: NodeKeySpace):
+        '''
+        Closes the node to Zenoh connection by undeclaring the current subscriptions
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node losing the connection
+
+        Returns:
+            None
+        '''
+
         logger.info(f"Closing remote connection to {ks.user_key}")
         subscriptions = [s for s in self.subscriptions if ks.contains(str(s.key_expr))]
         for s in subscriptions:
             s.undeclare()
 
     def serialize(self, proto: ProtoMessage) -> bytes:
+        '''
+        Converts the passed ProtoMessage to a base 64 encoded bytes object
+        
+        Note: In this instance "ProtoMessage" means proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData
+
+        Arguments:
+            proto (ProtoMessage): The ProtoMessage being converted to bytes
+
+        Returns:
+            bytes: The ProtoMessage converted to bytes
+        '''
         b = proto.SerializeToString()
         # TODO: base64 is needed due to errors with carriage returns in influxdb
         # which we should try to address in a better way than this
@@ -79,11 +106,31 @@ class Comm:
         return b
     
     def deserialize(self, proto: ProtoMessage, payload: bytes) -> Any:
+        '''
+        Converts the passed payload to a ProtoMessage
+
+        Arguments:
+            proto (ProtoMessage): The ProtoMessage that will be returned by the function as a ProtoMessage
+            payload(bytes): The bytes object that will be converted to the ProtoMessage object
+
+        Returns:
+            Any: The payload converted to a ProtoMessage
+        '''
         b = base64.b64decode(payload)
         proto.ParseFromString(b)
         return proto
 
     def _send_proto(self, key_expr: str, value: ProtoMessage):
+        '''
+        Sends the passed ProtoMessage to the passed node
+
+        Arguments:
+            key_expr (str): The key expression of a node
+            value (ProtoMessage): The value being passed to the node
+
+        Returns:
+            None
+        '''
         logger.debug(f"putting proto on key_expr '{key_expr}'")
         b = self.serialize(value)
 
@@ -92,6 +139,15 @@ class Comm:
         self.sequence_number.increment()
     
     def liveliness_token(self, ks: NodeKeySpace) -> zenoh.LivelinessToken:
+        '''
+        Returns a liveliness token representing the liveliness (online state) of the passed node
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node whose liveliness is being checked
+
+        Returns:
+            zenoh.LivelinessToken
+        '''
         key_expr = ks.liveliness_key_prefix
         return self.session.liveliness().declare_token(key_expr)
 
@@ -250,21 +306,59 @@ class Comm:
             reply(code, {}, error)
 
     def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> None:
+        '''
+        Creates a liveliness subscriber and adds it to the Zenoh session
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node recieving the Liveliness handler
+            handler (LivelinessCallback): A callback that responds with the Liveliness state of the node
+
+        Returns:
+            None
+        '''
         key_expr = ks.liveliness_key_prefix
         zenoh_handler = self._on_liveliness(handler)
         subscriber = self.session.liveliness().declare_subscriber(key_expr, zenoh_handler)
         self.subscriptions.append(subscriber)
 
     def _query_liveliness(self, ks: NodeKeySpace) -> zenoh.Reply:
+        '''
+        Acquires the liveliness state as a reply of the passed node in the Zenoh session
+        
+        Arguments:
+            ks (NodeKeySpace): The key space of the node being checked
+
+        Returns:
+            zenoh.Reply: The liveliness response from the Zenoh session
+        '''
         key_expr = ks.liveliness_key_prefix
         return self.session.liveliness().get(key_expr).recv()
 
     def _subscriber(self, key_expr: str, handler: ZenohCallback) -> None:
+        '''
+        Declares a subscriber with the passed handler on the node corresponding to the passed key expression
+
+        Arguments:
+            key_expr (str): The key expression of the node recieving the handler
+            handler (ZenohCallback): The handler of the subscription being added
+
+        Returns:
+            None
+        '''
         logger.debug(f"declaring subscriber on key expression '{key_expr}'")
         subscriber = self.session.declare_subscriber(key_expr, handler)
         self.subscriptions.append(subscriber)
 
     def cancel_subscription(self, key_expr: str):
+        '''
+        Removes all of the subscriptions of the node matching the passed key expression
+
+        Arguments:
+            key_expr (str): The key space of the node losing the subscriptions 
+
+        Returns:
+            None
+        '''
         subs = [s for s in self.subscriptions if str(s.key_expr) == key_expr]
         logger.debug(f"canceling {len(subs)} subscriptions at key_expr = {key_expr}")
         for s in subs:
@@ -272,10 +366,30 @@ class Comm:
             self.subscriptions.remove(s)
     
     def _queryable(self, key_expr: str, handler: ZenohQueryCallback) -> zenoh.Queryable:
+        '''
+        Declares a queryable in the current session on the node corresponding to the passed key expression
+
+        Arguments:
+            key_expr (str): The key expression of the node that the queryable is being declared upon
+            handler (ZenohQueryCallback): The handler that is being declared as Queryable
+
+        Returns:
+            zenoh.Queryable: The new Zenoh Queryable created
+        '''
         logger.debug(f"declaring queryable on key_expr = {key_expr}")
         return self.session.declare_queryable(key_expr, handler)
     
     def _query_sync(self, key_expr: str, payload: bytes) -> zenoh.Reply:
+        '''
+        Sends the passed payload to the node corresponding to the passed key expression and returns the reply from Zenoh
+
+        Arguments:
+            key_expr (str): The key expression of the node the payload is being passed to
+            payload (bytes): The payload is being sent to the passed node
+
+        Returns:
+            zenoh.Reply
+        '''
         try:
             reply = self.session.get(key_expr, payload=payload).recv()
         except Exception:
@@ -283,38 +397,119 @@ class Comm:
         return reply
     
     def meta_subscriber(self, ks: NodeKeySpace, handler: MetaCallback) -> None:
+        '''
+        Declares a Meta subscriber with the passed handler on the passed node
+
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node recieving the Meta handler
+            handler (MetaCallback): A MetaCallback handler
+
+        Returns:
+            None
+        '''
         key_expr = ks.meta_key_prefix
         zenoh_handler = self._on_meta(handler)
         self._subscriber(key_expr, zenoh_handler)
     
     def state_subscriber(self, ks: NodeKeySpace, handler: StateCallback) -> None:
+        '''
+        Declares a State subscriber with the passed handler on the passed node
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node recieving the State handler
+            handler: (StateCallback): A StateCallback handler
+
+        Returns:
+            None
+        '''
         key_expr = ks.state_key_prefix
         zenoh_handler = self._on_state(handler)
         self._subscriber(key_expr, zenoh_handler)
     
     def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, Tag]) -> None:
+        '''
+        Declares a Tag Data subscriber with the passed handler on the passed node with the passed tags at the passed path
+
+        Note: This is just creating a TagDataCallback on the passed node and it must include a given number of tags on the node, so we give it the path of the tags we are giving the handler to
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node recieving the Tag Data handler
+            path (str): The path of the tags in the passed node
+            handler (TagDataCallback): A TagDataCallback handler
+            tags (dict[str, Tag]): A dictionary of tags
+
+        Returns:
+            None
+        '''
         key_expr = ks.tag_data_path(path)
         zenoh_handler = self._on_tag_data(handler, tags)
         self._subscriber(key_expr, zenoh_handler)
 
     def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> zenoh.Queryable:
+        '''
+        Declares a new queryable handler with the passed tag on the passed node
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node that is declaring a queryable on the passed tag
+            tag (Tag): The tag that is being given the queryable status
+
+        Returns:
+            zenoh.Queryable: A Zenoh key expression that is able to recieve queries and has a registered response defined
+        '''
         key_expr = ks.tag_write_path(tag.path)
         zenoh_handler = self._on_tag_write(tag)
         logger.debug(f"tag queryable on {key_expr}")
         return self._queryable(key_expr, zenoh_handler)
     
     def query_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> zenoh.Reply:
+        '''
+        Sends the passed value to the Tag on the passed path in the passed node
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node that the tag belongs to
+            path (str): The path to the tag
+            value (proto.TagData): The value that will be passed to the tag
+
+        Returns:
+            zenoh.Reply: The reply from Zenoh after passing the parameter value to the tag on the passed node
+        '''
         b = self.serialize(value)
         logger.debug(f"querying tag at path {ks.tag_write_path(path)}")
         return self._query_sync(ks.tag_write_path(path), payload=b)
     
     def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
+        '''
+        Declares a method subscriber on the passed node with the passed method
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node that is setting up a method query
+            method (Method): The method that will handle method queries
+
+        Returns:
+            None
+        '''
         key_expr = ks.method_query_listen(method.path)
         logger.info(f"Setting up method at path {method.path} on node {ks.name}")
         zenoh_handler = self._on_method_query(method)
         self._subscriber(key_expr, zenoh_handler)
     
     def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, method: Method) -> str:
+        '''
+        Queries the tag along the passed path between the caller and method query and then sends the response along proto
+        
+        Arguments:
+            ks (NodeKeySpace): The key space of the node that method queries are being handled on
+            path (str): The path of the tag which is being queried
+            caller_id (str): The id of the caller of the method
+            method_query_id (str): The id of the method query
+            params (dict[str, proto.TagData]): The passed parameters for the Method Query Data
+            on_reply (MethodReplyCallback): The MethodReplyCallback for the query
+            method (Method): The method being queried
+        
+        Returns:
+            str: The key expression of the query
+        '''
         method_query_id = str(uuid.uuid4())
         query_key_expr = ks.method_query(path, caller_id, method_query_id)
         query_data = proto.MethodQueryData(params=params)
@@ -327,10 +522,32 @@ class Comm:
         return query_key_expr
 
     def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
+        '''
+        Updates the tag within the passed node along the passed path with the passed value
+        
+        Arguments:
+            ks (NodeKeySpace): The key space of the node whose tag is being updated
+            path (str): The path of the tag
+            value (proto.TagData): The value being sent to the tag within the node along the path
+        
+        Returns:
+            None
+        '''
         key_expr = ks.tag_data_path(path)
         self._send_proto(key_expr, value)
 
     def write_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> proto.WriteResponseData:
+        '''
+        Queries the tag on the passed path in the passed node with the passed value
+        
+        Arguments:
+            ks (NodeKeySpace): The key space of the node who is being written to
+            path (str): The path of the tag in the node
+            value (proto.Tagdata): The value being passed to the tag
+        
+        Returns:
+            proto.WriteResponseData
+        '''
         reply = self.query_tag(ks, path, value)
         if reply.ok:
             d: proto.WriteResponseData = self.deserialize(proto.WriteResponseData(), reply.result.payload.to_bytes())
@@ -340,14 +557,45 @@ class Comm:
             raise Exception(f"Failure in receiving tag write reply for tag at path {path}")
 
     def send_state(self, ks: NodeKeySpace, state: proto.State):
+        '''
+        Sends the passed state to the passed node
+        
+        Arguments:
+            ks (NodeKeySpace): The key space of the node who is being sent the state
+            state (proto.State): The state being sent to the node
+        
+        Returns:
+            None
+        '''
         key_expr = ks.state_key_prefix
         self._send_proto(key_expr, state)
 
     def send_meta(self, ks: NodeKeySpace, meta: proto.Meta):
+        '''
+        Sends the passed meta to the passed node
+        
+        Arguments:
+            ks (NodeKeySpace): The key space of the node who is being sent the meta
+            meta (proto.Meta): The meta being sent to the node
+        
+        Returns:
+            None
+        '''
         key_expr = ks.meta_key_prefix
         self._send_proto(key_expr, meta)
     
     def pull_meta_messages(self, only_online: bool = False):
+        '''
+        Pulls all Metas in the current Zenoh session of online nodes
+
+        Note: The only_online parameter translates to "Only give me meta messages from the historian of nodes that are currently online"
+        
+        Arguments:
+            only_online (bool): The current online state of a given node
+        
+        Returns:
+            list[Meta]: A list of the Meta messages
+        '''
         res = self.session.get(keys.key_join("**", keys.NODE, "*", keys.META))
         messages: list[proto.Meta] = []
         for r in res:
@@ -368,6 +616,15 @@ class Comm:
         return messages
 
     def pull_meta_message(self, ks: NodeKeySpace) -> proto.Meta:
+        '''
+        Returns the Meta of the passed node
+        
+        Arguments:
+            ks (NodeKeySpace): The key space of the node whose meta message is being pulled
+        
+        Returns:
+            proto.Meta
+        '''
         try:
             reply = self.session.get(ks.meta_key_prefix).recv()
         except:
@@ -379,6 +636,15 @@ class Comm:
         return meta
             
     def is_online(self, ks: NodeKeySpace) -> bool:
+        '''
+        Returns the liveliness of the passed node
+        
+        Arguments:
+            ks (NodeKeySpace): The key space of the node whose liveliness is being queried
+        
+        Returns:
+            bool: The online state of the passed node
+        '''
         try:
             reply = self._query_liveliness(ks)
             if not reply.ok:
