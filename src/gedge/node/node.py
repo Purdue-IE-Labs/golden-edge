@@ -649,12 +649,12 @@ class NodeSession:
         Example Implementation:
             config = gedge.NodeConfig.from_json5("...")
             config.add_method_handler("...", handler=?)
-
+            
             with gedge.connect(config, "...") as session:
                 session.tag_bind(path="...")
                 OR
                 session.tag_bind(path="...", value=?)
-
+            
 
         Arguments:
             path (str): The path of the tag

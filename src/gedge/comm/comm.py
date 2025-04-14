@@ -311,7 +311,7 @@ class Comm:
         Creates a liveliness subscriber and adds it to the Zenoh session
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node recieving the Liveliness handler
+            ks (NodeKeySpace): The node recieving the Liveliness handler
             handler (LivelinessCallback): A callback that responds with the Liveliness state of the node
 
         Returns:
@@ -327,7 +327,7 @@ class Comm:
         Acquires the liveliness state as a reply of the passed node in the Zenoh session
         
         Arguments:
-            ks (NodeKeySpace): The key space of the node being checked
+            ks (NodeKeySpace): The node being checked
 
         Returns:
             zenoh.Reply: The liveliness response from the Zenoh session
@@ -337,7 +337,7 @@ class Comm:
 
     def _subscriber(self, key_expr: str, handler: ZenohCallback) -> None:
         '''
-        Declares a subscriber with the passed handler on the passed node
+        Declares a subscriber with the passed handler on the node corresponding to the passed key expression
 
         Arguments:
             key_expr (str): The key expression recieving the handler
@@ -355,7 +355,7 @@ class Comm:
         Removes all of the subscriptions of the node matching the passed key expression
 
         Arguments:
-            key_expr (str): The key expression of the node losing the subscriptions
+            key_expr (str): The key space of the node losing the subscriptions 
 
         Returns:
             None
@@ -403,7 +403,7 @@ class Comm:
 
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node recieving the Meta handler
+            ks (NodeKeySpace): The node recieving the Meta handler
             handler (MetaCallback): A MetaCallback handler
 
         Returns:
@@ -418,7 +418,7 @@ class Comm:
         Declares a State subscriber with the passed handler on the passed node
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node recieving the State handler
+            ks (NodeKeySpace): The node recieving the State handler
             handler: (StateCallback): A StateCallback handler
 
         Returns:
@@ -435,7 +435,7 @@ class Comm:
         Note: This is just creating a TagDataCallback on the passed node and it must include a given number of tags on the node, so we give it the path of the tags we are giving the handler to
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node recieving the Tag Data handler
+            ks (NodeKeySpace): The node recieving the Tag Data handler
             path (str): The path of the tags in the passed node
             handler (TagDataCallback): A TagDataCallback handler
             tags (dict[str, Tag]): A dictionary of tags
@@ -452,7 +452,7 @@ class Comm:
         Declares a new queryable handler with the passed tag on the passed node
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node that is declaring a queryable on the passed tag
+            ks (NodeKeySpace): The node that is declaring a queryable on the passed tag
             tag (Tag): The tag that is being given the queryable status
 
         Returns:
@@ -468,7 +468,7 @@ class Comm:
         Sends the passed value to the Tag on the passed path in the passed node
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node that the tag belongs to
+            ks (NodeKeySpace): The node that the tag belongs to
             path (str): The path to the tag
             value (proto.TagData): The value that will be passed to the tag
 
@@ -484,7 +484,7 @@ class Comm:
         Declares a method subscriber on the passed node with the passed method
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node that is setting up a method query
+            ks (NodeKeySpace): The node that is setting up a method query
             method (Method): The method that will handle method queries
 
         Returns:
@@ -500,7 +500,7 @@ class Comm:
         Queries the tag along the passed path between the caller and method query and then sends the response along proto
         
         Arguments:
-            ks (NodeKeySpace): The key space of the node that method queries are being handled on
+            ks (NodeKeySpace): The  node that method queries are being handled on
             path (str): The path of the tag which is being queried
             caller_id (str): The id of the caller of the method
             method_query_id (str): The id of the method query
@@ -524,7 +524,7 @@ class Comm:
         Updates the tag within the passed node along the passed path with the passed value
         
         Arguments:
-            ks (NodeKeySpace): The key space of the node whose tag is being updated
+            ks (NodeKeySpace): The node whose tag is being updated
             path (str): The path of the tag
             value (proto.TagData): The value being sent to the tag within the node along the path
         
