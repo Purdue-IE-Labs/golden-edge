@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-import "method.proto";
-import "tag.proto";
-import "subnode.proto";
+import "method_config.proto";
+import "tag_config.proto";
+import "subnode_config.proto";
 
 message Meta {
     optional bool tracking = 7;
     string key = 8;
-    repeated Tag tags = 9;
-    repeated Method methods = 10;
-    repeated Subnode subnodes = 11;
+    repeated TagConfig tags = 9;
+    repeated MethodConfig methods = 10;
+    repeated SubnodeConfig subnodes = 11;
 }

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+enum BaseType {
+    UNKNOWN = 0;
+    INT = 1;
+    LONG = 2;
+    FLOAT = 3;
+    STRING = 4;
+    BOOL = 5;
+    LIST_INT = 6;
+    LIST_LONG = 7;
+    LIST_FLOAT = 8;
+    LIST_STRING = 9;
+    LIST_BOOL = 10;
+}
+
+// The type specifies a path where 
+// that model can be found to be retrieved
+message DataModelType {
+    string path = 1;
+    // version?
+}
+
+message Type {
+    oneof type {
+        BaseType base_type = 1;
+        DataModelType data_model_type = 2;
+    }
+}

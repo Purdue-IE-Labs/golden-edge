@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "method_config.proto";
+import "tag_config.proto";
+
+message SubnodeConfig {
+    string name = 1;
+    repeated TagConfig tags = 2;
+    repeated MethodConfig methods = 3;
+    repeated SubnodeConfig subnodes = 4;
+}

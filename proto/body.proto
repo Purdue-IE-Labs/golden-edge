@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-import "tag_data.proto";
-import "prop.proto";
-
-message Body {
-    DataType type = 1;
-    map<string, Prop> props = 2;
-}

@@ -1,19 +1,5 @@
 syntax = "proto3";
 
-enum DataType {
-    UNKNOWN = 0;
-    INT = 1;
-    LONG = 2;
-    FLOAT = 3;
-    STRING = 4;
-    BOOL = 5;
-    LIST_INT = 6;
-    LIST_LONG = 7;
-    LIST_FLOAT = 8;
-    LIST_STRING = 9;
-    LIST_BOOL = 10;
-}
-
 // These messages are defined because "repeated" is not allowed in a "oneof"
 message ListInt {
     repeated uint32 list = 1;
@@ -31,7 +17,7 @@ message ListBool {
     repeated bool list = 1;
 }
 
-message TagData {
+message BaseData {
     oneof data {
         uint32 int_data = 1;
         uint64 long_data = 2;

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+import "props.proto";
+import "params_config.proto";
+import "body_config.proto";
+
+message MethodConfig {
+    string path = 1;
+    Props props = 2;
+    ParamsConfig params = 3;
+    repeated MethodResponseConfig responses = 4;
+}
+
+message MethodResponseConfig {
+    int32 code = 1;
+    Props props = 2;
+    BodyConfig body = 3;
+}

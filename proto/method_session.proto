@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "data_model_session.proto";
+
+message MethodCall {
+    map<string, DataObject> params = 1;
+}
+
+message MethodResponse {
+    int32 code = 1;
+    map<string, DataObject> body = 2;
+
+    optional string error = 3;
+}

@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-import "tag_data.proto";
-
-message Prop {
-    DataType type = 7;
-    TagData value = 8;
-}

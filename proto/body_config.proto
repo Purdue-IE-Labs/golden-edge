@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+import "data_object_config.proto";
+
+message BodyConfig {
+    map<string, DataObjectConfig> body = 1;
+}

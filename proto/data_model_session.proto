@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "base_data.proto";
+
+message DataModel {
+    repeated DataObject data = 1;
+}
+
+message DataObject {
+    oneof data {
+        BaseData base_data = 1;
+        DataModel model_data = 2;
+    }
+}

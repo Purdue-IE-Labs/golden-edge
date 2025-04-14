@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+import "props.proto";
+import "type.proto";
+
+message TagConfig {
+    string path = 1;
+    Type type = 2;
+    Props props = 4;
+
+    bool writable = 5;
+    repeated TagWriteResponseConfig responses = 6;
+}
+
+message TagWriteResponseConfig {
+    int32 code = 1;
+    Props props = 2;
+}
