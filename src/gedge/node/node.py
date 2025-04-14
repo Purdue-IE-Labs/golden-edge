@@ -5,7 +5,7 @@ import uuid
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
-from gedge.node.remote import RemoteConfig, RemoteConnection
+from gedge.node.remote import RemoteConnection
 from gedge.proto import Meta, State, WriteResponseData, MethodQueryData
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
@@ -536,8 +536,7 @@ class NodeSession:
         '''
         logger.info(f"Node {self.config.key} connecting to remote node {key}")
 
-        # TODO: should remote and node have different Comm or the same?
-        connection = RemoteConnection(RemoteConfig(key), NodeKeySpace.from_user_key(key), self._comm, self.id, self._on_remote_close)
+        connection = RemoteConnection(NodeKeySpace.from_user_key(key), self._comm, self.id, self._on_remote_close)
         if on_state:
             connection.add_state_callback(on_state)
         if on_meta:

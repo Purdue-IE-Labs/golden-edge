@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+message root_object {
+    inner inner = 1;
+    bool tag4 = 2;
+}
+
+message inner {
+    string tag3 = 1;
+}
+
+message my_model {
+    root_object root_object = 1;    
+    float tag1 = 2;
+    int32 tag2 = 3;
+}
+
