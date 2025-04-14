@@ -11,6 +11,6 @@ message Props {
 // In those cases, we are specifying strictly configurations (i.e. 
 // type and props) while a Prop is a type and a value
 message Prop {
-    BaseType type = 1;
+    Type type = 1;
     DataObject value = 2;
 }

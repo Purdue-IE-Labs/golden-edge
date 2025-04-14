@@ -9,5 +9,11 @@ message DataModelConfig {
     DataModelType type = 1;
     string extends_path = 2;
     uint32 version = 3;
-	repeated TagConfig tags = 4;
+	repeated DataModelItemConfig tags = 4;
+}
+
+message DataModelItemConfig {
+    string path = 1;
+    Type type = 2;
+    Props props = 3;
 }

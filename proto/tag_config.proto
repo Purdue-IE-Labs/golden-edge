@@ -6,10 +6,10 @@ import "type.proto";
 message TagConfig {
     string path = 1;
     Type type = 2;
-    Props props = 4;
+    Props props = 3;
 
-    bool writable = 5;
-    repeated TagWriteResponseConfig responses = 6;
+    bool writable = 4;
+    repeated TagWriteResponseConfig responses = 5;
 }
 
 message TagWriteResponseConfig {
