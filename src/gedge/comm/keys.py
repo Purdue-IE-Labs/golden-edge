@@ -11,47 +11,243 @@ RESPONSE = "RESPONSE"
 SUBNODES = "SUBNODES"
 
 def key_join(*components: str):
+    '''
+    Joins the passed components
+
+    Example Implementation:
+        key = key_join("part0", "part1", "part2")
+        print(key) ==> "part0/part1/part2"
+
+    Arguments:
+        *components (tuple[str, ...]): The list of components to be joined
+
+    Returns:
+        str: The passed components with a slash between each component 
+    '''
     return "/".join(components)
 
 def node_key_prefix(prefix: str, name: str):
+    '''
+    Creates a node key prefix with the passed prefix and name
+
+    Example Implementation:
+        key = node_key_prefix("prefix", "name")
+        print(key) ==> "prefix/NODE/name"
+
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+
+    Returns:
+        str: The joined node key
+    '''
     return key_join(prefix, NODE, name)
 
 def meta_key_prefix(prefix: str, name: str):
+    '''
+    Creates a meta key prefix with the passed prefix and name
+
+    Example Implementation:
+        key = meta_key_prefix("prefix", "name")
+        print(key) ==> "prefix/NODE/name/META"
+    
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+
+    Returns:
+        str: The joined meta key
+    '''
     return key_join(prefix, NODE, name, META)
 
 def tag_data_key_prefix(prefix: str, name: str):
+    '''
+    Creates a tag data key prefix with the passed prefix and name
+
+    Example Implementation:
+        key = tag_data_key_prefix("prefix", "name")
+        print(key) ==> "prefix/NODE/name/TAGS/DATA"
+
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+
+    Returns:
+        str: The joined tag data key prefix
+    '''
     return key_join(node_key_prefix(prefix, name), TAGS, DATA)
 
 def tag_data_key(prefix: str, name: str, key: str):
+    '''
+    Creates a tag data key with the passsed prefix, name, and key
+
+    Example Implementation:
+        key = tag_data_key("prefix", "name", "key")
+        print(key) == "prefix/NODE/name/TAGS/DATA/key"
+
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+        key (str): The key of the tag
+
+    Returns:
+        str: The joined tag data key
+    '''
     return key_join(node_key_prefix(prefix, name), TAGS, DATA, key)
 
 def tag_write_key_prefix(prefix: str, name: str):
+    '''
+    Creates a tag write key prefix with the passed prefix and name
+
+    Example Implementation:
+        key = tag_write_key_prefix("prefix", "name")
+        print(key) ==> "prefix/NODE/name/TAGS/WRITE"
+
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+
+    Returns:
+        str: The joined tag write key prefix
+    '''
     return key_join(node_key_prefix(prefix, name), TAGS, WRITE)
 
 def tag_write_key(prefix: str, name: str, key: str):
+    '''
+    Creates a tag write key with the passed prefix, name, and key
+
+    Example Implementation:
+        key = tag_write_key("prefix", "name", "key")
+        print(key) ==> "prefix/NODE/name/TAGS/WRITE/key"
+
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+        key (str): The key of the tag
+
+    Returns:
+        str: The joined tag write key
+    '''
     return key_join(node_key_prefix(prefix, name), TAGS, WRITE, key)
 
 def state_key_prefix(prefix: str, name: str):
+    '''
+    Creates a state key prefix with the passed prefix and name
+
+    Example Implementation:
+        key = state_key_prefix("prefix", "name")
+        print(key) ==> "prefix/NODE/name/STATE"
+    
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+
+    Returns:
+        str: The joined state key prefix
+    '''
     return key_join(node_key_prefix(prefix, name), STATE)
 
 def method_key_prefix(prefix: str, name: str):
+    '''
+    Creates a method key prefix with the passed prefix and name
+
+    Example Implementation:
+        key = method_key_prefix("prefix", "name")
+        print(key) ==> "prefix/NODE/name/METHODS"
+
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+
+    Returns:
+        str: The joined method key prefix
+    '''
     return key_join(node_key_prefix(prefix, name), METHODS)
 
 def liveliness_key_prefix(prefix: str, name: str):
+    '''
+    Creates a liveliness key prefix with the passed prefix and name
+
+    Example Implementation:
+        key = liveliness_key_prefix("prefix", "name")
+        print(key) ==> "prefix/NODE/name"
+
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): The name of the node
+
+    Returns:
+        str: The joined liveliness key prefix
+    '''
     return node_key_prefix(prefix, name)
 
 def subnodes_key_prefix(prefix: str, node_name: str):
+    '''
+    Creates a subnodes key prefix with the passed prefix and node_name
+
+    Example Implementation:
+        key = subnodes_key_prefix("prefix", "node_name")
+        print(key) ==> "prefix/NODE/node_name/SUBNODES"
+
+    Arguments:
+        prefix (str): The prefix of the node
+        name (str): the name of the node
+
+    Returns:
+        str: The joined subnodes key prefix
+    '''
     return key_join(node_key_prefix(prefix, node_name), SUBNODES)
 
 def method_response_from_call(key_expr: str):
+    '''
+    Creates a method response from call key with the passed key expression
+
+    Example Implementation:
+        key = method_response_from_call("key_expr")
+        print(key) ==> "key_expr/RESPONSE"
+
+    Arguments:
+        key_expr (str): The key expression of the node the method belongs to
+
+    Returns:
+        str: The joined method response from call key
+    '''
     return key_join(key_expr, RESPONSE)
 
 def internal_to_user_key(key_expr: str):
+    '''
+    Creates a user key from the passed key expression corresponding to a given node
+
+    Arguments:
+        key_expr (str): The key expression of the node
+
+    Returns:
+        str: The joined user key
+    '''
     prefix = NodeKeySpace.prefix_from_key(key_expr)
     name = NodeKeySpace.name_from_key(key_expr)
     return key_join(prefix, name)
 
 def overlap(key1: str, key2: str):
+    '''
+    Returns a boolean representing the overlap of two keys given wildcarding
+
+    Example Implementation:
+        overlap("a/\*/c", "a/b/c")
+        This would return true since the wildcard in the first key could be a b
+        overlap("a/b", "a/\*/c")
+        This would return false since the lengths of the two components are different
+        overlap("a/\*/c", "a/\*/d")
+        This would return false since the non-wildcards components don't match
+        
+
+    Arguments:
+        key1 (str): The first key being compared
+        key2 (str): The second key being compared
+
+    Returns:
+        bool: Whether the keys overlap or not
+    '''
     # incredibly simple algorithm to handle * semantics like zenoh does
     # TODO: handle ** and ? in the future
     key1_split = key1.split('/')
