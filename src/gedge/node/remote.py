@@ -25,19 +25,10 @@ if TYPE_CHECKING:
 import logging
 logger = logging.getLogger(__name__)
 
-# TODO: either remove this or use it
-class RemoteConfig:
-    def __init__(self, key: str, read_tags: list[str] = [], read_write_tags: list[str] = [], method_calls: list[str] = []):
-        self.key = key
-        self.read_tags = read_tags
-        self.read_write_tags = read_write_tags
-        self.method_calls = method_calls
-
 class RemoteConnection:
-    def __init__(self, config: RemoteConfig, ks: NodeKeySpace, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
-        self.config = config
+    def __init__(self, ks: NodeKeySpace, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
         self._comm = comm 
-        self.key = self.config.key
+        self.key = ks.user_key
         self.ks = ks
         self.on_close = on_close
 
@@ -66,30 +57,98 @@ class RemoteConnection:
         self._comm.__exit__(*exc)
     
     def close(self):
+        '''
+        Closes the current remote connection
+        '''
         self._comm.close_remote(self.ks)
         if self.on_close is not None:
             self.on_close(self.key)
     
     def add_tag_data_callback(self, path: str, on_tag_data: TagDataCallback) -> None:
+        '''
+        Adds the passed TagDataCallback to the current node on the passed path
+
+        Arguments:
+            path (str): The path of the node recieving the new tag data callback
+            on_tag_data (TagDataCallbacks): The new TagDataCallback being added
+
+        Returns:
+            None
+        '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
 
-        self.config.read_write_tags.append(path)
         self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tags)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
+        '''
+        Adds the passed StateCallback to the current node
+
+        Arguments:
+            on_state (StateCallback): The handler being added to the node
+
+        Returns:
+            None
+        '''
         self._comm.state_subscriber(self.ks, on_state)
 
     def add_meta_callback(self, on_meta: MetaCallback) -> None:
+        '''
+        Adds the passed MetaCallback to the current node
+
+        Arguments:
+            on_meta (MetaCallback): The handler being added to the node
+
+        Returns:
+            None
+        '''
         self._comm.meta_subscriber(self.ks, on_meta)
 
     def add_liveliness_callback(self, on_liveliness_change: LivelinessCallback) -> None:
+        '''
+        Adds the passed LivelinessCallback to the current node
+
+        Arguments:
+            on_liveliness_change (LivelinessCallback): The handler being added to the node
+
+        Returns:
+            None
+        '''
         self._comm.liveliness_subscriber(self.ks, on_liveliness_change)
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
+        '''
+        Binds all of the tags in the passed paths to the current node
+
+        Note: To understand how an individual tag_bind functions look at the function tag_bind
+
+        Arguments:
+            paths (list[str]): The list of paths for the tags
+
+        Returns:
+            list[TagBind]: The list of the newly bound tags
+        '''
         return [self.tag_bind(path) for path in paths]
 
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
+        '''
+        Binds the tag at the passed path to the current node
+
+        Note: This allows users to declare a tag_bind on a tag that belongs to a remote node and then treat the tag as if it were their own.
+
+        Example Implementation:
+            remote = session.connect_to_remote(...)
+            my_tag = remote.tag_bind("my/tag")
+            my_tag.value = False
+            my_tag.value = True
+
+        Arguments:
+            path (str): The path of the tag
+            value (Any | Optional): The value for the TagBind
+
+        Returns:
+            TagBind: The new TagBind
+        '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
@@ -97,6 +156,15 @@ class RemoteConnection:
         return bind
     
     def subnode(self, name: str) -> RemoteSubConnection:
+        '''
+        Creates a RemoteSubConnection for the subnode that has the passed name
+
+        Arguments:
+            name (str): The name of subnode
+
+        Returns:
+            RemoteSubConnection: The new connection for the subnode
+        '''
         from gedge.node.subnode import RemoteSubConnection
         def on_close(key):
             pass
@@ -111,17 +179,27 @@ class RemoteConnection:
             # different uuid or same?
             from gedge.node.subnode import SubnodeConfig
             assert isinstance(curr_node, SubnodeConfig)
-            r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+            r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
             return r
 
         if name not in self.subnodes:
             raise ValueError(f"No subnode {name}") 
         curr_node = self.subnodes[name]
         logger.debug(self._comm.session.is_closed())
-        r = RemoteSubConnection(RemoteConfig(name), curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+        r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r
 
     def _write_tag(self, path: str, value: Any) -> TagWriteReply:
+        '''
+        Writes the passed value to the tag at the passed path and returns the reply
+
+        Arguments:
+            path (str): The path of the tag being written to
+            value (Any): The value being written to the tag
+
+        Returns:
+            TagWriteReply: The reply from the tag write
+        '''
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -146,55 +224,114 @@ class RemoteConnection:
         return reply
 
     def write_tag(self, path: str, value: Any) -> TagWriteReply:
+        '''
+        Writes the passed value to the tag at the passed path and returns the reply
+
+        Example Implementation:
+            remote = session.connect_to_remote(...)
+            reply = remote.write_tag("example/path", value=n)
+            print(f"got reply: {reply}")
+            print(f"reply props: {reply.props}")
+
+        Arguments:
+            path (str): The path of the tag being written to
+            value (Any): The value being written to the tag
+
+        Returns:
+            TagWriteReply: The reply from the tag write
+        '''
         return self._write_tag(path, value)
 
     async def write_tag_async(self, path: str, value: Any) -> TagWriteReply:
+        '''
+        Writes the passed value to the tag at the passed path and returns the reply
+
+        Note: As of now this functions is implemented the same as write_tag
+
+        Example Implementation:
+            remote = session.connect_to_remote(...)
+            reply = await remote.write_tag_async("example/path", param=n)
+            print(f"got reply: {reply}")
+            print(f"reply props: {reply.props}")
+
+        Arguments:
+            path (str): The path of the tag being written to
+            value (Any): The value being written to the tag
+
+        Returns:
+            TagWriteReply: The reply from the tag write
+        '''
         return self._write_tag(path, value)
     
-    # TODO: (key, value) vs {key: value}. Currently, we use the tuple for (name, type) and the dict for {name: value}
-    def call_method(self, path: str, on_reply: MethodReplyCallback, **kwargs) -> None:
-        # TODO: this setup may limit the user if they want to have a parameter "path" passed into 
-        # their method because it conflicts with this function's arguments, but honestly we could just mangle our keyword args to be something like __path_ and _timeout__
+    def call_method(self, _path: str, _on_reply: MethodReplyCallback, **kwargs) -> None:
+        '''
+        Registers the passed MethodReplyCallback and then calls the method at the passed path and all replies get routed to the passed Callback
 
-        if path not in self.methods:
-            raise MethodLookupError(path, self.ks.name)
+        Example Implementation:
+            def my_callback(reply):
+                if reply.error:
+                    print(f"Error: {reply.code}, {rply.error}")
+                else:
+                    print(f"Success: {reply.code}, {reply.props}, reply.body}")
+            
+            remote = session.connect_to_remote(...)
+            remote.call_method("example/path", my_callback, param0=x, param1=y)
         
-        # TODO: should this be a queryable with selectors? 
-        # TODO: should this be in comm?
-        method_query_id = str(uuid.uuid4())
-        method = self.methods[path]
+        Arguments:
+            _path (str): The path of the method
+            on_reply (MethodReplyCallback): The MethodReplyCallback for the replies
+            kwargs (dict[str, Any]): Parameters passsed to the method
+
+        Returns:
+            None
+        '''
+        if _path not in self.methods:
+            raise MethodLookupError(_path, self.ks.name)
+        
+        method = self.methods[_path]
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
             data_type = method.params[key].type
             params[key] = TagData.py_to_proto(value, data_type)
 
-        # TODO: we need a subscriber for /** and for /caller_id/method_query_id
-        logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
-        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, on_reply, self.methods[path])
+        logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
+        self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
     
     # CAUTION: because this is a generator, just calling it (session.call_method_iter(...)) will do nothing,
     # it must be iterated upon to actually run
     # timeout in milliseconds
-    def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
+    def call_method_iter(self, _path: str, _timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
         '''
-        timeout in ms 
+        Calls the method along the passed path with an optional timeout
+
+        Note: The returned object of this function is a generator, not a list
+
+        Example Implementation:
+            remote = session.connect_to_remote("example/path")
+            responses = remote.call_method_iter("example/path", param0=x, param1=y)
+            for response in responses:
+                print(response.code, response.props, response.body)
+
+        Arguments:
+            path (str): The path to the method being called
+            timeout (flout | None): Optional timeout in milliseconds
+            kwargs (dict[str, Any]): Parameters passsed to the method
+
+        Returns:
+            Iterator[MethodReply]: The generator corresponding to the replies from the method
         '''
 
-        # appparently, Generator[Reply, None, None] == Iterator[Reply]?
-        # TODO: we can probably merge this with call_method eventually
+        if _timeout:
+            _timeout /= 1000
 
-        if timeout:
-            timeout /= 1000
+        if _path not in self.methods:
+            raise MethodLookupError(_path, self.ks.name)
 
-        if path not in self.methods:
-            raise MethodLookupError(path, self.ks.name)
-
-        method = self.methods[path]
+        method = self.methods[_path]
         for param in method.params:
             if param not in kwargs:
                 raise LookupError(f"Parameter {param} defined in config but not included in method call for method {method.path}")
         
-        method_query_id = str(uuid.uuid4())
         params: dict[str, proto.TagData] = {}
         for key, value in kwargs.items():
             data_type = method.params[key].type
@@ -204,24 +341,23 @@ class RemoteConnection:
         def _on_reply(reply: MethodReply) -> None:
             replies.put(reply)
 
-        logger.info(f"Querying method of node {self.ks.name} at path {path} with params {params.keys()}")
-        # TODO: this function definition is longggggg, so many arguments
+        logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
         start = time.time()
-        self._comm.query_method(self.ks, path, self.node_id, method_query_id, params, _on_reply, self.methods[path])
+        key_expr = self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
         while True:
             try:
                 elapsed = (time.time() - start)
-                if timeout and elapsed >= timeout:
+                if _timeout and elapsed >= _timeout:
                     # timeout exceeded, we need an item ASAP
                     res = replies.get(block=False)
-                elif timeout:
+                elif _timeout:
                     # we can wait timeout - elapsed more seconds
-                    res = replies.get(block=True, timeout=(timeout - elapsed))
+                    res = replies.get(block=True, timeout=(_timeout - elapsed))
                 else:
                     # if no timeout, we block forever
                     res = replies.get(block=True)
             except Empty:
-                key_expr = self.ks.method_response(path, self.node_id, method_query_id)
+                key_expr = method_response_from_call(key_expr)
                 self._comm.cancel_subscription(key_expr)
                 raise TimeoutError(f"Timeout of method call at path {method.path} exceeded")
             # Design decision: we don't give a codes.DONE to the iterator that the user uses
