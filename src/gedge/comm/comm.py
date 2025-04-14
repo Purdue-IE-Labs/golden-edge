@@ -75,7 +75,7 @@ class Comm:
         Closes the node to Zenoh connection by undeclaring the current subscriptions
 
         Arguments:
-            ks (NodeKeySpace): The node who is losing the connection
+            ks (NodeKeySpace): The node losing the connection
 
         Returns:
             None
@@ -145,7 +145,7 @@ class Comm:
             ks (NodeKeySpace): The node whose liveliness is being checked
 
         Returns:
-            zenoh.Livelinesstoken
+            zenoh.LivelinessToken
         '''
         key_expr = ks.liveliness_key_prefix
         return self.session.liveliness().declare_token(key_expr)
@@ -172,7 +172,6 @@ class Comm:
             value = TagData.proto_to_py(tag_data, tag_config.type)
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
-        print("ON TAG DATA CALLED")
         return _on_tag_data
 
     def _on_state(self, on_state: StateCallback) -> ZenohCallback:
@@ -338,7 +337,7 @@ class Comm:
 
     def _subscriber(self, key_expr: str, handler: ZenohCallback) -> None:
         '''
-        Declares a subscriber with the passed handler on the passed key expression
+        Declares a subscriber with the passed handler on the passed node
 
         Arguments:
             key_expr (str): The key expression recieving the handler
@@ -353,10 +352,10 @@ class Comm:
 
     def cancel_subscription(self, key_expr: str):
         '''
-        Removes all of the subscriptions of the passed node key expression
+        Removes all of the subscriptions of the node matching the passed key expression
 
         Arguments:
-            key_expr (str): The key space of the node getting its subscriptions cancelled
+            key_expr (str): The key expression of the node losing the subscriptions
 
         Returns:
             None
@@ -369,7 +368,7 @@ class Comm:
     
     def _queryable(self, key_expr: str, handler: ZenohQueryCallback) -> zenoh.Queryable:
         '''
-        Declares a queryable in the current session on the passed key expression
+        Declares a queryable in the current session on the node corresponding to the passed key expression
 
         Arguments:
             key_expr (str): The key expression that the queryable is being declared upon
@@ -383,7 +382,7 @@ class Comm:
     
     def _query_sync(self, key_expr: str, payload: bytes) -> zenoh.Reply:
         '''
-        Sends the passed payload to the passed key_expr and returns the reply from Zenoh
+        Sends the passed payload to the node corresponding to the passed key expression and returns the reply from Zenoh
 
         Arguments:
             key_expr (str): The key expression of the node the payload is being passed to
@@ -400,7 +399,8 @@ class Comm:
     
     def meta_subscriber(self, ks: NodeKeySpace, handler: MetaCallback) -> None:
         '''
-        Creates a new Meta subscriber for the passed node
+        Declares a Meta subscriber with the passed handler on the passed node
+
 
         Arguments:
             ks (NodeKeySpace): The key space of the node recieving the Meta handler
@@ -415,7 +415,7 @@ class Comm:
     
     def state_subscriber(self, ks: NodeKeySpace, handler: StateCallback) -> None:
         '''
-        Creates a new State subscriber for the passed node
+        Declares a State subscriber with the passed handler on the passed node
 
         Arguments:
             ks (NodeKeySpace): The key space of the node recieving the State handler
@@ -430,11 +430,13 @@ class Comm:
     
     def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, Tag]) -> None:
         '''
-        Creates a new tag data subscriber for the passed node
+        Declares a Tag Data subscriber with the passed handler on the passed node with the passed tags at the passed path
+
+        Note: This is just creating a TagDataCallback on the passed node and it must include a given number of tags on the node, so we give it the path of the tags we are giving the handler to
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node recieving the State handler
-            path (str): The path of the corresponing node key space
+            ks (NodeKeySpace): The key space of the node recieving the Tag Data handler
+            path (str): The path of the tags in the passed node
             handler (TagDataCallback): A TagDataCallback handler
             tags (dict[str, Tag]): A dictionary of tags
 
@@ -451,7 +453,7 @@ class Comm:
 
         Arguments:
             ks (NodeKeySpace): The key space of the node that is declaring a queryable on the passed tag
-            tag (Tag): The tag that is becomeing the queryable in the node
+            tag (Tag): The tag that is being given the queryable status
 
         Returns:
             zenoh.Queryable: A Zenoh key expression that is able to recieve queries and has a registered response defined
@@ -466,12 +468,12 @@ class Comm:
         Sends the passed value to the Tag on the passed path in the passed node
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node that is declaring a queryable on the passed tag
-            path (str): The path to the tag_write
+            ks (NodeKeySpace): The key space of the node that the tag belongs to
+            path (str): The path to the tag
             value (proto.TagData): The value that will be passed to the tag
 
         Returns:
-            zenoh.Reply: The reply from Zenoh after passing the parameter payload to the tag on the passed node
+            zenoh.Reply: The reply from Zenoh after passing the parameter value to the tag on the passed node
         '''
         b = self.serialize(value)
         logger.debug(f"querying tag at path {ks.tag_write_path(path)}")
@@ -479,7 +481,7 @@ class Comm:
     
     def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
         '''
-        Sets a new method (passed method) on the passed node
+        Declares a method subscriber on the passed node with the passed method
 
         Arguments:
             ks (NodeKeySpace): The key space of the node that is setting up a method query
@@ -522,7 +524,7 @@ class Comm:
         Updates the tag within the passed node along the passed path with the passed value
         
         Arguments:
-            ks (NodeKeySpace): The key space of the node thats tag is being updated
+            ks (NodeKeySpace): The key space of the node whose tag is being updated
             path (str): The path of the tag
             value (proto.TagData): The value being sent to the tag within the node along the path
         

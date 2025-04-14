@@ -217,7 +217,7 @@ class NodeConfig:
     
     def add_write_response(self, path: str, code: int, props: dict[str, Any] = {}):
         '''
-        Adds a white handler to a tag at the passed path and defines the write response with the passed code and properties
+        Adds a write handler to a tag at the passed path and defines the write response with the passed code and properties
 
         Arguments:
             path (str): The path of the tag
@@ -630,7 +630,7 @@ class NodeSession:
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         '''
-        Binds all of the tags in the passed paths to the current node
+        Updates all the tags on your own node that match the passed paths
 
         Note: To understand how an individual tag_bind functions look at the function tag_bind
 
@@ -638,21 +638,23 @@ class NodeSession:
             paths (list[str]): The list of paths for the tags
 
         Returns:
-            list[TagBind]: The list of the newly bound tags
+            list[TagBind]: The list of the new TagBinds
         '''
         return [self.tag_bind(path) for path in paths]
 
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
         '''
-        Binds the tag at the passed path to the current node
-
-        Note: This allows users to declare a tag_bind on a tag that belongs to a remote node and then treat the tag as if it were their own.
+        Updates the tag at the passed back on your own node with an optional passed value
 
         Example Implementation:
-            remote = session.connect_to_remote(...)
-            my_tag = remote.tag_bind("my/tag")
-            my_tag.value = False
-            my_tag.value = True
+            config = gedge.NodeConfig.from_json5("...")
+            config.add_method_handler("...", handler=?)
+
+            with gedge.connect(config, "...") as session:
+                session.tag_bind(path="...")
+                OR
+                session.tag_bind(path="...", value=?)
+
 
         Arguments:
             path (str): The path of the tag
