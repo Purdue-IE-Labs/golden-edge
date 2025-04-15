@@ -26,7 +26,7 @@ from . import type_pb2 as type__pb2
 from . import props_pb2 as props__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x64\x61ta_model_config.proto\x1a\ntype.proto\x1a\x0bprops.proto\"{\n\x0f\x44\x61taModelConfig\x12\x1c\n\x04type\x18\x01 \x01(\x0b\x32\x0e.DataModelType\x12\x14\n\x0c\x65xtends_path\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\r\x12#\n\x05items\x18\x04 \x03(\x0b\x32\x14.DataModelItemConfig\"F\n\x13\x44\x61taModelItemConfig\x12\x0c\n\x04path\x18\x01 \x01(\t\x12!\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x11.DataObjectConfig\"\x84\x01\n\x10\x44\x61taObjectConfig\x12 \n\x0b\x62\x61se_config\x18\x01 \x01(\x0e\x32\t.BaseTypeH\x00\x12-\n\x11\x64\x61ta_model_config\x18\x02 \x01(\x0b\x32\x10.DataModelConfigH\x00\x12\x15\n\x05props\x18\x03 \x01(\x0b\x32\x06.PropsB\x08\n\x06\x63onfigb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x64\x61ta_model_config.proto\x1a\ntype.proto\x1a\x0bprops.proto\"{\n\x0f\x44\x61taModelConfig\x12\x1c\n\x04type\x18\x01 \x01(\x0b\x32\x0e.DataModelType\x12\x14\n\x0c\x65xtends_path\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\r\x12#\n\x05items\x18\x04 \x03(\x0b\x32\x14.DataModelItemConfig\"F\n\x13\x44\x61taModelItemConfig\x12\x0c\n\x04path\x18\x01 \x01(\t\x12!\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x11.DataObjectConfig\"\x84\x01\n\x10\x44\x61taObjectConfig\x12 \n\x0b\x62\x61se_config\x18\x01 \x01(\x0e\x32\t.BaseTypeH\x00\x12-\n\x11\x64\x61ta_model_config\x18\x02 \x01(\x0b\x32\x10.DataModelConfigH\x00\x12\x15\n\x05props\x18\x03 \x01(\x0b\x32\x06.PropsB\x08\n\x06\x63onfig\"\x89\x01\n\x16\x44\x61taModelConfigFetched\x12\x1c\n\x04type\x18\x01 \x01(\x0b\x32\x0e.DataModelType\x12\x14\n\x0c\x65xtends_path\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\r\x12*\n\x05items\x18\x04 \x03(\x0b\x32\x1b.DataModelItemConfigFetched\"T\n\x1a\x44\x61taModelItemConfigFetched\x12\x0c\n\x04path\x18\x01 \x01(\t\x12(\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x18.DataObjectConfigFetched\"\x92\x01\n\x17\x44\x61taObjectConfigFetched\x12 \n\x0b\x62\x61se_config\x18\x01 \x01(\x0e\x32\t.BaseTypeH\x00\x12\x34\n\x11\x64\x61ta_model_config\x18\x02 \x01(\x0b\x32\x17.DataModelConfigFetchedH\x00\x12\x15\n\x05props\x18\x03 \x01(\x0b\x32\x06.PropsB\x08\n\x06\x63onfigb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -39,4 +39,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DATAMODELITEMCONFIG']._serialized_end=247
   _globals['_DATAOBJECTCONFIG']._serialized_start=250
   _globals['_DATAOBJECTCONFIG']._serialized_end=382
+  _globals['_DATAMODELCONFIGFETCHED']._serialized_start=385
+  _globals['_DATAMODELCONFIGFETCHED']._serialized_end=522
+  _globals['_DATAMODELITEMCONFIGFETCHED']._serialized_start=524
+  _globals['_DATAMODELITEMCONFIGFETCHED']._serialized_end=608
+  _globals['_DATAOBJECTCONFIGFETCHED']._serialized_start=611
+  _globals['_DATAOBJECTCONFIGFETCHED']._serialized_end=757
 # @@protoc_insertion_point(module_scope)

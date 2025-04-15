@@ -24,3 +24,23 @@ message DataObjectConfig {
     }
     Props props = 3;
 }
+
+message DataModelConfigFetched {
+    DataModelType type = 1;
+    string extends_path = 2;
+    uint32 version = 3;
+    repeated DataModelItemConfigFetched items = 4;
+}
+
+message DataModelItemConfigFetched {
+    string path = 1;
+    DataObjectConfigFetched config = 2;
+}
+
+message DataObjectConfigFetched {
+    oneof config {
+        BaseType base_config = 1;
+        DataModelConfigFetched data_model_config = 2;
+    }
+    Props props = 3;
+}
