@@ -3,11 +3,13 @@ syntax = "proto3";
 import "method_config.proto";
 import "tag_config.proto";
 import "subnode_config.proto";
+import "data_model_config.proto";
 
 message Meta {
-    optional bool tracking = 7;
-    string key = 8;
-    repeated TagConfig tags = 9;
-    repeated MethodConfig methods = 10;
-    repeated SubnodeConfig subnodes = 11;
+    optional bool tracking = 1;
+    string key = 2;
+    repeated TagConfig tags = 3;
+    repeated MethodConfig methods = 4;
+    repeated SubnodeConfig subnodes = 5;
+    repeated DataModelConfig models = 6;
 }

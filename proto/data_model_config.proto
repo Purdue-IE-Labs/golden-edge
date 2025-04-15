@@ -1,7 +1,7 @@
 syntax = "proto3";
 
-import "tag_config.proto";
 import "type.proto";
+import "props.proto";
 
 // Although both path and version can be found in the keyspace, we include them 
 // here for traceability back to where we originally got the model
@@ -9,11 +9,18 @@ message DataModelConfig {
     DataModelType type = 1;
     string extends_path = 2;
     uint32 version = 3;
-	repeated DataModelItemConfig tags = 4;
+	repeated DataModelItemConfig items = 4;
 }
 
 message DataModelItemConfig {
     string path = 1;
-    Type type = 2;
+    DataObjectConfig config = 2;
+}
+
+message DataObjectConfig {
+    oneof config {
+        BaseType base_config = 1;
+        DataModelConfig data_model_config = 2;
+    }
     Props props = 3;
 }

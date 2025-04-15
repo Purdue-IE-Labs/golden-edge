@@ -25,6 +25,6 @@ class Prop(_message.Message):
     __slots__ = ("type", "value")
     TYPE_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
-    type: _type_pb2.BaseType
+    type: _type_pb2.Type
     value: _data_model_session_pb2.DataObject
-    def __init__(self, type: _Optional[_Union[_type_pb2.BaseType, str]] = ..., value: _Optional[_Union[_data_model_session_pb2.DataObject, _Mapping]] = ...) -> None: ...
+    def __init__(self, type: _Optional[_Union[_type_pb2.Type, _Mapping]] = ..., value: _Optional[_Union[_data_model_session_pb2.DataObject, _Mapping]] = ...) -> None: ...

@@ -22,17 +22,21 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from . import tag_config_pb2 as tag__config__pb2
 from . import type_pb2 as type__pb2
+from . import props_pb2 as props__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x64\x61ta_model_config.proto\x1a\x10tag_config.proto\x1a\ntype.proto\"p\n\x0f\x44\x61taModelConfig\x12\x1c\n\x04type\x18\x01 \x01(\x0b\x32\x0e.DataModelType\x12\x14\n\x0c\x65xtends_path\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\r\x12\x18\n\x04tags\x18\x04 \x03(\x0b\x32\n.TagConfigb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x64\x61ta_model_config.proto\x1a\ntype.proto\x1a\x0bprops.proto\"{\n\x0f\x44\x61taModelConfig\x12\x1c\n\x04type\x18\x01 \x01(\x0b\x32\x0e.DataModelType\x12\x14\n\x0c\x65xtends_path\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\r\x12#\n\x05items\x18\x04 \x03(\x0b\x32\x14.DataModelItemConfig\"F\n\x13\x44\x61taModelItemConfig\x12\x0c\n\x04path\x18\x01 \x01(\t\x12!\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x11.DataObjectConfig\"\x84\x01\n\x10\x44\x61taObjectConfig\x12 \n\x0b\x62\x61se_config\x18\x01 \x01(\x0e\x32\t.BaseTypeH\x00\x12-\n\x11\x64\x61ta_model_config\x18\x02 \x01(\x0b\x32\x10.DataModelConfigH\x00\x12\x15\n\x05props\x18\x03 \x01(\x0b\x32\x06.PropsB\x08\n\x06\x63onfigb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'data_model_config_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_DATAMODELCONFIG']._serialized_start=57
-  _globals['_DATAMODELCONFIG']._serialized_end=169
+  _globals['_DATAMODELCONFIG']._serialized_start=52
+  _globals['_DATAMODELCONFIG']._serialized_end=175
+  _globals['_DATAMODELITEMCONFIG']._serialized_start=177
+  _globals['_DATAMODELITEMCONFIG']._serialized_end=247
+  _globals['_DATAOBJECTCONFIG']._serialized_start=250
+  _globals['_DATAOBJECTCONFIG']._serialized_end=382
 # @@protoc_insertion_point(module_scope)
