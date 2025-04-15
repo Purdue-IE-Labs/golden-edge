@@ -5,165 +5,99 @@ from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace
 
 class TestInitialize:
-    def test_all_filled(self):
-        instance = NodeKeySpace(prefix="prefix", name="name")
+    params = [
+        ("prefix", "name"),
+        ("", "name"),
+        ("prefix", ""),
+        ("", "")
+    ]
 
-        assert instance.prefix == "prefix"
-        assert instance.name == "name"
-        assert instance.user_key == "prefix/name"
+    params_special = [
+        ("prefix", "name"),
+        ("", "name"),
+        ("prefix", ""),
+        ("", ""),
+        ("EMPTY", "EMPTY")
+    ]
 
-        assert instance.node_key_prefix == "prefix/NODE/name"
-        assert instance.meta_key_prefix == "prefix/NODE/name/META"
-        assert instance.state_key_prefix == "prefix/NODE/name/STATE"
-        assert instance.tag_data_key_prefix == "prefix/NODE/name/TAGS/DATA"
-        assert instance.tag_write_key_prefix == "prefix/NODE/name/TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "prefix/NODE/name"
-        assert instance.method_key_prefix == "prefix/NODE/name/METHODS"
-        assert instance.subnodes_key_prefix == "prefix/NODE/name/SUBNODES"
+    ids = [
+        "All Filled",
+        "No Prefix",
+        "No Name",
+        "No Arguments"
+    ]
 
-    def test_no_prefix(self):
-        instance = NodeKeySpace(prefix="", name="name")
+    ids_special = [
+        "All Filled",
+        "No Prefix",
+        "No Name",
+        "No Arguments",
+        "Completely Empty"
+    ]
 
-        assert instance.prefix == ""
-        assert instance.name == "name"
-        assert instance.user_key == "/name"
+    @pytest.mark.parametrize("prefix, name", params, ids=ids)
+    def test_basic_initialization(self, prefix, name):
+        instance = NodeKeySpace(prefix=prefix, name=name)
 
-        assert instance.node_key_prefix == "/NODE/name"
-        assert instance.meta_key_prefix == "/NODE/name/META"
-        assert instance.state_key_prefix == "/NODE/name/STATE"
-        assert instance.tag_data_key_prefix == "/NODE/name/TAGS/DATA"
-        assert instance.tag_write_key_prefix == "/NODE/name/TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "/NODE/name"
-        assert instance.method_key_prefix == "/NODE/name/METHODS"
-        assert instance.subnodes_key_prefix == "/NODE/name/SUBNODES"
-    
-    def test_no_name(self):
-        instance = NodeKeySpace(prefix="prefix", name="")
+        assert instance.prefix == f"{prefix}"
+        assert instance.name == f"{name}"
+        assert instance.user_key == f"{prefix}/{name}"
 
-        assert instance.prefix == "prefix"
-        assert instance.name == ""
-        assert instance.user_key == "prefix/"
+        assert instance.node_key_prefix == f"{prefix}/NODE/{name}"
+        assert instance.meta_key_prefix == f"{prefix}/NODE/{name}/META"
+        assert instance.state_key_prefix == f"{prefix}/NODE/{name}/STATE"
+        assert instance.tag_data_key_prefix == f"{prefix}/NODE/{name}/TAGS/DATA"
+        assert instance.tag_write_key_prefix == f"{prefix}/NODE/{name}/TAGS/WRITE"
+        assert instance.liveliness_key_prefix == f"{prefix}/NODE/{name}"
+        assert instance.method_key_prefix == f"{prefix}/NODE/{name}/METHODS"
+        assert instance.subnodes_key_prefix == f"{prefix}/NODE/{name}/SUBNODES"
 
-        assert instance.node_key_prefix == "prefix/NODE/"
-        assert instance.meta_key_prefix == "prefix/NODE//META"
-        assert instance.state_key_prefix == "prefix/NODE//STATE"
-        assert instance.tag_data_key_prefix == "prefix/NODE//TAGS/DATA"
-        assert instance.tag_write_key_prefix == "prefix/NODE//TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "prefix/NODE/"
-        assert instance.method_key_prefix == "prefix/NODE//METHODS"
-        assert instance.subnodes_key_prefix == "prefix/NODE//SUBNODES"
+    @pytest.mark.parametrize("prefix, name", params, ids=ids)
+    def test_from_user_key(self, prefix, name):
+        if (prefix == '' and name == ''):
+            with pytest.raises(ValueError, match="key '' must include at least one '/'"):
+                NodeKeySpace.from_user_key(f"{prefix}/{name}")
+        elif (prefix == ''):
+            with pytest.raises(ValueError, match="key 'name' must include at least one '/'"):
+                NodeKeySpace.from_user_key(f"{prefix}/{name}")
+        elif (name == ''):
+            with pytest.raises(ValueError, match="key 'prefix' must include at least one '/'"):
+                NodeKeySpace.from_user_key(f"{prefix}/{name}")
+        else:
+            instance = NodeKeySpace.from_user_key(f"{prefix}/{name}")
 
-    def test_no_param(self):
-        instance = NodeKeySpace(prefix="", name="")
+            assert instance.prefix == prefix
+            assert instance.name == name
+            assert instance.user_key == f"{prefix}/{name}"
 
-        assert instance.prefix == ""
-        assert instance.name == ""
-        assert instance.user_key == "/"
+            assert instance.node_key_prefix == f"{prefix}/NODE/{name}"
+            assert instance.meta_key_prefix == f"{prefix}/NODE/{name}/META"
+            assert instance.state_key_prefix == f"{prefix}/NODE/{name}/STATE"
+            assert instance.tag_data_key_prefix == f"{prefix}/NODE/{name}/TAGS/DATA"
+            assert instance.tag_write_key_prefix == f"{prefix}/NODE/{name}/TAGS/WRITE"
+            assert instance.liveliness_key_prefix == f"{prefix}/NODE/{name}"
+            assert instance.method_key_prefix == f"{prefix}/NODE/{name}/METHODS"
+            assert instance.subnodes_key_prefix == f"{prefix}/NODE/{name}/SUBNODES"
 
-        assert instance.node_key_prefix == "/NODE/"
-        assert instance.meta_key_prefix == "/NODE//META"
-        assert instance.state_key_prefix == "/NODE//STATE"
-        assert instance.tag_data_key_prefix == "/NODE//TAGS/DATA"
-        assert instance.tag_write_key_prefix == "/NODE//TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "/NODE/"
-        assert instance.method_key_prefix == "/NODE//METHODS"
-        assert instance.subnodes_key_prefix == "/NODE//SUBNODES"
+    @pytest.mark.parametrize("prefix, name", params_special, ids=ids_special)
+    def test_from_internal_key(self, prefix, name):
+        if (prefix == "EMPTY" and name == "EMPTY"):
+            with pytest.raises(ValueError, match="'NODE' is not in list"):
+                NodeKeySpace.from_internal_key("")
+        instance = NodeKeySpace.from_internal_key(f"{prefix}/NODE/{name}")
 
-    def test_from_user_key_all_filled(self):
-        instance = NodeKeySpace.from_user_key("prefix/name")
+        assert instance.prefix == prefix
+        assert instance.name == name
+        assert instance.user_key == f"{prefix}/{name}"
 
-        assert instance.prefix == "prefix"
-        assert instance.name == "name"
-        assert instance.user_key == "prefix/name"
-
-        assert instance.node_key_prefix == "prefix/NODE/name"
-        assert instance.meta_key_prefix == "prefix/NODE/name/META"
-        assert instance.state_key_prefix == "prefix/NODE/name/STATE"
-        assert instance.tag_data_key_prefix == "prefix/NODE/name/TAGS/DATA"
-        assert instance.tag_write_key_prefix == "prefix/NODE/name/TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "prefix/NODE/name"
-        assert instance.method_key_prefix == "prefix/NODE/name/METHODS"
-        assert instance.subnodes_key_prefix == "prefix/NODE/name/SUBNODES"
-
-    def test_from_user_key_no_prefix(self):
-        with pytest.raises(ValueError, match="key 'name' must include at least one '/'"):
-            instance = NodeKeySpace.from_user_key("/name")
-
-    def test_from_user_key_no_name(self):
-        with pytest.raises(ValueError, match="key 'prefix' must include at least one '/'"):
-            instance = NodeKeySpace.from_user_key("prefix/")
-    
-    def test_from_user_key_no_param(self):
-        with pytest.raises(ValueError, match="key '' must include at least one '/'"):
-            instance = NodeKeySpace.from_user_key("")
-
-    def test_from_internal_key_all_filled(self):
-        instance = NodeKeySpace.from_internal_key("prefix/NODE/name")
-
-        assert instance.prefix == "prefix"
-        assert instance.name == "name"
-        assert instance.user_key == "prefix/name"
-
-        assert instance.node_key_prefix == "prefix/NODE/name"
-        assert instance.meta_key_prefix == "prefix/NODE/name/META"
-        assert instance.state_key_prefix == "prefix/NODE/name/STATE"
-        assert instance.tag_data_key_prefix == "prefix/NODE/name/TAGS/DATA"
-        assert instance.tag_write_key_prefix == "prefix/NODE/name/TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "prefix/NODE/name"
-        assert instance.method_key_prefix == "prefix/NODE/name/METHODS"
-        assert instance.subnodes_key_prefix == "prefix/NODE/name/SUBNODES"
-
-    def test_from_internal_key_no_prefix(self):
-        instance = NodeKeySpace.from_internal_key("/NODE/name")
-
-        assert instance.prefix == ""
-        assert instance.name == "name"
-        assert instance.user_key == "/name"
-
-        assert instance.node_key_prefix == "/NODE/name"
-        assert instance.meta_key_prefix == "/NODE/name/META"
-        assert instance.state_key_prefix == "/NODE/name/STATE"
-        assert instance.tag_data_key_prefix == "/NODE/name/TAGS/DATA"
-        assert instance.tag_write_key_prefix == "/NODE/name/TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "/NODE/name"
-        assert instance.method_key_prefix == "/NODE/name/METHODS"
-        assert instance.subnodes_key_prefix == "/NODE/name/SUBNODES"
-
-    def test_from_internal_key_no_name(self):
-        instance = NodeKeySpace.from_internal_key("prefix/NODE/")
-
-        assert instance.prefix == "prefix"
-        assert instance.name == ""
-        assert instance.user_key == "prefix/"
-
-        assert instance.node_key_prefix == "prefix/NODE/"
-        assert instance.meta_key_prefix == "prefix/NODE//META"
-        assert instance.state_key_prefix == "prefix/NODE//STATE"
-        assert instance.tag_data_key_prefix == "prefix/NODE//TAGS/DATA"
-        assert instance.tag_write_key_prefix == "prefix/NODE//TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "prefix/NODE/"
-        assert instance.method_key_prefix == "prefix/NODE//METHODS"
-        assert instance.subnodes_key_prefix == "prefix/NODE//SUBNODES"
-    
-    def test_from_internal_key_no_param(self):
-        with pytest.raises(ValueError, match="'NODE' is not in list"):
-            instance = NodeKeySpace.from_internal_key("")
-
-    def test_from_internal_key_just_node(self):
-        instance = NodeKeySpace.from_internal_key("/NODE/")
-
-        assert instance.prefix == ""
-        assert instance.name == ""
-        assert instance.user_key == "/"
-
-        assert instance.node_key_prefix == "/NODE/"
-        assert instance.meta_key_prefix == "/NODE//META"
-        assert instance.state_key_prefix == "/NODE//STATE"
-        assert instance.tag_data_key_prefix == "/NODE//TAGS/DATA"
-        assert instance.tag_write_key_prefix == "/NODE//TAGS/WRITE"
-        assert instance.liveliness_key_prefix == "/NODE/"
-        assert instance.method_key_prefix == "/NODE//METHODS"
-        assert instance.subnodes_key_prefix == "/NODE//SUBNODES"
+        assert instance.node_key_prefix == f"{prefix}/NODE/{name}"
+        assert instance.meta_key_prefix == f"{prefix}/NODE/{name}/META"
+        assert instance.state_key_prefix == f"{prefix}/NODE/{name}/STATE"
+        assert instance.tag_data_key_prefix == f"{prefix}/NODE/{name}/TAGS/DATA"
+        assert instance.tag_write_key_prefix == f"{prefix}/NODE/{name}/TAGS/WRITE"
+        assert instance.liveliness_key_prefix == f"{prefix}/NODE/{name}"
+        assert instance.method_key_prefix == f"{prefix}/NODE/{name}/METHODS"
+        assert instance.subnodes_key_prefix == f"{prefix}/NODE/{name}/SUBNODES"
 
 def test_split_user_key_valid():
     expected = ("prefix", "name")
