@@ -233,11 +233,11 @@ def overlap(key1: str, key2: str):
     Returns a boolean representing the overlap of two keys given wildcarding
 
     Example Implementation:
-        overlap("a/\*/c", "a/b/c")
+        overlap("a/\\*/c", "a/b/c")
         This would return true since the wildcard in the first key could be a b
-        overlap("a/b", "a/\*/c")
+        overlap("a/b", "a/\\*/c")
         This would return false since the lengths of the two components are different
-        overlap("a/\*/c", "a/\*/d")
+        overlap("a/\\*/c", "a/\\*/d")
         This would return false since the non-wildcards components don't match
         
 
@@ -294,7 +294,7 @@ class NodeKeySpace:
 
     @staticmethod
     def prefix_from_key(key_expr: str):
-        components = key_expr.split(NODE)
+        components = key_expr.split("/NODE")
         return components[0]
     
     @staticmethod
