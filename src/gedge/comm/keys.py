@@ -16,7 +16,7 @@ def key_join(*components: str):
 
     Example Implementation:
         key = key_join("part0", "part1", "part2")
-        print(key) ==> "part0/part1/part2"
+        key ==> "part0/part1/part2"
 
     Arguments:
         *components (tuple[str, ...]): The list of components to be joined
@@ -32,7 +32,7 @@ def node_key_prefix(prefix: str, name: str):
 
     Example Implementation:
         key = node_key_prefix("prefix", "name")
-        print(key) ==> "prefix/NODE/name"
+        key ==> "prefix/NODE/name"
 
     Arguments:
         prefix (str): The prefix of the node
@@ -49,7 +49,7 @@ def meta_key_prefix(prefix: str, name: str):
 
     Example Implementation:
         key = meta_key_prefix("prefix", "name")
-        print(key) ==> "prefix/NODE/name/META"
+        key ==> "prefix/NODE/name/META"
     
     Arguments:
         prefix (str): The prefix of the node
@@ -66,7 +66,7 @@ def tag_data_key_prefix(prefix: str, name: str):
 
     Example Implementation:
         key = tag_data_key_prefix("prefix", "name")
-        print(key) ==> "prefix/NODE/name/TAGS/DATA"
+        key ==> "prefix/NODE/name/TAGS/DATA"
 
     Arguments:
         prefix (str): The prefix of the node
@@ -83,7 +83,7 @@ def tag_data_key(prefix: str, name: str, key: str):
 
     Example Implementation:
         key = tag_data_key("prefix", "name", "key")
-        print(key) == "prefix/NODE/name/TAGS/DATA/key"
+        key ==> "prefix/NODE/name/TAGS/DATA/key"
 
     Arguments:
         prefix (str): The prefix of the node
@@ -101,7 +101,7 @@ def tag_write_key_prefix(prefix: str, name: str):
 
     Example Implementation:
         key = tag_write_key_prefix("prefix", "name")
-        print(key) ==> "prefix/NODE/name/TAGS/WRITE"
+        key ==> "prefix/NODE/name/TAGS/WRITE"
 
     Arguments:
         prefix (str): The prefix of the node
@@ -118,7 +118,7 @@ def tag_write_key(prefix: str, name: str, key: str):
 
     Example Implementation:
         key = tag_write_key("prefix", "name", "key")
-        print(key) ==> "prefix/NODE/name/TAGS/WRITE/key"
+        key ==> "prefix/NODE/name/TAGS/WRITE/key"
 
     Arguments:
         prefix (str): The prefix of the node
@@ -136,7 +136,7 @@ def state_key_prefix(prefix: str, name: str):
 
     Example Implementation:
         key = state_key_prefix("prefix", "name")
-        print(key) ==> "prefix/NODE/name/STATE"
+        key ==> "prefix/NODE/name/STATE"
     
     Arguments:
         prefix (str): The prefix of the node
@@ -153,7 +153,7 @@ def method_key_prefix(prefix: str, name: str):
 
     Example Implementation:
         key = method_key_prefix("prefix", "name")
-        print(key) ==> "prefix/NODE/name/METHODS"
+        key ==> "prefix/NODE/name/METHODS"
 
     Arguments:
         prefix (str): The prefix of the node
@@ -170,7 +170,7 @@ def liveliness_key_prefix(prefix: str, name: str):
 
     Example Implementation:
         key = liveliness_key_prefix("prefix", "name")
-        print(key) ==> "prefix/NODE/name"
+        key ==> "prefix/NODE/name"
 
     Arguments:
         prefix (str): The prefix of the node
@@ -187,7 +187,7 @@ def subnodes_key_prefix(prefix: str, node_name: str):
 
     Example Implementation:
         key = subnodes_key_prefix("prefix", "node_name")
-        print(key) ==> "prefix/NODE/node_name/SUBNODES"
+        key ==> "prefix/NODE/node_name/SUBNODES"
 
     Arguments:
         prefix (str): The prefix of the node
@@ -204,7 +204,7 @@ def method_response_from_call(key_expr: str):
 
     Example Implementation:
         key = method_response_from_call("key_expr")
-        print(key) ==> "key_expr/RESPONSE"
+        key ==> "key_expr/RESPONSE"
 
     Arguments:
         key_expr (str): The key expression of the node the method belongs to
@@ -270,17 +270,47 @@ class NodeKeySpace:
 
     @classmethod
     def from_user_key(cls, key: str):
+        '''
+        Creates a new NodeKeySpace object using the passed user key
+
+        Arguments:
+            key (str): The user key used create NodeKeySpace
+
+        Returns:
+            NodeKeySpace: The new NodeKeySpace object
+
+        '''
         prefix, name = NodeKeySpace.split_user_key(key)
         return cls(prefix, name)
     
     @classmethod
     def from_internal_key(cls, key_expr: str):
+        '''
+        Creates a new NodeKeySpace object using the passed internal key
+
+        Arguments:
+            key_expr (str): The internal key used to create the NodeKeySpace
+
+        Returns:
+            NodeKeySpace: The new NodeKeySpace object
+        '''
         prefix = NodeKeySpace.prefix_from_key(key_expr)
         name = NodeKeySpace.name_from_key(key_expr)
         return cls(prefix, name)
 
     @staticmethod
     def split_user_key(key: str):
+        '''
+        Splits the passed user key into a prefix and name
+
+        Note: The split key is returned in the order: prefix, name
+        
+        Arguments:
+            key (str): The user key being split
+
+        Returns:
+            tuple[str, str]: The parsed prefix and name
+        '''
         key = key.strip('/')
         if '/' not in key:
             raise ValueError(f"key '{key}' must include at least one '/'")
@@ -289,22 +319,67 @@ class NodeKeySpace:
 
     @staticmethod
     def name_from_key(key_expr: str):
+        '''
+        Splits the passed internal key and returns the name element
+
+        Note: This function is dependent on NODE being in the path
+
+        Arguments:
+            key_expr (str): The internal key containing the name
+
+        Returns:
+            str: The parsed name
+        '''
         components = key_expr.split("/")
         return components[components.index(NODE) + 1]
 
     @staticmethod
     def prefix_from_key(key_expr: str):
+        '''
+        Splits the passed internal key and returns the prefix element
+
+        Note: This function is dependent on NODE being in the path
+
+        Arguments:
+            key_expr (str): The internal key containing the prefix
+
+        Returns:
+            str: The parsed prefix
+        '''
         components = key_expr.split("/NODE")
         return components[0]
     
     @staticmethod
     def internal_to_user_key(key_expr: str):
+        '''
+        Splits the passed internal key and returnes a joined user key
+
+        Note: This function is dependent on NODE being in the path
+
+        Arguments:
+            key_expr (str): The internal key containing the user key
+
+        Returns:
+            str: The parsed user key
+
+        '''
         prefix = NodeKeySpace.prefix_from_key(key_expr)
         name = NodeKeySpace.name_from_key(key_expr)
         return key_join(prefix, name)
     
     @staticmethod
     def tag_path_from_key(key_expr: str):
+        '''
+        Splits the passed internal key and returns a joined tag path
+
+        Note: This function is dependent on DATA or WRITE being in the path
+
+        Arguments:
+            key_expr (str): The internal key containing the tag path
+
+        Returns:
+            str: The parsed tag path
+        '''
         components = key_expr.split("/")
         try:
             i = components.index(DATA)
@@ -317,6 +392,17 @@ class NodeKeySpace:
     
     @staticmethod
     def method_path_from_call_key(key_expr: str):
+        '''
+        Splits the passed internal key and returns a joined method path
+
+        Note: This function is dependent on METHODS being in the path
+
+        Arguments:
+            key_expr (str): The internal key containing the method path
+
+        Returns:
+            str: The parsed method path
+        '''
         components = key_expr.split("/")
         try:
             i = components.index(METHODS)
@@ -326,12 +412,35 @@ class NodeKeySpace:
 
     @staticmethod
     def method_path_from_response_key(key_expr: str):
+        '''
+        Splits the passed response key and returns a joined method path
+
+        Note: This function is dependent on METHODS being in the path
+
+        Arguments:
+            key_expr (str): The response key containing the method path
+
+        Returns:
+            str: The parsed method path
+        '''
         key_expr = NodeKeySpace.method_path_from_call_key(key_expr)
         components = key_expr.split("/")
         return key_join(*components[:-1])
     
     @staticmethod
     def user_key_from_key(key_expr: str):
+        '''
+        Splits the passed internal key and returns a joined user key
+
+        Note: This function is dependent on NODE being in the path
+
+        Arguments:
+            key_expr (str): The internal key containing the the user key
+
+
+        Returns:
+            str: The parsed user key
+        '''
         components = key_expr.split("/")
         try:
             i = components.index(NODE)
@@ -368,6 +477,11 @@ class NodeKeySpace:
         self.name = name
     
     def _set_keys(self, prefix: str, name: str):
+        '''
+        Sets all of the keys for the NodeKeySpace object
+
+        Note: These keys include: node, meta, state, tag_data, tag_write, liveliness, method, and subnodes
+        '''
         self.node_key_prefix = node_key_prefix(prefix, name)
         self.meta_key_prefix = meta_key_prefix(prefix, name)
         self.state_key_prefix = state_key_prefix(prefix, name)
@@ -378,25 +492,94 @@ class NodeKeySpace:
         self.subnodes_key_prefix = subnodes_key_prefix(prefix, name)
     
     def tag_data_path(self, path: str):
+        '''
+        Creates a tag data path key using the passed path
+
+        Arguments:
+            path (str): The path being appended to the end of the tag data key
+
+        Returns:
+            (str): The tag_data_key_prefix with path appended to the end 
+        '''
         return key_join(self.tag_data_key_prefix, path)
     
     def tag_write_path(self, path: str):
+        '''
+        Creates a tag write path key using the passed path
+
+        Arguments:
+            path (str): The path being appended to the end of the tag write key
+
+        Returns:
+            (str): The tag_write_key_prefix with path appended to the end 
+        '''
         return key_join(self.tag_write_key_prefix, path)
     
     def method_path(self, path: str):
+        '''
+        Creates a method path key using the passed path
+
+        Arguments:
+            path (str): The path being appended to the end of the method key
+
+        Returns:
+            (str): The method_key_prefix with path appended to the end 
+        '''
         return key_join(self.method_key_prefix, path)
         
     def method_query(self, path: str, caller_id: str, method_query_id: str):
+        '''
+        Creates a method query key using the passed path, caller_id, and method_query_id
+
+        Arguments:
+            path (str): The path being appended to the end of the method key
+            caller_id (str): The id of the caller for the query
+            method_query_id (str): The id of the method being queried
+
+        Returns:
+            (str): The method_key_prefix with path, caller_id, and method_query_id appended to the end 
+        '''
         return key_join(self.method_path(path), caller_id, method_query_id)
     
     def method_response(self, path: str, caller_id: str, method_query_id: str):
+        '''
+        Creates a method response key using the passed path, caller_id, and method_query_id
+
+        Arguments:
+            path (str): The path being appended to the end of the method key
+            caller_id (str): The id of the caller for the query
+            method_query_id (str): The id of the method being queried
+
+        Returns:
+            (str): The method_key_prefix with path, caller_id, method_query_id, and RESPONSE appended to the end 
+        '''
         return key_join(self.method_path(path), caller_id, method_query_id, RESPONSE)
     
     def method_query_listen(self, path: str):
+        '''
+        Creates a method response key using the passed path
+
+        Note: The two asterisks signify caller_id and method_id, but show that there is not a subscription to responses
+
+        Arguments:
+            path (str): The path being appended to the end of the method key
+
+        Returns:
+            (str): The method_key_prefix with path and two asterisks appended to the end 
+        '''
         # the two * signify caller_id and method_query_id, but we should not subscribe to responses
         return key_join(self.method_path(path), "*", "*")
     
     def contains(self, key_expr: str):
+        '''
+        Checks if the curent NodeKeySpace contains the passed internal key
+
+        Arguments:
+            key_expr (str): The internal key being compared to
+
+        Returns:
+            bool: Whether the current NodeKeySpace contains the passed internal key
+        '''
         name = self.name_from_key(key_expr)
         prefix = self.prefix_from_key(key_expr)
         return name == self.name and prefix == self.prefix
@@ -423,10 +606,20 @@ class SubnodeKeySpace(NodeKeySpace):
         self._set_sub_keys(value)
 
     def _set_keys(self, prefix: str, name: str):
+        '''
+        Sets all of the keys for the parent NodeKeySpace object and then the child SubnodeKeySpace object
+
+        Note: These keys include: node, meta, state, tag_data, tag_write, liveliness, method, and subnodes
+        '''
         self._parent._set_keys(prefix, name)
         self._set_sub_keys(self.subnode_name)
 
     def _set_sub_keys(self, subnode_name: str):
+        '''
+        Sets all of the keys for the SubnodeKeySpace object
+
+        Note: This is essentially _set_keys, it includes the parent key, SUBNODES, the subnode name, and then the corresponding keys for the SubnodeKeySpace
+        '''
         key_prefix = key_join(self._parent.__repr__(), SUBNODES, subnode_name)
         self.subnode_key_prefix = key_prefix
         self.state_key_prefix = key_join(key_prefix, STATE)
