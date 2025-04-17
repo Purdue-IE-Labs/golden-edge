@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "props.proto";
+import "data_model_config.proto";
 import "params_config.proto";
 import "body_config.proto";
 

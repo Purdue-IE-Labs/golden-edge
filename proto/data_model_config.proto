@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 import "type.proto";
-import "props.proto";
+import "data_model_session.proto";
 
 // Although both path and version can be found in the keyspace, we include them 
 // here for traceability back to where we originally got the model
@@ -17,30 +17,43 @@ message DataModelItemConfig {
     DataObjectConfig config = 2;
 }
 
+/*
+We have reached a generic from of a config object. It consists of 
+either the type (if base type) or [either the model path or expanded model definition]
+along with properties
+*/
 message DataObjectConfig {
-    oneof config {
-        BaseType base_config = 1;
-        DataModelConfig data_model_config = 2;
-    }
+    Config config = 2;
     Props props = 3;
 }
 
-message DataModelConfigFetched {
-    DataModelType type = 1;
-    string extends_path = 2;
-    uint32 version = 3;
-    repeated DataModelItemConfigFetched items = 4;
+// an embedded data model can take two forms: a path, or the whole config object
+message DataModelObjectConfig {
+    /*
+    repr -> representation. The representation of of this model as either just path
+    or as embedded
+    */
+    oneof repr {
+        DataModelType path = 1;
+        DataModelConfig embedded = 2;
+    }
 }
 
-message DataModelItemConfigFetched {
-    string path = 1;
-    DataObjectConfigFetched config = 2;
-}
-
-message DataObjectConfigFetched {
+message Config {
     oneof config {
         BaseType base_config = 1;
-        DataModelConfigFetched data_model_config = 2;
+        DataModelObjectConfig data_model_config = 2;
     }
-    Props props = 3;
+}
+
+// We require a Prop object because it is distinct from Body and Param
+// In those cases, we are specifying strictly configurations (i.e. 
+// type and props) while a Prop is a type and a value
+message Prop {
+    Config config = 1;
+    DataObject value = 2;
+}
+
+message Props {
+    map<string, Prop> props = 1;
 }

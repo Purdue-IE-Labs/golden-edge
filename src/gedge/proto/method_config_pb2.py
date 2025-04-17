@@ -22,20 +22,20 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from . import props_pb2 as props__pb2
+from . import data_model_config_pb2 as data__model__config__pb2
 from . import params_config_pb2 as params__config__pb2
 from . import body_config_pb2 as body__config__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13method_config.proto\x1a\x0bprops.proto\x1a\x13params_config.proto\x1a\x11\x62ody_config.proto\"|\n\x0cMethodConfig\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x15\n\x05props\x18\x02 \x01(\x0b\x32\x06.Props\x12\x1d\n\x06params\x18\x03 \x01(\x0b\x32\r.ParamsConfig\x12(\n\tresponses\x18\x04 \x03(\x0b\x32\x15.MethodResponseConfig\"V\n\x14MethodResponseConfig\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\x15\n\x05props\x18\x02 \x01(\x0b\x32\x06.Props\x12\x19\n\x04\x62ody\x18\x03 \x01(\x0b\x32\x0b.BodyConfigb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13method_config.proto\x1a\x17\x64\x61ta_model_config.proto\x1a\x13params_config.proto\x1a\x11\x62ody_config.proto\"|\n\x0cMethodConfig\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x15\n\x05props\x18\x02 \x01(\x0b\x32\x06.Props\x12\x1d\n\x06params\x18\x03 \x01(\x0b\x32\r.ParamsConfig\x12(\n\tresponses\x18\x04 \x03(\x0b\x32\x15.MethodResponseConfig\"V\n\x14MethodResponseConfig\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\x15\n\x05props\x18\x02 \x01(\x0b\x32\x06.Props\x12\x19\n\x04\x62ody\x18\x03 \x01(\x0b\x32\x0b.BodyConfigb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'method_config_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_METHODCONFIG']._serialized_start=76
-  _globals['_METHODCONFIG']._serialized_end=200
-  _globals['_METHODRESPONSECONFIG']._serialized_start=202
-  _globals['_METHODRESPONSECONFIG']._serialized_end=288
+  _globals['_METHODCONFIG']._serialized_start=88
+  _globals['_METHODCONFIG']._serialized_end=212
+  _globals['_METHODRESPONSECONFIG']._serialized_start=214
+  _globals['_METHODRESPONSECONFIG']._serialized_end=300
 # @@protoc_insertion_point(module_scope)

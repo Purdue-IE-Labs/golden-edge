@@ -1,5 +1,5 @@
 from . import type_pb2 as _type_pb2
-from . import props_pb2 as _props_pb2
+from . import data_model_session_pb2 as _data_model_session_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -29,41 +29,46 @@ class DataModelItemConfig(_message.Message):
     def __init__(self, path: _Optional[str] = ..., config: _Optional[_Union[DataObjectConfig, _Mapping]] = ...) -> None: ...
 
 class DataObjectConfig(_message.Message):
-    __slots__ = ("base_config", "data_model_config", "props")
-    BASE_CONFIG_FIELD_NUMBER: _ClassVar[int]
-    DATA_MODEL_CONFIG_FIELD_NUMBER: _ClassVar[int]
-    PROPS_FIELD_NUMBER: _ClassVar[int]
-    base_config: _type_pb2.BaseType
-    data_model_config: DataModelConfig
-    props: _props_pb2.Props
-    def __init__(self, base_config: _Optional[_Union[_type_pb2.BaseType, str]] = ..., data_model_config: _Optional[_Union[DataModelConfig, _Mapping]] = ..., props: _Optional[_Union[_props_pb2.Props, _Mapping]] = ...) -> None: ...
-
-class DataModelConfigFetched(_message.Message):
-    __slots__ = ("type", "extends_path", "version", "items")
-    TYPE_FIELD_NUMBER: _ClassVar[int]
-    EXTENDS_PATH_FIELD_NUMBER: _ClassVar[int]
-    VERSION_FIELD_NUMBER: _ClassVar[int]
-    ITEMS_FIELD_NUMBER: _ClassVar[int]
-    type: _type_pb2.DataModelType
-    extends_path: str
-    version: int
-    items: _containers.RepeatedCompositeFieldContainer[DataModelItemConfigFetched]
-    def __init__(self, type: _Optional[_Union[_type_pb2.DataModelType, _Mapping]] = ..., extends_path: _Optional[str] = ..., version: _Optional[int] = ..., items: _Optional[_Iterable[_Union[DataModelItemConfigFetched, _Mapping]]] = ...) -> None: ...
-
-class DataModelItemConfigFetched(_message.Message):
-    __slots__ = ("path", "config")
-    PATH_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("config", "props")
     CONFIG_FIELD_NUMBER: _ClassVar[int]
-    path: str
-    config: DataObjectConfigFetched
-    def __init__(self, path: _Optional[str] = ..., config: _Optional[_Union[DataObjectConfigFetched, _Mapping]] = ...) -> None: ...
+    PROPS_FIELD_NUMBER: _ClassVar[int]
+    config: Config
+    props: Props
+    def __init__(self, config: _Optional[_Union[Config, _Mapping]] = ..., props: _Optional[_Union[Props, _Mapping]] = ...) -> None: ...
 
-class DataObjectConfigFetched(_message.Message):
-    __slots__ = ("base_config", "data_model_config", "props")
+class DataModelObjectConfig(_message.Message):
+    __slots__ = ("path", "embedded")
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDED_FIELD_NUMBER: _ClassVar[int]
+    path: _type_pb2.DataModelType
+    embedded: DataModelConfig
+    def __init__(self, path: _Optional[_Union[_type_pb2.DataModelType, _Mapping]] = ..., embedded: _Optional[_Union[DataModelConfig, _Mapping]] = ...) -> None: ...
+
+class Config(_message.Message):
+    __slots__ = ("base_config", "data_model_config")
     BASE_CONFIG_FIELD_NUMBER: _ClassVar[int]
     DATA_MODEL_CONFIG_FIELD_NUMBER: _ClassVar[int]
-    PROPS_FIELD_NUMBER: _ClassVar[int]
     base_config: _type_pb2.BaseType
-    data_model_config: DataModelConfigFetched
-    props: _props_pb2.Props
-    def __init__(self, base_config: _Optional[_Union[_type_pb2.BaseType, str]] = ..., data_model_config: _Optional[_Union[DataModelConfigFetched, _Mapping]] = ..., props: _Optional[_Union[_props_pb2.Props, _Mapping]] = ...) -> None: ...
+    data_model_config: DataModelObjectConfig
+    def __init__(self, base_config: _Optional[_Union[_type_pb2.BaseType, str]] = ..., data_model_config: _Optional[_Union[DataModelObjectConfig, _Mapping]] = ...) -> None: ...
+
+class Prop(_message.Message):
+    __slots__ = ("config", "value")
+    CONFIG_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    config: Config
+    value: _data_model_session_pb2.DataObject
+    def __init__(self, config: _Optional[_Union[Config, _Mapping]] = ..., value: _Optional[_Union[_data_model_session_pb2.DataObject, _Mapping]] = ...) -> None: ...
+
+class Props(_message.Message):
+    __slots__ = ("props",)
+    class PropsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: Prop
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[Prop, _Mapping]] = ...) -> None: ...
+    PROPS_FIELD_NUMBER: _ClassVar[int]
+    props: _containers.MessageMap[str, Prop]
+    def __init__(self, props: _Optional[_Mapping[str, Prop]] = ...) -> None: ...

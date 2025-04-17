@@ -23,26 +23,32 @@ _sym_db = _symbol_database.Default()
 
 
 from . import type_pb2 as type__pb2
-from . import props_pb2 as props__pb2
+from . import data_model_session_pb2 as data__model__session__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x64\x61ta_model_config.proto\x1a\ntype.proto\x1a\x0bprops.proto\"{\n\x0f\x44\x61taModelConfig\x12\x1c\n\x04type\x18\x01 \x01(\x0b\x32\x0e.DataModelType\x12\x14\n\x0c\x65xtends_path\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\r\x12#\n\x05items\x18\x04 \x03(\x0b\x32\x14.DataModelItemConfig\"F\n\x13\x44\x61taModelItemConfig\x12\x0c\n\x04path\x18\x01 \x01(\t\x12!\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x11.DataObjectConfig\"\x84\x01\n\x10\x44\x61taObjectConfig\x12 \n\x0b\x62\x61se_config\x18\x01 \x01(\x0e\x32\t.BaseTypeH\x00\x12-\n\x11\x64\x61ta_model_config\x18\x02 \x01(\x0b\x32\x10.DataModelConfigH\x00\x12\x15\n\x05props\x18\x03 \x01(\x0b\x32\x06.PropsB\x08\n\x06\x63onfig\"\x89\x01\n\x16\x44\x61taModelConfigFetched\x12\x1c\n\x04type\x18\x01 \x01(\x0b\x32\x0e.DataModelType\x12\x14\n\x0c\x65xtends_path\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\r\x12*\n\x05items\x18\x04 \x03(\x0b\x32\x1b.DataModelItemConfigFetched\"T\n\x1a\x44\x61taModelItemConfigFetched\x12\x0c\n\x04path\x18\x01 \x01(\t\x12(\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x18.DataObjectConfigFetched\"\x92\x01\n\x17\x44\x61taObjectConfigFetched\x12 \n\x0b\x62\x61se_config\x18\x01 \x01(\x0e\x32\t.BaseTypeH\x00\x12\x34\n\x11\x64\x61ta_model_config\x18\x02 \x01(\x0b\x32\x17.DataModelConfigFetchedH\x00\x12\x15\n\x05props\x18\x03 \x01(\x0b\x32\x06.PropsB\x08\n\x06\x63onfigb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x64\x61ta_model_config.proto\x1a\ntype.proto\x1a\x18\x64\x61ta_model_session.proto\"{\n\x0f\x44\x61taModelConfig\x12\x1c\n\x04type\x18\x01 \x01(\x0b\x32\x0e.DataModelType\x12\x14\n\x0c\x65xtends_path\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\r\x12#\n\x05items\x18\x04 \x03(\x0b\x32\x14.DataModelItemConfig\"F\n\x13\x44\x61taModelItemConfig\x12\x0c\n\x04path\x18\x01 \x01(\t\x12!\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x11.DataObjectConfig\"B\n\x10\x44\x61taObjectConfig\x12\x17\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x07.Config\x12\x15\n\x05props\x18\x03 \x01(\x0b\x32\x06.Props\"e\n\x15\x44\x61taModelObjectConfig\x12\x1e\n\x04path\x18\x01 \x01(\x0b\x32\x0e.DataModelTypeH\x00\x12$\n\x08\x65mbedded\x18\x02 \x01(\x0b\x32\x10.DataModelConfigH\x00\x42\x06\n\x04repr\"i\n\x06\x43onfig\x12 \n\x0b\x62\x61se_config\x18\x01 \x01(\x0e\x32\t.BaseTypeH\x00\x12\x33\n\x11\x64\x61ta_model_config\x18\x02 \x01(\x0b\x32\x16.DataModelObjectConfigH\x00\x42\x08\n\x06\x63onfig\";\n\x04Prop\x12\x17\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x07.Config\x12\x1a\n\x05value\x18\x02 \x01(\x0b\x32\x0b.DataObject\"^\n\x05Props\x12 \n\x05props\x18\x01 \x03(\x0b\x32\x11.Props.PropsEntry\x1a\x33\n\nPropsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x14\n\x05value\x18\x02 \x01(\x0b\x32\x05.Prop:\x02\x38\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'data_model_config_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_DATAMODELCONFIG']._serialized_start=52
-  _globals['_DATAMODELCONFIG']._serialized_end=175
-  _globals['_DATAMODELITEMCONFIG']._serialized_start=177
-  _globals['_DATAMODELITEMCONFIG']._serialized_end=247
-  _globals['_DATAOBJECTCONFIG']._serialized_start=250
-  _globals['_DATAOBJECTCONFIG']._serialized_end=382
-  _globals['_DATAMODELCONFIGFETCHED']._serialized_start=385
-  _globals['_DATAMODELCONFIGFETCHED']._serialized_end=522
-  _globals['_DATAMODELITEMCONFIGFETCHED']._serialized_start=524
-  _globals['_DATAMODELITEMCONFIGFETCHED']._serialized_end=608
-  _globals['_DATAOBJECTCONFIGFETCHED']._serialized_start=611
-  _globals['_DATAOBJECTCONFIGFETCHED']._serialized_end=757
+  _globals['_PROPS_PROPSENTRY']._loaded_options = None
+  _globals['_PROPS_PROPSENTRY']._serialized_options = b'8\001'
+  _globals['_DATAMODELCONFIG']._serialized_start=65
+  _globals['_DATAMODELCONFIG']._serialized_end=188
+  _globals['_DATAMODELITEMCONFIG']._serialized_start=190
+  _globals['_DATAMODELITEMCONFIG']._serialized_end=260
+  _globals['_DATAOBJECTCONFIG']._serialized_start=262
+  _globals['_DATAOBJECTCONFIG']._serialized_end=328
+  _globals['_DATAMODELOBJECTCONFIG']._serialized_start=330
+  _globals['_DATAMODELOBJECTCONFIG']._serialized_end=431
+  _globals['_CONFIG']._serialized_start=433
+  _globals['_CONFIG']._serialized_end=538
+  _globals['_PROP']._serialized_start=540
+  _globals['_PROP']._serialized_end=599
+  _globals['_PROPS']._serialized_start=601
+  _globals['_PROPS']._serialized_end=695
+  _globals['_PROPS_PROPSENTRY']._serialized_start=644
+  _globals['_PROPS_PROPSENTRY']._serialized_end=695
 # @@protoc_insertion_point(module_scope)

@@ -1,8 +1,7 @@
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Mapping as _Mapping
-from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+from typing import ClassVar as _ClassVar, Optional as _Optional
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -36,11 +35,3 @@ class DataModelType(_message.Message):
     PATH_FIELD_NUMBER: _ClassVar[int]
     path: str
     def __init__(self, path: _Optional[str] = ...) -> None: ...
-
-class Type(_message.Message):
-    __slots__ = ("base_type", "data_model_type")
-    BASE_TYPE_FIELD_NUMBER: _ClassVar[int]
-    DATA_MODEL_TYPE_FIELD_NUMBER: _ClassVar[int]
-    base_type: BaseType
-    data_model_type: DataModelType
-    def __init__(self, base_type: _Optional[_Union[BaseType, str]] = ..., data_model_type: _Optional[_Union[DataModelType, _Mapping]] = ...) -> None: ...

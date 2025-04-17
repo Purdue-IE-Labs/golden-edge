@@ -1,12 +1,9 @@
 syntax = "proto3";
 
-import "props.proto";
-import "type.proto";
+import "data_model_config.proto";
 
 message TagConfig {
-    string path = 1;
-    Type type = 2;
-    Props props = 3;
+    DataModelItemConfig config = 1;
 
     bool writable = 4;
     repeated TagWriteResponseConfig responses = 5;

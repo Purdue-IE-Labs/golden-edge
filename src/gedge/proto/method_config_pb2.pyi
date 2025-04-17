@@ -1,4 +1,4 @@
-from . import props_pb2 as _props_pb2
+from . import data_model_config_pb2 as _data_model_config_pb2
 from . import params_config_pb2 as _params_config_pb2
 from . import body_config_pb2 as _body_config_pb2
 from google.protobuf.internal import containers as _containers
@@ -16,10 +16,10 @@ class MethodConfig(_message.Message):
     PARAMS_FIELD_NUMBER: _ClassVar[int]
     RESPONSES_FIELD_NUMBER: _ClassVar[int]
     path: str
-    props: _props_pb2.Props
+    props: _data_model_config_pb2.Props
     params: _params_config_pb2.ParamsConfig
     responses: _containers.RepeatedCompositeFieldContainer[MethodResponseConfig]
-    def __init__(self, path: _Optional[str] = ..., props: _Optional[_Union[_props_pb2.Props, _Mapping]] = ..., params: _Optional[_Union[_params_config_pb2.ParamsConfig, _Mapping]] = ..., responses: _Optional[_Iterable[_Union[MethodResponseConfig, _Mapping]]] = ...) -> None: ...
+    def __init__(self, path: _Optional[str] = ..., props: _Optional[_Union[_data_model_config_pb2.Props, _Mapping]] = ..., params: _Optional[_Union[_params_config_pb2.ParamsConfig, _Mapping]] = ..., responses: _Optional[_Iterable[_Union[MethodResponseConfig, _Mapping]]] = ...) -> None: ...
 
 class MethodResponseConfig(_message.Message):
     __slots__ = ("code", "props", "body")
@@ -27,6 +27,6 @@ class MethodResponseConfig(_message.Message):
     PROPS_FIELD_NUMBER: _ClassVar[int]
     BODY_FIELD_NUMBER: _ClassVar[int]
     code: int
-    props: _props_pb2.Props
+    props: _data_model_config_pb2.Props
     body: _body_config_pb2.BodyConfig
-    def __init__(self, code: _Optional[int] = ..., props: _Optional[_Union[_props_pb2.Props, _Mapping]] = ..., body: _Optional[_Union[_body_config_pb2.BodyConfig, _Mapping]] = ...) -> None: ...
+    def __init__(self, code: _Optional[int] = ..., props: _Optional[_Union[_data_model_config_pb2.Props, _Mapping]] = ..., body: _Optional[_Union[_body_config_pb2.BodyConfig, _Mapping]] = ...) -> None: ...

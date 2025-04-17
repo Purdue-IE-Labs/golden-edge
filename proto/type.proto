@@ -21,9 +21,25 @@ message DataModelType {
     // version?
 }
 
-message Type {
-    oneof type {
-        BaseType base_type = 1;
-        DataModelType data_model_type = 2;
+
+/*
+Type and Config are the distinction between a model 
+that has been pulled vs. one that has not been pulled.
+In a json5 object, as someone is building their model,
+they will use only the model path. However, when a 
+node publishes its Meta, it will embed all those 
+models into the message and not just the paths.
+*/
+
+/*
+Type has been removed in favor of a Config object that can hold both the model path
+or the expanded model object
+Config {
+    BaseType
+    or {
+        DataModelPath
+        or
+        DataModelConfigObject
     }
 }
+*/ 
