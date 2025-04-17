@@ -27,8 +27,23 @@ def pull(args):
 
     with gedge.comm.comm.Comm([f"tcp/{args.ip_address}:7447"]) as comm:
         config = comm.pull_model(path)
-        here = pathlib.Path(__file__).parents[3] / "test" / "test_models" / "model_pulled.json5"
         j = config.to_json5()
+        here = pathlib.Path(__file__).parents[3] / "test" / "test_models" / "model_pulled.json5"
+        # here = pathlib.Path(__file__).parents[3] / "test" / "test_models" / "model_pulled_embedded.json5"
+        with open(str(here), "w") as f:
+            json5.dump(j, f, indent=4)
+
+def fetch(args):
+    print("FETCH COMMAND")
+    path = args.path
+
+    with gedge.comm.comm.Comm([f"tcp/{args.ip_address}:7447"]) as comm:
+        config = comm.pull_model(path)
+        print(config)
+        config.fetch(comm)
+        print(config)
+        j = config.to_json5()
+        here = pathlib.Path(__file__).parents[3] / "test" / "test_models" / "model_pulled_embedded.json5"
         with open(str(here), "w") as f:
             json5.dump(j, f, indent=4)
 
@@ -45,6 +60,10 @@ def main():
     pull_parser = subparsers.add_parser("pull")
     pull_parser.add_argument("path", type=str, help="path where model lives in the historian")
     pull_parser.set_defaults(func=pull)
+
+    fetch_parser = subparsers.add_parser("fetch")
+    fetch_parser.add_argument("path", type=str, help="path where model lives in the historian")
+    fetch_parser.set_defaults(func=fetch)
 
     args = parser.parse_args()
 

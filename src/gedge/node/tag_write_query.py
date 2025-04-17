@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from gedge.node.tag import Tag
+from gedge.py_proto.tag_config import TagConfig
 
 from typing import Any, TYPE_CHECKING, Callable
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class TagWriteQuery:
     key_expr: str
     value: Any
-    tag_config: Tag
+    tag_config: TagConfig
     _reply: Callable[[int, str], None]
 
     def reply(self, code: int, error: str = ""):

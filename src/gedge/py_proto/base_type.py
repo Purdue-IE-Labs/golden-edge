@@ -2,7 +2,7 @@ from typing import Self
 from gedge import proto
 from enum import Enum, auto
 
-class DataType(Enum):
+class BaseType(Enum):
     UNKNOWN = proto.BaseType.UNKNOWN
     INT = auto()
     LONG = auto()
@@ -17,7 +17,7 @@ class DataType(Enum):
 
     @classmethod
     def from_type(cls, type: Self | type) -> Self:
-        if isinstance(type, DataType):
+        if isinstance(type, BaseType):
             return type
         return cls.from_py_type(type)
 
@@ -25,19 +25,34 @@ class DataType(Enum):
     def from_proto(cls, proto: proto.BaseType) -> Self:
         return cls(int(proto))
     
+    def to_json5(self) -> str:
+        mapping = {
+            BaseType.INT: "int",
+            BaseType.LONG: "long",
+            BaseType.FLOAT: "float",
+            BaseType.STRING: "string",
+            BaseType.BOOL: "bool",
+            BaseType.LIST_INT: "list[int]",
+            BaseType.LIST_LONG: "list[long]",
+            BaseType.LIST_FLOAT: "list[float]",
+            BaseType.LIST_STRING: "list[string]",
+            BaseType.LIST_BOOL: "list[bool]",
+        }
+        return mapping[self]
+    
     @classmethod
     def from_json5(cls, type: str) -> Self:
         mapping = {
-            "int": DataType.INT,
-            "long": DataType.LONG,
-            "float": DataType.FLOAT,
-            "string": DataType.STRING,
-            "bool": DataType.BOOL,
-            "list[int]": DataType.LIST_INT,
-            "list[long]": DataType.LIST_LONG,
-            "list[float]": DataType.LIST_FLOAT,
-            "list[string]": DataType.LIST_STRING,
-            "list[bool]": DataType.LIST_BOOL,
+            "int": BaseType.INT,
+            "long": BaseType.LONG,
+            "float": BaseType.FLOAT,
+            "string": BaseType.STRING,
+            "bool": BaseType.BOOL,
+            "list[int]": BaseType.LIST_INT,
+            "list[long]": BaseType.LIST_LONG,
+            "list[float]": BaseType.LIST_FLOAT,
+            "list[string]": BaseType.LIST_STRING,
+            "list[bool]": BaseType.LIST_BOOL,
         }
         if type not in mapping:
             raise ValueError(f"Invalid type {type}")
@@ -58,25 +73,25 @@ class DataType(Enum):
         """
         new_type = -1
         if type == int:
-            new_type = proto.BaseType.INT
+            new_type = BaseType.INT
         elif type == float:
-            new_type = proto.BaseType.FLOAT
+            new_type = BaseType.FLOAT
         elif type == str:
-            new_type = proto.BaseType.STRING
+            new_type = BaseType.STRING
         elif type == bool:
-            new_type = proto.BaseType.BOOL
+            new_type = BaseType.BOOL
         elif type == list[int]:
-            new_type = proto.BaseType.LIST_INT
+            new_type = BaseType.LIST_INT
         elif type == list[float]:
-            new_type = proto.BaseType.LIST_FLOAT
+            new_type = BaseType.LIST_FLOAT
         elif type == list[str]:
-            new_type = proto.BaseType.LIST_STRING
+            new_type = BaseType.LIST_STRING
         elif type == list[bool]:
-            new_type = proto.BaseType.LIST_BOOL
+            new_type = BaseType.LIST_BOOL
         if new_type == -1:
             raise ValueError(f"Illegal type {type} for tag")
         
-        return cls.from_proto(new_type)
+        return cls(new_type.value)
 
     def __repr__(self):
         return self.name

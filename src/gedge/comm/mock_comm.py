@@ -16,22 +16,20 @@ from gedge.comm.keys import NodeKeySpace, method_response_from_call
 
 from typing import Any, TYPE_CHECKING, Callable
 
-from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagValue, ZenohQueryCallback
+from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagBaseValue, ZenohQueryCallback
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import MethodResponse
 from gedge.node.param import params_proto_to_py
-from gedge.node.prop import Props
+from gedge.py_proto.props import Props
 from gedge.node.query import MethodQuery
-from gedge.node.tag import Tag, WriteResponse
-from gedge.node.tag_data import TagData
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.tag_write_reply import TagWriteReply
 import threading
 if TYPE_CHECKING:
     from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
-ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData | proto.ResponseData
+# ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData | proto.ResponseData
 
 import logging
 logger = logging.getLogger(__name__)

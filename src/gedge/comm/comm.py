@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from tkinter import W
 import uuid
 import zenoh
 import json
@@ -14,20 +15,21 @@ from gedge.comm.keys import NodeKeySpace, internal_to_user_key, method_response_
 
 from typing import Any, TYPE_CHECKING, Callable
 
-from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler
+from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagBaseValue, TagWriteHandler
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import MethodResponse
 from gedge.node.param import params_proto_to_py
-from gedge.node.prop import Props
+from gedge.py_proto.data_model_config import DataModelConfig
+from gedge.py_proto.props import Props
 from gedge.node.query import MethodQuery
-from gedge.node.tag import Tag, WriteResponse
-from gedge.node.tag_data import TagData
+from gedge.py_proto.tag_config import TagConfig, TagWriteResponseConfig
+from gedge.py_proto.data_model import DataObject
 from gedge.node.tag_write_query import TagWriteQuery
 if TYPE_CHECKING:
     from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
-ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData
+ProtoMessage = proto.Meta | proto.DataObject | proto.TagWriteResponse | proto.State | proto.MethodCall | proto.MethodResponse | proto.DataModelConfig
 
 import logging
 logger = logging.getLogger(__name__)
@@ -105,16 +107,18 @@ class Comm:
             on_liveliness_change(str(sample.key_expr), is_online)
         return _on_liveliness
 
-    def _on_tag_data(self, on_tag_data: TagDataCallback, tags: dict[str, Tag]) -> ZenohCallback:
+    def _on_tag_data(self, on_tag_data: TagDataCallback, tags: dict[str, TagConfig]) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
-            tag_data: proto.TagData = self.deserialize(proto.TagData(), sample.payload.to_bytes())
-            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {tag_data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
+            data: proto.DataObject = self.deserialize(proto.DataObject(), sample.payload.to_bytes())
+            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
             path: str = NodeKeySpace.tag_path_from_key(str(sample.key_expr))
             if path not in tags:
                 node: str = NodeKeySpace.name_from_key(str(sample.key_expr))
                 raise TagLookupError(path, node)
             tag_config = tags[path]
-            value = TagData.proto_to_py(tag_data, tag_config.type)
+            do = DataObject.from_proto(data, tag_config.type)
+            value = do.to
+            value = DataObject.proto_to_py(tag_data, tag_config.type)
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
@@ -347,7 +351,7 @@ class Comm:
         key_expr = ks.meta_key_prefix
         self._send_proto(key_expr, meta)
     
-    def pull_meta_messages(self, only_online: bool = False):
+    def pull_meta_messages(self, only_online: bool = False) -> list[proto.Meta]:
         res = self.session.get(keys.key_join("**", keys.NODE, "*", keys.META))
         messages: list[proto.Meta] = []
         for r in res:
@@ -386,3 +390,20 @@ class Comm:
             return reply.ok.kind == zenoh.SampleKind.PUT
         except:
             return False
+    
+    def pull_model(self, path: str) -> DataModelConfig:
+        res = self.session.get(keys.model_fetch(path))
+        for r in res:
+            r: zenoh.Reply
+            if not r.ok:
+                continue
+            result = r.result
+            try:
+                print(result.payload.to_bytes())
+                config = self.deserialize(proto.DataModelConfig(), result.payload.to_bytes())
+                print(config)
+                config = DataModelConfig.from_proto(config)
+            except Exception as e:
+                raise ValueError(f"Could not deserialize model from historian")
+            return config
+        raise Exception

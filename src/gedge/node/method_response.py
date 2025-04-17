@@ -1,9 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
-from gedge.node.body import Body
+from gedge.node.body import BodyConfig
 from gedge.node.data_type import DataType
-from gedge.node.prop import Props
+from gedge.py_proto.props import Props
 from gedge import proto
 from typing import Any, Self, TYPE_CHECKING
 
@@ -15,12 +15,13 @@ if TYPE_CHECKING:
 class MethodResponse:
     code: int
     props: Props
-    body: dict[str, Body]
+    body: BodyConfig
     
-    def to_proto(self) -> proto.Response:
+    def to_proto(self) -> proto.MethodResponseConfig:
         props = self.props.to_proto()
-        body = {key:value.to_proto() for key, value in self.body.items()}
-        return proto.Response(code=self.code, props=props, body=body)
+        # body = {key:value.to_proto() for key, value in self.body.items()}
+        body = self.body.to_proto()
+        return proto.MethodResponseConfig(code=self.code, props=props, body=body)
 
     @classmethod
     def from_proto(cls, proto: proto.Response) -> Self:

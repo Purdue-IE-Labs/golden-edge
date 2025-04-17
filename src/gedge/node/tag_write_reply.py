@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from gedge.node import codes
-from gedge.node.tag import Tag
 from typing import Any
 
 @dataclass

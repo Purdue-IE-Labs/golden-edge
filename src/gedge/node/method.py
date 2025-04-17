@@ -1,16 +1,16 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
-from gedge.node.body import Body
+from gedge.node.body import BodyConfig
 from gedge.node.data_type import DataType
 from gedge.node.param import Param
-from gedge.node.prop import Props
+from gedge.py_proto.props import Props
 from gedge import proto
 from gedge.node.method_response import MethodResponse
 
 from typing import Any, Self, TYPE_CHECKING
 if TYPE_CHECKING:
-    from gedge.node.gtypes import TagValue, Type, MethodHandler
+    from gedge.node.gtypes import TagBaseValue, Type, MethodHandler
 
 @dataclass
 class Method:

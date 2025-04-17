@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from gedge.node.data_type import DataType
-from gedge.node.prop import Props
+from gedge.py_proto.props import Props
 from gedge import proto
 
 from typing import Any, Self, TYPE_CHECKING
 
-from gedge.node.tag_data import TagData
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagValue
 

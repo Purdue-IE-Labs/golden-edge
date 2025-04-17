@@ -1,26 +1,27 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from tkinter import N
 
-from gedge.node.data_type import DataType
 from gedge import proto
-from gedge.node.prop import Props
+from gedge.py_proto.props import Props
 
 from typing import Any, Self, TYPE_CHECKING
 if TYPE_CHECKING:
+    from gedge.py_proto.data_model_config import DataModelItemConfig
     from gedge.node.gtypes import TagWriteHandler
 
 @dataclass
-class WriteResponse:
+class TagWriteResponseConfig:
     code: int
     props: Props
     
-    def to_proto(self) -> proto.WriteResponse:
+    def to_proto(self) -> proto.TagWriteResponseConfig:
         code = self.code
         props = self.props.to_proto()
-        return proto.WriteResponse(code=code, props=props)
+        return proto.TagWriteResponseConfig(code=code, props=props)
 
     @classmethod
-    def from_proto(cls, response: proto.WriteResponse) -> Self:
+    def from_proto(cls, response: proto.TagWriteResponseConfig) -> Self:
         code = response.code
         props = Props.from_proto(response.props)
         return cls(code, props)
@@ -39,27 +40,24 @@ class WriteResponse:
         return cls(code, props)
     
 
-class Tag:
-    def __init__(self, path: str, type: DataType, props: Props, writable: bool, responses: list[WriteResponse], write_handler: TagWriteHandler | None):
-        self.path = path
-        self.type = type
-        self.props = props
-        self._writable = writable
-        self.responses = responses
-        self.write_handler = write_handler
-    
-    def to_proto(self) -> proto.Tag:
-        type = self.type.to_proto()
-        props = self.props.to_proto()
+@dataclass
+class TagConfig:
+    config: DataModelItemConfig
+    _writable: bool
+    responses: list[TagWriteResponseConfig]
+    write_handle: TagWriteHandler | None = field(default=None)
+
+    def to_proto(self) -> proto.TagConfig:
+        config = self.config.to_proto()
         responses = [r.to_proto() for r in self.responses]
-        return proto.Tag(path=self.path, type=type, props=props, writable=self._writable, responses=responses)
+        return proto.TagConfig(config=config, writable=self._writable, responses=responses)
 
     @classmethod
-    def from_proto(cls, tag: proto.Tag):
-        type = DataType.from_proto(tag.type)
-        props = Props.from_proto(tag.props)
-        responses = [WriteResponse.from_proto(wr) for wr in tag.responses]
-        t = Tag(tag.path, type, props, tag.writable, responses, None)
+    def from_proto(cls, tag: proto.TagConfig) -> Self:
+        from gedge.py_proto.data_model_config import DataModelItemConfig
+        config = DataModelItemConfig.from_proto(tag.config)
+        responses = [TagWriteResponseConfig.from_proto(wr) for wr in tag.responses]
+        t = cls(config, tag.writable, responses)
         return t
     
     @classmethod
@@ -69,16 +67,14 @@ class Tag:
         
         if not("path" in json and "type" in json):
             raise LookupError(f"tag must include both a path and a type: {json}")
-        path = json["path"]
-        type = DataType.from_json5(json["type"])
-        props = Props.from_json5(json.get("props", {}))
+        config = DataModelItemConfig.from_json5(json)
         writable = json.get("writable", False)
         responses = []
         for response in json.get("responses", []):
-            r = WriteResponse.from_json5(response)
+            r = TagWriteResponseConfig.from_json5(response)
             responses.append(r)
 
-        return cls(path, type, props, writable, responses, write_handler=None)
+        return cls(config, writable, responses)
     
     def writable(self, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]] = []):
         self._writable = True
@@ -91,7 +87,7 @@ class Tag:
         return self._writable
     
     def add_write_response(self, code: int, props: Props = Props.empty()):
-        response = WriteResponse(code, props)
+        response = TagWriteResponseConfig(code, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:
             raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")
         self.responses.append(response)
@@ -104,10 +100,4 @@ class Tag:
             self.add_prop(name, value)
     
     def add_prop(self, key: str, value: Any):
-        self.props.add_prop(key, value)
-    
-    def __repr__(self) -> str:
-        res = f"Tag(path={self.path}, type={self.type}, props={self.props}, writable={self._writable}"
-        if self._writable:
-            res = f"{res}, {self.responses}"
-        return f"{res})"
+        self.config.config.props.add_prop(key, value)

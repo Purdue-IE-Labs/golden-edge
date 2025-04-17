@@ -6,13 +6,12 @@ from gedge.comm.mock_comm import MockCallback, MockComm, MockSample
 from gedge.node import codes
 from gedge.node.body import BodyData
 from gedge.node.error import MethodLookupError
-from gedge.node.gtypes import TagValue, ZenohCallback
+from gedge.node.gtypes import TagBaseValue, ZenohCallback
 from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import MethodResponse
 from gedge.node.node import NodeConfig, NodeSession
-from gedge.node.prop import Props
+from gedge.py_proto.props import Props
 from gedge.node.query import MethodQuery
-from gedge.node.tag_data import TagData
 
 from typing import TYPE_CHECKING, Any, Iterator
 if TYPE_CHECKING:

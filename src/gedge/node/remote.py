@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from queue import Queue, Empty
 import time
-from gedge.node.tag_data import TagData
 from gedge.node.method import Method
 from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import MethodResponse
@@ -10,7 +9,6 @@ from gedge.node import codes
 from gedge import proto
 from gedge.node.error import MethodLookupError, SessionError, TagLookupError
 from gedge.comm.comm import Comm
-from gedge.node.tag import Tag
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
 import uuid

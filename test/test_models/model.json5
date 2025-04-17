@@ -1,0 +1,32 @@
+{
+    model_path: "foo",
+    // extends_path: "critters/animal",
+    version: 2,
+    tags: [
+        // base tag
+        {
+            path: "foo/bar/baz",
+            base_type: "int",
+            props: {
+                desc: "A simple description",
+            }
+        },
+        // model tag
+        {
+            path: "baz",
+            model_path: "bar",
+            // a model prop and base prop
+            props: {
+                // model_prop: {
+                //     model_path: "path",
+                //     model: {
+                //         foo: "hello",
+                //         bar: "world",
+                //         baz: "!!!!!"
+                //     }
+                // },
+                desc: "Another description"
+            }
+        }
+    ]
+}

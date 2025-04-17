@@ -9,6 +9,7 @@ STATE = "STATE"
 METHODS = "METHODS"
 RESPONSE = "RESPONSE"
 SUBNODES = "SUBNODES"
+MODELS = "MODELS"
 
 def key_join(*components: str):
     return "/".join(components)
@@ -44,6 +45,11 @@ def subnodes_key_prefix(prefix: str, node_name: str):
 
 def method_response_from_call(key_expr: str):
     return key_join(key_expr, RESPONSE)
+
+def model_fetch(path: str):
+    # * is version
+    # return key_join(MODELS, path, "*")
+    return key_join(MODELS, path)
 
 def internal_to_user_key(key_expr: str):
     prefix = NodeKeySpace.prefix_from_key(key_expr)

@@ -1,0 +1,20 @@
+{
+    model_path: "foo",
+    version: 2,
+    tags: [
+        {
+            path: "foo/bar/baz",
+            props: {
+                desc: "A simple description",
+            },
+            base_type: "int",
+        },
+        {
+            path: "baz",
+            props: {
+                desc: "Another description",
+            },
+            model_path: "foo/baz",
+        },
+    ],
+}

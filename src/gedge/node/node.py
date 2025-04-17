@@ -4,17 +4,18 @@ from re import sub
 import uuid
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.data_type import DataType
-from gedge.node.prop import Props
+from gedge.py_proto.data_model_config import DataModelConfig
+from gedge.py_proto.props import Props
 from gedge.node.remote import RemoteConnection
-from gedge.proto import Meta, State, WriteResponseData, MethodQueryData
+from gedge.proto import Meta, State, MethodResponse, MethodCall
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
-from gedge.node.tag import Tag, WriteResponse
+from gedge.py_proto.tag_config import TagConfig, TagWriteResponseConfig
+from gedge import py_proto
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
 from gedge.node.method import Method, MethodResponse
-from gedge.node.tag_data import TagData 
 import json5
 
 from typing import Self, Any, TYPE_CHECKING
@@ -30,9 +31,10 @@ class NodeConfig:
     def __init__(self, key: str):
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
-        self.tags: dict[str, Tag] = dict()
+        self.tags: dict[str, TagConfig] = dict()
         self.methods: dict[str, Method] = dict()
         self.subnodes: dict[str, SubnodeConfig] = dict()
+        self.models: dict[str, DataModelConfig] = dict()
 
     @classmethod
     def from_json5(cls, path: str):
@@ -51,7 +53,7 @@ class NodeConfig:
             raise LookupError(f"Node must have a key")
         config = NodeConfig(obj["key"])
         for tag_json in obj.get("tags", []):
-            tag = Tag.from_json5(tag_json)
+            tag = TagConfig.from_json5(tag_json)
             config.tags[tag.path] = tag
         for method_json in obj.get("methods", []):
             method = Method.from_json5(method_json)
@@ -71,6 +73,7 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
     
+    # experimenting with a decorator
     @staticmethod
     def warn_duplicate_tag(func):
         def wrapper(self: Self, *args, **kwargs):
@@ -83,7 +86,7 @@ class NodeConfig:
     
     @warn_duplicate_tag
     def _add_readable_tag(self, path: str, type: Type, props: dict[str, TagValue] = {}):
-        tag = Tag(path, DataType.from_type(type), Props.from_value(props), False, [], None)
+        tag = TagConfig(path, py_proto.Type.from_py_type(type), Props.from_value(props), False, [], None)
         self.tags[path] = tag
         logger.info(f"Adding tag with path '{path}' on node '{self.key}'")
         return tag
@@ -101,11 +104,14 @@ class NodeConfig:
         if name not in self.subnodes:
             raise ValueError(f"No subnode {name}") 
         return self.subnodes[name]
+    
+    def add_model(self, model: DataModelConfig):
+        self.models[model.path] = model
 
-    def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
+    def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> TagConfig:
         return self._add_readable_tag(path, type, props)
 
-    def add_writable_tag(self, path: str, type: Type, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]], props: dict[str, Any] = {}) -> Tag:
+    def add_writable_tag(self, path: str, type: Type, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]], props: dict[str, Any] = {}) -> TagConfig:
         tag = self._add_readable_tag(path, type, props)
         return tag.writable(write_handler, responses)
     
