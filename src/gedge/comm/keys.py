@@ -306,10 +306,10 @@ class NodeKeySpace:
         Note: The split key is returned in the order: prefix, name
         
         Arguments:
-            key (str): The user key being split
-
+                key (str): The user key being split
+        
         Returns:
-            tuple[str, str]: The parsed prefix and name
+                tuple[str, str]: The parsed
         '''
         key = key.strip('/')
         if '/' not in key:
@@ -346,6 +346,8 @@ class NodeKeySpace:
         Returns:
             str: The parsed prefix
         '''
+        if 'NODE' not in key_expr:
+            raise ValueError("'NODE' is not in list")
         components = key_expr.split("/NODE")
         return components[0]
     
@@ -408,7 +410,7 @@ class NodeKeySpace:
             i = components.index(METHODS)
         except:
             raise ValueError(f"No method path found in {key_expr}")
-        return key_join(*components[(i + 1):(len(components) - 3)])
+        return key_join(*components[(i + 1):(len(components) - 2)])
 
     @staticmethod
     def method_path_from_response_key(key_expr: str):
