@@ -32,7 +32,7 @@ class TagBind:
 
     def _on_value(self, sample: zenoh.Sample):
         tag_data = self._comm.deserialize(proto.DataObject(), sample.payload.to_bytes())
-        value = DataObject.from_proto(tag_data, self.tag.type)
+        value = DataObject.from_proto(tag_data, self.tag.data_object_config)
         self.last_received = datetime.now()
         self.value = value
 

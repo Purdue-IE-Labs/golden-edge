@@ -9,14 +9,14 @@ logger = logging.getLogger(__name__)
 
 from typing import TYPE_CHECKING, Any, Callable
 if TYPE_CHECKING:
-    from gedge.node.method_response import MethodResponse
+    from gedge.node.method_response import MethodResponseConfig
 
 @dataclass
 class MethodQuery:
     key_expr: str
     params: dict[str, Any]
     _reply: Callable[[int, dict[str, Any], str], None]
-    _responses: list[MethodResponse]
+    _responses: list[MethodResponseConfig]
     
     def reply(self, code: int, body: dict[str, Any] = {}, error: str = ""):
         if not isinstance(error, str):

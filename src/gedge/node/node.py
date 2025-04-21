@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from re import sub
 import uuid
+from gedge.node.method import MethodConfig
+from gedge.node.method_response import MethodResponseConfig
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.data_type import DataType
-from gedge.py_proto.data_model_config import DataModelConfig
+from gedge.py_proto.base_type import BaseType
+from gedge.py_proto.config import Config
+from gedge.py_proto.data_model import DataObject
+from gedge.py_proto.data_model_config import DataModelConfig, DataModelItemConfig
+from gedge.py_proto.data_object_config import DataObjectConfig
+from gedge.py_proto.params_config import ParamsConfig
 from gedge.py_proto.props import Props
 from gedge.node.remote import RemoteConnection
 from gedge.proto import Meta, State, MethodResponse, MethodCall
@@ -15,7 +22,6 @@ from gedge.py_proto.tag_config import TagConfig, TagWriteResponseConfig
 from gedge import py_proto
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
-from gedge.node.method import Method, MethodResponse
 import json5
 
 from typing import Self, Any, TYPE_CHECKING
@@ -32,7 +38,7 @@ class NodeConfig:
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
         self.tags: dict[str, TagConfig] = dict()
-        self.methods: dict[str, Method] = dict()
+        self.methods: dict[str, MethodConfig] = dict()
         self.subnodes: dict[str, SubnodeConfig] = dict()
         self.models: dict[str, DataModelConfig] = dict()
 
@@ -56,7 +62,7 @@ class NodeConfig:
             tag = TagConfig.from_json5(tag_json)
             config.tags[tag.config.path] = tag
         for method_json in obj.get("methods", []):
-            method = Method.from_json5(method_json)
+            method = MethodConfig.from_json5(method_json)
             config.methods[method.path] = method
         from gedge.node.subnode import SubnodeConfig
         for subnode_json in obj.get("subnodes", []):
@@ -86,7 +92,8 @@ class NodeConfig:
     
     @warn_duplicate_tag
     def _add_readable_tag(self, path: str, type: Type, props: dict[str, TagBaseValue] = {}):
-        tag = TagConfig(path, py_proto.Type.from_py_type(type), Props.from_value(props), False, [], None)
+        config = DataModelItemConfig(path, DataObjectConfig(Config(BaseType.from_py_type(type)), Props.from_value(props)))
+        tag = TagConfig(config, False, [], None)
         self.tags[path] = tag
         logger.info(f"Adding tag with path '{path}' on node '{self.key}'")
         return tag
@@ -110,10 +117,6 @@ class NodeConfig:
 
     def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> TagConfig:
         return self._add_readable_tag(path, type, props)
-
-    def add_writable_tag(self, path: str, type: Type, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]], props: dict[str, Any] = {}) -> TagConfig:
-        tag = self._add_readable_tag(path, type, props)
-        return tag.writable(write_handler, responses)
     
     def add_write_responses(self, path: str, responses: list[tuple[int, dict[str, Any]]]):
         if path not in self.tags:
@@ -149,7 +152,7 @@ class NodeConfig:
         del self.tags[path]
     
     def add_method(self, path: str, handler, props: dict[str, Any] = {}):
-        method = Method(path, handler, Props.from_value(props), {}, [])
+        method = MethodConfig(path, handler, Props.from_value(props), ParamsConfig.empty(), [])
         self.methods[path] = method
         logger.info(f"Adding method with path '{path}' on node '{self.key}'")
         return method
@@ -175,9 +178,9 @@ class NodeConfig:
     # essentially to_proto() for the node
     def build_meta(self) -> Meta:
         self._verify_tags()
-        tags: list[proto.Tag] = [t.to_proto() for t in self.tags.values()]
-        methods: list[proto.Method] = [m.to_proto() for m in self.methods.values()]
-        subnodes: list[proto.Subnode] = [s.to_proto() for s in self.subnodes.values()]
+        tags: list[proto.TagConfig] = [t.to_proto() for t in self.tags.values()]
+        methods: list[proto.MethodConfig] = [m.to_proto() for m in self.methods.values()]
+        subnodes: list[proto.SubnodeConfig] = [s.to_proto() for s in self.subnodes.values()]
         meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods, subnodes=subnodes)
         return meta
 
@@ -200,10 +203,10 @@ class NodeSession:
         self._comm.connect()
 
         self._startup()
-        self.tags: dict[str, Tag] = self.config.tags
-        self.tag_write_responses: dict[str, dict[int, WriteResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
-        self.methods: dict[str, Method] = self.config.methods
-        self.method_responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.tags: dict[str, TagConfig] = self.config.tags
+        self.tag_write_responses: dict[str, dict[int, TagWriteResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
+        self.methods: dict[str, MethodConfig] = self.config.methods
+        self.method_responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         self.subnodes: dict[str, SubnodeConfig] = self.config.subnodes
 
     def __enter__(self):
@@ -323,12 +326,10 @@ class NodeSession:
         bind = TagBind(self.ks, self._comm, self.tags[path], value, self.update_tag)
         return bind
     
-    def update_tag(self, path: str, value: Any):
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
+    def update_tag(self, path: str, value: Any | dict):
         tag = self.tags[path]
-        logger.info(f"Updating tag at path {path} with value {value}")
-        self._comm.update_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
+        res = DataObject.from_value(value, tag.config.config)
+        self._comm.update_tag(self.ks, tag.config.path, res.to_proto())
     
     def update_state(self, online: bool):
         online_str = "online" if online else "offline"

@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from ast import Call
-import base64
 from collections import defaultdict
 from dataclasses import dataclass
 import zenoh
 import json
 from gedge.comm.comm import Comm
 from gedge.node import codes
-from gedge.node.body import BodyData
 from gedge.node.error import NodeLookupError
 from gedge import proto
 from gedge.comm import keys
@@ -16,20 +13,22 @@ from gedge.comm.keys import NodeKeySpace, method_response_from_call
 
 from typing import Any, TYPE_CHECKING, Callable
 
-from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagBaseValue, ZenohQueryCallback
-from gedge.node.method import Method
+from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagBaseValue, TagValue, ZenohQueryCallback
+from gedge.node.method import MethodConfig
 from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponse
 from gedge.node.param import params_proto_to_py
+from gedge.py_proto.data_model import DataObject
 from gedge.py_proto.props import Props
 from gedge.node.query import MethodQuery
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.tag_write_reply import TagWriteReply
 import threading
+
+from gedge.py_proto.tag_config import TagConfig, TagWriteResponseConfig
 if TYPE_CHECKING:
     from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
-# ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData | proto.ResponseData
+ProtoMessage = proto.Meta | proto.DataObject | proto.TagWriteResponse | proto.State | proto.MethodCall | proto.MethodResponse
 
 import logging
 logger = logging.getLogger(__name__)
@@ -76,29 +75,29 @@ class MockComm(Comm):
     def cancel_subscription(self, key_expr: str):
         self.subscribers[key_expr] = []
     
-    def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> MockCallback:
+    def _on_method_reply(self, on_reply: MethodReplyCallback, method: MethodConfig) -> MockCallback:
         def _on_reply(reply: MockSample) -> None:
-            assert type(reply.value) == proto.ResponseData
+            assert type(reply.value) == proto.MethodResponse
             self._handle_on_method_reply(method, reply.key_expr, reply.value, on_reply)
         return _on_reply
     
     # TODO: combine this function with comm
     def _tag_write_reply(self, query: zenoh.Query) -> Callable[[int, str], None]:
         def _reply(code: int, error: str = ""):
-            write_response = proto.WriteResponseData(code=code, error=error)
+            write_response = proto.TagWriteResponse(code=code, error=error)
             b = self.serialize(write_response)
             query.reply(key_expr=str(query.key_expr), payload=b)
         return _reply
 
     # TODO: combine this function with comm
-    def _on_tag_write(self, tag: Tag) -> ZenohQueryCallback:
+    def _on_tag_write(self, tag: TagConfig) -> ZenohQueryCallback:
         def _on_write(query: zenoh.Query) -> None:
             reply = self._tag_write_reply(query)
             try:
                 if not query.payload:
                     raise ValueError(f"Empty write request")
-                proto_data = self.deserialize(proto.TagData(), query.payload.to_bytes())
-                data: TagValue = TagData.proto_to_py(proto_data, tag.type)
+                proto_data = self.deserialize(proto.DataObject(), query.payload.to_bytes())
+                data: TagValue = DataObject.proto_to_py(proto_data, tag.data_object_config)
                 logger.info(f"Node {query.key_expr} received tag write at path '{tag.path}' with value '{data}'")
 
                 t = TagWriteQuery(str(query.key_expr), data, tag, reply)
@@ -111,7 +110,7 @@ class MockComm(Comm):
                 except:
                     raise ValueError(f"Tag write handler must call 'reply(...)' at some point")
 
-                write_responses: dict[int, WriteResponse] = {r.code:r for r in tag.responses}
+                write_responses: dict[int, TagWriteResponseConfig] = {r.code:r for r in tag.responses}
                 if code not in write_responses:
                     raise LookupError(f"Tag write handler for tag {tag.path} given incorrect code {code} not found in callback config")
 
@@ -123,20 +122,20 @@ class MockComm(Comm):
                 reply(*response)
         return _on_write
     
-    def _method_reply(self, key_expr: str, method: Method):
+    def _method_reply(self, key_expr: str, method: MethodConfig):
         return super()._method_reply(key_expr, method)
     
-    def _on_method_query(self, method: Method):
+    def _on_method_query(self, method: MethodConfig):
         def _on_query(sample: MockSample) -> None:
-            assert type(sample.value) == proto.MethodQueryData
+            assert type(sample.value) == proto.MethodCall
             self._handle_method_query(method, sample.key_expr, sample.value)
         return _on_query
     
-    def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
+    def method_queryable(self, ks: NodeKeySpace, method: MethodConfig) -> None:
         super().method_queryable(ks, method)
     
     # TODO: combine with comm
-    def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> None:
+    def tag_queryable(self, ks: NodeKeySpace, tag: TagConfig) -> None:
         key_expr = ks.tag_write_path(tag.path)
         zenoh_handler = self._on_tag_write(tag)
         self._queryable(key_expr, zenoh_handler)

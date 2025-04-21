@@ -7,7 +7,6 @@ import zenoh
 import json
 from gedge.comm.sequence_number import SequenceNumber
 from gedge.node import codes
-from gedge.node.body import BodyData
 from gedge.node.error import NodeLookupError, TagLookupError
 from gedge import proto
 from gedge.comm import keys
@@ -15,11 +14,12 @@ from gedge.comm.keys import NodeKeySpace, internal_to_user_key, method_response_
 
 from typing import Any, TYPE_CHECKING, Callable
 
-from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagBaseValue, TagWriteHandler
-from gedge.node.method import Method
+from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagBaseValue, TagValue, TagWriteHandler
+from gedge.node.method import MethodConfig
 from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponse
+from gedge.node.method_response import MethodResponseConfig
 from gedge.node.param import params_proto_to_py
+from gedge.node.body import BodyConfig
 from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.props import Props
 from gedge.node.query import MethodQuery
@@ -116,9 +116,7 @@ class Comm:
                 node: str = NodeKeySpace.name_from_key(str(sample.key_expr))
                 raise TagLookupError(path, node)
             tag_config = tags[path]
-            do = DataObject.from_proto(data, tag_config.type)
-            value = do.to
-            value = DataObject.proto_to_py(tag_data, tag_config.type)
+            value = DataObject.proto_to_py(data, tag_config.data_object_config)
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
@@ -137,16 +135,16 @@ class Comm:
             on_meta(str(sample.key_expr), meta)
         return _on_meta
 
-    def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> ZenohCallback:
+    def _on_method_reply(self, on_reply: MethodReplyCallback, method: MethodConfig) -> ZenohCallback:
         def _on_reply(sample: zenoh.Sample) -> None:
             if not sample:
                 logger.warning(f"reply from method failed")
                 return
-            r: proto.ResponseData = self.deserialize(proto.ResponseData(), sample.payload.to_bytes())
+            r: proto.MethodResponse = self.deserialize(proto.MethodResponse(), sample.payload.to_bytes())
             self._handle_on_method_reply(method, str(sample.key_expr), r, on_reply)
         return _on_reply
     
-    def _handle_on_method_reply(self, method: Method, key_expr: str, r: proto.ResponseData, on_reply: MethodReplyCallback) -> None:
+    def _handle_on_method_reply(self, method: MethodConfig, key_expr: str, r: proto.MethodResponse, on_reply: MethodReplyCallback) -> None:
         responses = {r.code: r for r in method.responses}
         '''
         Design decision here. The problem is that golden-edge reserved codes do not have a 
@@ -159,15 +157,15 @@ class Comm:
         '''
         logger.info(f"Received reply from method at path '{method.path}' with code {r.code}")
         if r.code in {codes.DONE, codes.METHOD_ERROR}:
-            response: MethodResponse = MethodResponse(r.code, Props.empty(), {})
+            response_config: MethodResponseConfig = MethodResponseConfig(r.code, Props.empty(), BodyConfig.empty())
         else:
-            response: MethodResponse = responses[r.code]
-        body: dict[str, BodyData] = {}
+            response_config: MethodResponseConfig = responses[r.code]
+        body: dict[str, DataObject] = {}
         for key, value in r.body.items():
-            data_type = response.body[key].type
-            props = response.body[key].props
-            body[key] = BodyData(TagData.proto_to_py(value, data_type), props.to_value())
-        props = response.props.to_value()
+            body_config = response_config.body[key]
+            props = response_config.body[key].props
+            body[key] = DataObject.from_proto(value, body_config)
+        props = response_config.props.to_value()
         reply = MethodReply(key_expr, r.code, body, r.error, props)
         on_reply(reply)
         if r.code in {codes.DONE, codes.METHOD_ERROR}:
@@ -176,19 +174,19 @@ class Comm:
     
     def _tag_write_reply(self, query: zenoh.Query) -> Callable[[int, str], None]:
         def _reply(code: int, error: str = ""):
-            write_response = proto.WriteResponseData(code=code, error=error)
+            write_response = proto.TagWriteResponse(code=code, error=error)
             b = self.serialize(write_response)
             query.reply(key_expr=str(query.key_expr), payload=b)
         return _reply
 
-    def _on_tag_write(self, tag: Tag) -> ZenohQueryCallback:
+    def _on_tag_write(self, tag: TagConfig) -> ZenohQueryCallback:
         def _on_write(query: zenoh.Query) -> None:
             reply = self._tag_write_reply(query)
             try:
                 if not query.payload:
                     raise ValueError(f"Empty write request")
-                proto_data = self.deserialize(proto.TagData(), query.payload.to_bytes())
-                data: TagValue = TagData.proto_to_py(proto_data, tag.type)
+                proto_data = self.deserialize(proto.DataObject(), query.payload.to_bytes())
+                data: DataObject = DataObject.from_proto(proto_data, tag.data_object_config)
                 logger.info(f"Node {query.key_expr} received tag write at path '{tag.path}' with value '{data}'")
 
                 t = TagWriteQuery(str(query.key_expr), data, tag, reply)
@@ -201,7 +199,7 @@ class Comm:
                 except:
                     raise ValueError(f"Tag write handler must call 'reply(...)' at some point")
 
-                write_responses: dict[int, WriteResponse] = {r.code:r for r in tag.responses}
+                write_responses: dict[int, TagWriteResponseConfig] = {r.code:r for r in tag.responses}
                 if code not in write_responses:
                     raise LookupError(f"Tag write handler for tag {tag.path} given incorrect code {code} not found in callback config")
 
@@ -213,27 +211,27 @@ class Comm:
                 reply(*response)
         return _on_write
     
-    def _method_reply(self, key_expr: str, method: Method) -> Callable[[int, dict[str, TagValue], str], None]:
+    def _method_reply(self, key_expr: str, method: MethodConfig) -> Callable[[int, dict[str, TagValue], str], None]:
         responses = method.responses
         def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
             if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
                 raise ValueError(f"invalid repsonse code {code}")
-            new_body: dict[str, proto.TagData] = {}
+            new_body: dict[str, proto.DataObject] = {}
             for key, value in body.items():
                 response = [i for i in responses if i.code == code][0]
-                data_type = response.body[key].type
-                new_body[key] = TagData.py_to_proto(value, data_type)
-            r = proto.ResponseData(code=code, body=new_body, error=error)
+                config = response.body[key]
+                new_body[key] = DataObject.py_to_proto(value, config)
+            r = proto.MethodResponse(code=code, body=new_body, error=error)
             self._send_proto(key_expr=key_expr, value=r)
         return _reply
     
-    def _on_method_query(self, method: Method):
+    def _on_method_query(self, method: MethodConfig):
         def _on_query(sample: zenoh.Sample) -> None:
-            m = self.deserialize(proto.MethodQueryData(), sample.payload.to_bytes())
+            m = self.deserialize(proto.MethodCall(), sample.payload.to_bytes())
             self._handle_method_query(method, str(sample.key_expr), m)
         return _on_query
 
-    def _handle_method_query(self, method: Method, key_expr: str, value: proto.MethodQueryData):
+    def _handle_method_query(self, method: MethodConfig, key_expr: str, value: proto.MethodCall):
         params: dict[str, Any] = params_proto_to_py(dict(value.params), method.params)
         
         key_expr = method_response_from_call(key_expr)
@@ -296,32 +294,32 @@ class Comm:
         zenoh_handler = self._on_state(handler)
         self._subscriber(key_expr, zenoh_handler)
     
-    def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, Tag]) -> None:
+    def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, TagConfig]) -> None:
         key_expr = ks.tag_data_path(path)
         zenoh_handler = self._on_tag_data(handler, tags)
         self._subscriber(key_expr, zenoh_handler)
 
-    def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> zenoh.Queryable:
+    def tag_queryable(self, ks: NodeKeySpace, tag: TagConfig) -> zenoh.Queryable:
         key_expr = ks.tag_write_path(tag.path)
         zenoh_handler = self._on_tag_write(tag)
         logger.debug(f"tag queryable on {key_expr}")
         return self._queryable(key_expr, zenoh_handler)
     
-    def query_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> zenoh.Reply:
+    def query_tag(self, ks: NodeKeySpace, path: str, value: proto.DataObject) -> zenoh.Reply:
         b = self.serialize(value)
         logger.debug(f"querying tag at path {ks.tag_write_path(path)}")
         return self._query_sync(ks.tag_write_path(path), payload=b)
     
-    def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
+    def method_queryable(self, ks: NodeKeySpace, method: MethodConfig) -> None:
         key_expr = ks.method_query_listen(method.path)
         logger.info(f"Setting up method at path {method.path} on node {ks.name}")
         zenoh_handler = self._on_method_query(method)
         self._subscriber(key_expr, zenoh_handler)
     
-    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, method: Method) -> str:
+    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, params: dict[str, proto.DataObject], on_reply: MethodReplyCallback, method: MethodConfig) -> str:
         method_query_id = str(uuid.uuid4())
         query_key_expr = ks.method_query(path, caller_id, method_query_id)
-        query_data = proto.MethodQueryData(params=params)
+        query_data = proto.MethodCall(params=params)
 
         response_key_expr = ks.method_response(path, caller_id, method_query_id)
         zenoh_handler = self._on_method_reply(on_reply, method)
@@ -330,14 +328,14 @@ class Comm:
 
         return query_key_expr
 
-    def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
+    def update_tag(self, ks: NodeKeySpace, path: str, value: proto.DataObject):
         key_expr = ks.tag_data_path(path)
         self._send_proto(key_expr, value)
 
-    def write_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> proto.WriteResponseData:
+    def write_tag(self, ks: NodeKeySpace, path: str, value: proto.DataObject) -> proto.TagWriteResponse:
         reply = self.query_tag(ks, path, value)
         if reply.ok:
-            d: proto.WriteResponseData = self.deserialize(proto.WriteResponseData(), reply.result.payload.to_bytes())
+            d: proto.TagWriteResponse = self.deserialize(proto.TagWriteResponse(), reply.result.payload.to_bytes())
             return d
         else:
             # TODO: more granular exception?

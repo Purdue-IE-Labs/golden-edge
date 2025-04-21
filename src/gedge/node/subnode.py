@@ -5,8 +5,8 @@ import uuid
 from gedge import proto
 from gedge.comm.comm import Comm
 from gedge.comm.keys import NodeKeySpace, SubnodeKeySpace
-from gedge.node.method import Method
-from gedge.node.method_response import MethodResponse
+from gedge.node.method import MethodConfig
+from gedge.node.method_response import MethodResponseConfig
 from gedge.node.node import NodeConfig, NodeSession
 from gedge.node.remote import RemoteConnection
 from gedge.py_proto.tag_config import TagConfig, TagWriteResponseConfig
@@ -17,7 +17,7 @@ logger = logging.getLogger(__file__)
 
 # inherit at some point but not now?
 class SubnodeConfig(NodeConfig):
-    def __init__(self, name: str, parent: NodeKeySpace, tags: dict[str, TagConfig], methods: dict[str, Method], subnodes: dict[str, SubnodeConfig]):
+    def __init__(self, name: str, parent: NodeKeySpace, tags: dict[str, TagConfig], methods: dict[str, MethodConfig], subnodes: dict[str, SubnodeConfig]):
         self.name = name
         self.tags = tags
         self.methods = methods
@@ -46,7 +46,7 @@ class SubnodeConfig(NodeConfig):
             tag = TagConfig.from_json5(tag_json)
             tags[tag.path] = tag
         for method_json in json.get("methods", []):
-            method = Method.from_json5(method_json)
+            method = MethodConfig.from_json5(method_json)
             methods[method.path] = method
         for subnode_json in json.get("subnodes", []):
             ks = SubnodeKeySpace(parent, name)
@@ -64,7 +64,7 @@ class SubnodeConfig(NodeConfig):
     def from_proto(cls, proto: proto.SubnodeConfig, parent: NodeKeySpace) -> Self:
         name = proto.name
         tags = {t.path: t for t in [TagConfig.from_proto(t) for t in proto.tags]}
-        methods = {m.path: m for m in [Method.from_proto(m) for m in proto.methods]}
+        methods = {m.path: m for m in [MethodConfig.from_proto(m) for m in proto.methods]}
         ks = SubnodeKeySpace(parent, proto.name)
         subnodes = {s.name: s for s in [SubnodeConfig.from_proto(s, ks) for s in proto.subnodes]}
         return cls(name, parent, tags, methods, subnodes)
@@ -81,8 +81,8 @@ class SubnodeSession(NodeSession):
 
         self.tags: dict[str, TagConfig] = self.config.tags
         self.tag_write_responses: dict[str, dict[int, TagWriteResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
-        self.methods: dict[str, Method] = self.config.methods
-        self.method_responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.methods: dict[str, MethodConfig] = self.config.methods
+        self.method_responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         self.subnodes: dict[str, SubnodeConfig] = self.config.subnodes
     
     def subnode(self, name: str) -> SubnodeSession:
@@ -108,7 +108,7 @@ class RemoteSubConnection(RemoteConnection):
         self.meta = subnode_config
         self.tags = self.meta.tags
         self.methods = self.meta.methods
-        self.responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         self.subnodes: dict[str, SubnodeConfig] = self.meta.subnodes
     
     def subnode(self, name: str) -> RemoteSubConnection:

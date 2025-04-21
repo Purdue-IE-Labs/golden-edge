@@ -5,7 +5,7 @@ from tkinter import W
 from typing import Any, Self, TYPE_CHECKING
 
 from gedge import proto
-from gedge.node.gtypes import TagBaseValue
+from gedge.node.gtypes import TagBaseValue, TagValue
 from gedge.py_proto.base_type import BaseType
 
 if TYPE_CHECKING:
@@ -73,13 +73,21 @@ class DataObject:
         return cls(data, config)
     
     @classmethod
-    def from_model_value(cls, value: list[Any], config: DataObjectConfig) -> Self:
+    def py_to_proto(cls, value: TagValue, config: DataObjectConfig) -> proto.DataObject:
+        return cls.from_value(value, config).to_proto()
+    
+    @classmethod
+    def proto_to_py(cls, proto: proto.DataObject, config: DataObjectConfig) -> TagValue:
+        return cls.from_proto(proto, config).to_value()
+    
+    @classmethod
+    def from_model_value(cls, value: dict, config: DataObjectConfig) -> Self:
         res = cls([], config)
         configs = config.get_config_items()
         if configs is None:
             raise Exception
-        for val, c in zip(value, configs):
-            if isinstance(val, list):
+        for (key, val), c in zip(value.items(), configs):
+            if isinstance(val, dict):
                 res.data.append(cls.from_model_value(val, c)) # type: ignore
             res.data.append(cls.from_py_value(val, c)) # type: ignore
         return res
@@ -92,7 +100,14 @@ class DataObject:
             raise Exception(value, config)
         return cls(BaseData.from_value(value, type), config)
     
-    def to_value(self) -> TagBaseValue | dict[str, Any]:
+    @classmethod
+    def from_value(cls, value: Any | dict, config: DataObjectConfig) -> Self:
+        if isinstance(value, dict):
+            return cls.from_model_value(value, config)
+        else:
+            return cls.from_py_value(value, config) 
+    
+    def to_value(self) -> TagBaseValue | dict:
         if self.is_base_data():
             return self.data.to_py() # type: ignore
 

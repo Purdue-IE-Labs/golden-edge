@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from queue import Queue, Empty
 import time
-from gedge.node.method import Method
+from gedge.node.gtypes import TagBaseValue, TagValue
+from gedge.node.method import MethodConfig
 from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponse
+from gedge.node.method_response import MethodResponseConfig
 from gedge.node import codes
 from gedge import proto
 from gedge.node.error import MethodLookupError, SessionError, TagLookupError
@@ -16,6 +17,8 @@ import uuid
 from typing import Any, Iterator, Callable, TYPE_CHECKING
 
 from gedge.node.tag_write_reply import TagWriteReply
+from gedge.py_proto.data_model import DataObject
+from gedge.py_proto.tag_config import TagConfig
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
     from gedge.node.subnode import RemoteSubConnection
@@ -37,11 +40,11 @@ class RemoteConnection:
         would need to react to that (i.e. be properties)
         '''
         self.meta = self._comm.pull_meta_message(ks)
-        tags: list[Tag] = [Tag.from_proto(t) for t in self.meta.tags]
+        tags: list[TagConfig] = [TagConfig.from_proto(t) for t in self.meta.tags]
         self.tags = {t.path: t for t in tags}
-        methods: list[Method] = [Method.from_proto(m) for m in self.meta.methods]
+        methods: list[MethodConfig] = [MethodConfig.from_proto(m) for m in self.meta.methods]
         self.methods = {m.path: m for m in methods}
-        self.responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
 
         from gedge.node.subnode import SubnodeConfig
         subnodes: list[SubnodeConfig] = [SubnodeConfig.from_proto(s, self.ks) for s in self.meta.subnodes]
@@ -109,12 +112,13 @@ class RemoteConnection:
         r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r
 
-    def _write_tag(self, path: str, value: Any) -> TagWriteReply:
+    def _write_tag(self, path: str, value: TagValue) -> TagWriteReply:
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        response = self._comm.write_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
+        if tag.config.config.is_base_type():
+            response = self._comm.write_tag(self.ks, tag.path, DataObject.from_py_value(value, tag.config.config).to_proto())
         code, error = response.code, response.error
 
         '''
@@ -133,10 +137,10 @@ class RemoteConnection:
         reply = TagWriteReply(self.ks.tag_write_path(path), code, error, value, props)
         return reply
 
-    def write_tag(self, path: str, value: Any) -> TagWriteReply:
+    def write_tag(self, path: str, value: TagValue) -> TagWriteReply:
         return self._write_tag(path, value)
 
-    async def write_tag_async(self, path: str, value: Any) -> TagWriteReply:
+    async def write_tag_async(self, path: str, value: TagValue) -> TagWriteReply:
         return self._write_tag(path, value)
     
     def call_method(self, _path: str, _on_reply: MethodReplyCallback, **kwargs) -> None:
@@ -144,10 +148,10 @@ class RemoteConnection:
             raise MethodLookupError(_path, self.ks.name)
         
         method = self.methods[_path]
-        params: dict[str, proto.TagData] = {}
+        params: dict[str, proto.DataObject] = {}
         for key, value in kwargs.items():
-            data_type = method.params[key].type
-            params[key] = TagData.py_to_proto(value, data_type)
+            config = method.params[key]
+            params[key] = DataObject.py_to_proto(value, config)
 
         logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
         self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
@@ -171,10 +175,10 @@ class RemoteConnection:
             if param not in kwargs:
                 raise LookupError(f"Parameter {param} defined in config but not included in method call for method {method.path}")
         
-        params: dict[str, proto.TagData] = {}
+        params: dict[str, proto.DataObject] = {}
         for key, value in kwargs.items():
-            data_type = method.params[key].type
-            params[key] = TagData.py_to_proto(value, data_type)
+            config = method.params[key]
+            params[key] = DataObject.py_to_proto(value, config)
         
         replies: Queue[MethodReply] = Queue()
         def _on_reply(reply: MethodReply) -> None:

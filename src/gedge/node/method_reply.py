@@ -5,19 +5,19 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from gedge.node import codes
+from gedge.py_proto.data_model import DataObject
 if TYPE_CHECKING:
-    from gedge.node.gtypes import TagValue
-    from gedge.node.body import BodyData
+    from gedge.node.gtypes import TagBaseValue
 
 @dataclass
 class MethodReply:
     key_expr: str
     code: int
-    body: dict[str, BodyData]
+    body: dict[str, DataObject]
     error: str | None
     # method_config: Method
     # response_config: MethodResponse
-    props: dict[str, TagValue]
+    props: dict[str, DataObject]
 
     def is_error(self):
         return self.code == codes.METHOD_ERROR

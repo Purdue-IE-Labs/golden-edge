@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from gedge import proto
 
 from typing import Any, Self, TYPE_CHECKING
+
+from gedge.py_proto.data_object_config import DataObjectConfig
 if TYPE_CHECKING:
     from gedge.py_proto.data_model_config import DataModelItemConfig
     from gedge.node.gtypes import TagWriteHandler
@@ -45,7 +47,15 @@ class TagConfig:
     config: DataModelItemConfig
     _writable: bool
     responses: list[TagWriteResponseConfig]
-    write_handle: TagWriteHandler | None = field(default=None)
+    write_handler: TagWriteHandler | None = field(default=None)
+
+    @property
+    def path(self) -> str:
+        return self.config.path
+    
+    @property
+    def data_object_config(self) -> DataObjectConfig:
+        return self.config.config
 
     def to_proto(self) -> proto.TagConfig:
         config = self.config.to_proto()

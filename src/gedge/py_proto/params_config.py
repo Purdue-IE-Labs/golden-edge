@@ -15,14 +15,14 @@ if TYPE_CHECKING:
 class ParamsConfig:
     params: dict[str, DataObjectConfig]
 
-    def to_proto(self):
-        body_proto = {key:value.to_proto() for key, value in self.params.items()}
-        return proto.BodyConfig(body=body_proto)
+    def to_proto(self) -> proto.ParamsConfig:
+        params = {key:value.to_proto() for key, value in self.params.items()}
+        return proto.ParamsConfig(params=params)
     
     @classmethod
     def from_proto(cls, proto: proto.ParamsConfig) -> Self:
-        body = {key:DataObjectConfig.from_proto(value) for key, value in proto.params.items()}
-        return cls(body)
+        params = {key:DataObjectConfig.from_proto(value) for key, value in proto.params.items()}
+        return cls(params)
     
     @classmethod
     def from_json5(cls, json: Any) -> Self:
@@ -33,16 +33,12 @@ class ParamsConfig:
             params[key] = DataObjectConfig.from_json5(value)
         return cls(params)
 
-
-@dataclass
-class ParamData:
-    value: TagBaseValue
-    props: dict[str, TagBaseValue]
-
-
-# def params_proto_to_py(proto: dict[str, proto.DataObject], params_config: dict[str, Param]) -> dict[str, Any]:
-#     params: dict[str, Any] = {}
-#     for key, value in proto.items():
-#         data_type = params_config[key].type
-#         params[key] = TagData.proto_to_py(value, data_type)
-#     return params
+    @classmethod
+    def empty(cls) -> Self:
+        return cls({})
+    
+    def __getitem__(self, key: str) -> DataObjectConfig:
+        return self.params[key]
+    
+    def __iter__(self):
+        yield from self.params
