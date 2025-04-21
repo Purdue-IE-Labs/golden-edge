@@ -1,14 +1,13 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from tkinter import N
 
 from gedge import proto
-from gedge.py_proto.props import Props
 
 from typing import Any, Self, TYPE_CHECKING
 if TYPE_CHECKING:
     from gedge.py_proto.data_model_config import DataModelItemConfig
     from gedge.node.gtypes import TagWriteHandler
+    from gedge.py_proto.props import Props
 
 @dataclass
 class TagWriteResponseConfig:
@@ -22,6 +21,7 @@ class TagWriteResponseConfig:
 
     @classmethod
     def from_proto(cls, response: proto.TagWriteResponseConfig) -> Self:
+        from gedge.py_proto.props import Props
         code = response.code
         props = Props.from_proto(response.props)
         return cls(code, props)
@@ -65,7 +65,7 @@ class TagConfig:
         if not isinstance(json, dict):
             raise ValueError(f"invalid tag, tag must be a dict")
         
-        if not("path" in json and "type" in json):
+        if not ("path" in json and "type" in json):
             raise LookupError(f"tag must include both a path and a type: {json}")
         config = DataModelItemConfig.from_json5(json)
         writable = json.get("writable", False)
@@ -76,17 +76,10 @@ class TagConfig:
 
         return cls(config, writable, responses)
     
-    def writable(self, write_handler: TagWriteHandler, responses: list[tuple[int, dict[str, Any]]] = []):
-        self._writable = True
-        self.write_handler = write_handler
-        for tup in responses:
-            self.add_write_response(tup[0], Props.from_value(tup[1]))
-        return self
-    
     def is_writable(self):
         return self._writable
     
-    def add_write_response(self, code: int, props: Props = Props.empty()):
+    def add_write_response(self, code: int, props: Props):
         response = TagWriteResponseConfig(code, props)
         if len([x for x in self.responses if response.code == x.code]) > 0:
             raise ValueError(f"Tag write responses must have unique codes, and code {response.code} is not unique")

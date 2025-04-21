@@ -20,7 +20,7 @@ import json5
 
 from typing import Self, Any, TYPE_CHECKING
 if TYPE_CHECKING:
-    from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, Type, ZenohQueryCallback, TagWriteHandler, MethodHandler
+    from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagBaseValue, Type, ZenohQueryCallback, TagWriteHandler, MethodHandler
     from gedge.node.subnode import SubnodeConfig
     from gedge.node.subnode import SubnodeSession
 
@@ -54,7 +54,7 @@ class NodeConfig:
         config = NodeConfig(obj["key"])
         for tag_json in obj.get("tags", []):
             tag = TagConfig.from_json5(tag_json)
-            config.tags[tag.path] = tag
+            config.tags[tag.config.path] = tag
         for method_json in obj.get("methods", []):
             method = Method.from_json5(method_json)
             config.methods[method.path] = method
@@ -85,7 +85,7 @@ class NodeConfig:
         return wrapper
     
     @warn_duplicate_tag
-    def _add_readable_tag(self, path: str, type: Type, props: dict[str, TagValue] = {}):
+    def _add_readable_tag(self, path: str, type: Type, props: dict[str, TagBaseValue] = {}):
         tag = TagConfig(path, py_proto.Type.from_py_type(type), Props.from_value(props), False, [], None)
         self.tags[path] = tag
         logger.info(f"Adding tag with path '{path}' on node '{self.key}'")

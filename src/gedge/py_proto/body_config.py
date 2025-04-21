@@ -25,19 +25,13 @@ class BodyConfig:
         return cls(body)
     
     @classmethod
-    def from_json5(cls, body: Any) -> Self:
-        # TODO: stuff gonna look different json side
-        if isinstance(body, str):
-            type = DataType.from_json5(body)
-            return cls(type, Props.empty())
-
-        if not isinstance(body, dict):
-            raise ValueError(f"invalid body {body}")
-        if "type" not in body:
-            raise ValueError(f"body {body} must have type")
-        type = DataType.from_json5(body["type"])
-        props = Props.from_json5(body.get("props", {}))
-        return cls(type, props)
+    def from_json5(cls, json: Any) -> Self:
+        if not isinstance(json, dict):
+            raise ValueError
+        body = {}
+        for key, value in json.items():
+            body[key] = DataObjectConfig.from_json5(value)
+        return cls(body)
 
 # @dataclass
 # class BodyData:

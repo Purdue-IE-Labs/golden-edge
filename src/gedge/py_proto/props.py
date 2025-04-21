@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from gedge import proto
 
@@ -7,21 +7,22 @@ from typing import Any, Self, TYPE_CHECKING
 
 from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.data_model import DataObject
-from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.data_model_object_config import DataModelObjectConfig
 from gedge.py_proto.data_model_type import DataModelType
+from gedge.py_proto.data_object_config import DataObjectConfig
 
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagBaseValue
-    from gedge.py_proto.config import Config
-    from gedge.comm.comm import Comm
     from gedge.py_proto.base_data import BaseData
 
 @dataclass
 class Prop:
-    config: Config
+    # TODO: could remove config because DataObject has a DataObjectConfig?
     value: DataObject
-    temp_object: dict | None = field(default=None)
+
+    @property
+    def config(self):
+        return self.value.config.config
     
     def to_proto(self) -> proto.Prop:
         config = self.config.to_proto()
@@ -32,57 +33,49 @@ class Prop:
         from gedge.py_proto.base_data import BaseData
         assert isinstance(self.value.data, BaseData)
         return self.value.data
-    
+
     @classmethod
     def from_json5(cls, json5: Any):
         from gedge.py_proto.config import Config
-        from gedge.py_proto.base_data import BaseData
         if isinstance(json5, dict):
-            # we cannot pull model right now because we are just parsing the json5
+            # we do not pull the model from the historian
+            # we instead use a local version of it
             path: str = json5["model_path"]
             config = Config(DataModelObjectConfig(DataModelType(path)))
-            return cls(config, DataObject([]), json5["model"])
+            c = config.config.load(DataModelType(path)) # type: ignore
+            res = DataObject.from_json5(json5["model"], DataObjectConfig.from_model_config(c))
+            return cls(res)
         else:
             t = Prop.intuit_type(json5)
-            data = BaseData.from_value(json5, t)
-            return cls(Config(t), DataObject(data))
+            ob = DataObjectConfig.from_base_type(t)
+            res = DataObject.from_py_value(json5, ob)
+            return cls(res)
     
     def to_json5(self) -> dict | Any:
-        from gedge.py_proto.base_data import BaseData
-        if isinstance(self.config.config, BaseType):
-            assert isinstance(self.value.data, BaseData)
-            return self.value.data.value
-        else:
-            j = {}
-            assert not isinstance(self.value.data, BaseData)
-            for object in self.value.data:
-                j = object.to_json5(self.config.config.repr)
-            return j
-    
-    def fetch(self, comm: Comm):
-        if not isinstance(self.config.config, DataModelObjectConfig):
-            return
-        if not isinstance(self.config.config.repr, DataModelConfig):
-            return
-        if not self.temp_object:
-            return
-        config = comm.pull_model(self.config.config.repr.path)
-        # TODO
-        # DataObject.from_json5(self.temp_object, config)
-        return
+        if self.config.is_base_type():
+            return self.value.data.value # type: ignore
+        j = {}
+        data: list[DataObject] = self.value.data # type: ignore
+        configs = self.config.get_model_items()
+        if configs is None:
+            raise Exception
+        for d, c in zip(data, configs):
+            j[c.path] = c.config.props.to_json5()
+        return j
     
     @classmethod
     def from_proto(cls, prop: proto.Prop) -> Self:
         from gedge.py_proto.config import Config
         config = Config.from_proto(prop.config)
-        value = DataObject.from_proto(prop.value, config)
-        return cls(config, value)
+        value = DataObject.from_proto(prop.value, DataObjectConfig.from_config(config))
+        return cls(value)
     
     @classmethod
     def from_value(cls, value: TagBaseValue) -> Self:
         type_ = cls.intuit_type(value)
-        value_ = DataObject.from_value(value, type_)
-        return cls(type_, value_)
+        ob = DataObjectConfig.from_base_type(type_)
+        value_ = DataObject.from_py_value(value, ob)
+        return cls(value_)
     
     @staticmethod
     def intuit_type(value: Any) -> BaseType:
@@ -122,9 +115,9 @@ class Props:
     def from_proto(cls, props: proto.Props) -> Self:
         return cls({key:Prop.from_proto(value) for key, value in props.props.items()})
     
-    # @classmethod
-    # def from_value(cls, props: dict[str, Any]) -> Self:
-    #     return cls({key:Prop.from_value(value) for key, value in props.items()})
+    @classmethod
+    def from_value(cls, props: dict[str, Any]) -> Self:
+        return cls({key:Prop.from_value(value) for key, value in props.items()})
     
     @classmethod
     def from_json5(cls, props: Any) -> Self:

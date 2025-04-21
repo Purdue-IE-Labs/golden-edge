@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from tkinter import W
 from typing import TYPE_CHECKING, Any, Self
+
+import json5
 
 from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.data_model_type import DataModelType
 from gedge import proto
+from gedge.py_proto.singleton import Singleton
 
 if TYPE_CHECKING:
     from gedge.comm.comm import Comm
@@ -36,8 +40,41 @@ class DataModelObjectConfig:
     def to_json5(self) -> dict | str:
         return self.repr.to_json5()
     
-    def fetch(self, comm: Comm):
-        if isinstance(self.repr, DataModelConfig):
-            return self.repr
-        self.repr = comm.pull_model(self.repr.path)
-        
+    def fetch(self, comm: Comm) -> bool:
+        if self.is_embedded():
+            return True
+        model = comm.pull_model(self.repr.path)
+        if not model:
+            return False
+        self.repr = model
+        return True
+    
+    def load(self, path: DataModelType) -> DataModelConfig:
+        config = load(path)
+        self.repr = config
+        return config
+    
+    def is_path(self):
+        return isinstance(self.repr, DataModelType)
+    
+    def is_embedded(self):
+        return isinstance(self.repr, DataModelConfig)
+    
+    def get_path(self) -> DataModelType | None:
+        if not self.is_path():
+            return None
+        return self.repr # type: ignore
+
+    def get_embedded(self) -> DataModelConfig | None:
+        if not self.is_embedded():
+            return None
+        return self.repr # type: ignore
+
+
+def load(path: DataModelType) -> DataModelConfig:
+    directory= Singleton().get_model_dir()
+    path_to_json = f"{directory}/{path.path}"
+    with open(path_to_json, "r") as f:
+        j = json5.load(f)
+    config = DataModelConfig.from_json5(j)
+    return config

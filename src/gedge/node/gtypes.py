@@ -5,7 +5,7 @@ from gedge.node.query import MethodQuery
 from gedge.node.method_reply import MethodReply
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.data_type import DataType
-from gedge.py_proto.data_model import DataObject
+# from gedge.py_proto.data_model import DataObject
 
 # specifies that we expect the user to pass a type itself (or a DataType instance)
 # example: int
@@ -22,7 +22,8 @@ MethodReplyCallback = Callable[[MethodReply], None]
 KeyExpr = str
 StateCallback = Callable[[KeyExpr, proto.State], None]
 MetaCallback = Callable[[KeyExpr, proto.Meta], None]
-TagDataCallback = Callable[[KeyExpr, TagBaseValue | DataObject], None]
+# TagDataCallback = Callable[[KeyExpr, TagBaseValue | DataObject], None]
+TagDataCallback = Callable[[KeyExpr, TagBaseValue], None]
 LivelinessCallback = Callable[[KeyExpr, bool], None]
 ZenohCallback = Callable[[zenoh.Sample], None]
 ZenohQueryCallback = Callable[[zenoh.Query], None]

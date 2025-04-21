@@ -3,6 +3,7 @@ from typing import Any, Self
 
 from gedge import proto
 from gedge.py_proto.base_type import BaseType
+from gedge.py_proto.data_model_config import DataModelItemConfig
 from gedge.py_proto.data_model_object_config import DataModelObjectConfig
 
 
@@ -33,4 +34,28 @@ class Config:
     
     def to_json5(self):
         return self.config.to_json5()
+    
+    def is_base_type(self) -> bool:
+        return isinstance(self.config, BaseType)
+    
+    def is_model_object_config(self) -> bool:
+        return isinstance(self.config, DataModelObjectConfig)
+    
+    def get_base_type(self) -> BaseType | None:
+        if not self.is_base_type():
+            return None
+        return self.config # type: ignore
+    
+    def get_model_object_config(self) -> DataModelObjectConfig | None:
+        if not self.is_model_object_config():
+            return None
+        return self.config # type: ignore
+    
+    def get_model_items(self) -> list[DataModelItemConfig] | None:
+        if not self.is_model_object_config():
+            return None
+        model = self.config.get_embedded() # type: ignore
+        if not model:
+            return None
+        return model.items
 

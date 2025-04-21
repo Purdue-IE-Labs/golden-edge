@@ -24,6 +24,9 @@ test = [
 [project.urls]
 Homepage = "https://github.com/Purdue-IE-Labs/golden-edge"
 
+[project.scripts]
+gedge = "gedge.cli.cli:main"
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"

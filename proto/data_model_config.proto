@@ -5,6 +5,10 @@ import "data_model_session.proto";
 
 // Although both path and version can be found in the keyspace, we include them 
 // here for traceability back to where we originally got the model
+
+// TODO: does a model need props? Or just the items on it?
+// If so, we could add a Config to this, but it would just need to 
+// be known that the config will always be the DataModelType
 message DataModelConfig {
     DataModelType type = 1;
     string extends_path = 2;
@@ -49,6 +53,7 @@ message Config {
 // We require a Prop object because it is distinct from Body and Param
 // In those cases, we are specifying strictly configurations (i.e. 
 // type and props) while a Prop is a type and a value
+// We include it in this file because otherwise we get recursive imports
 message Prop {
     Config config = 1;
     DataObject value = 2;

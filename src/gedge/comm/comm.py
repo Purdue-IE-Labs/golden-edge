@@ -391,7 +391,7 @@ class Comm:
         except:
             return False
     
-    def pull_model(self, path: str) -> DataModelConfig:
+    def pull_model(self, path: str) -> DataModelConfig | None:
         res = self.session.get(keys.model_fetch(path))
         for r in res:
             r: zenoh.Reply
@@ -406,4 +406,4 @@ class Comm:
             except Exception as e:
                 raise ValueError(f"Could not deserialize model from historian")
             return config
-        raise Exception
+        return None

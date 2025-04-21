@@ -34,31 +34,34 @@ class BaseData:
     def from_json5(cls, json5: Any) -> Self:
         base_type = Prop.intuit_type(json5)
         return cls.from_value(json5, base_type)
+    
+    def to_json5(self) -> TagBaseValue:
+        return self.to_py()
 
     @classmethod
     def py_to_proto(cls, value: TagBaseValue, type: BaseType) -> proto.BaseData:
         data = proto.BaseData()
         match type:
             case BaseType.INT:
-                data.int_data = int(value)
+                data.int_data = int(value) # type: ignore
             case BaseType.LONG:
-                data.long_data = int(value)
+                data.long_data = int(value) # type: ignore
             case BaseType.FLOAT:
-                data.float_data = float(value)
+                data.float_data = float(value) # type: ignore
             case BaseType.STRING:
                 data.string_data = str(value)
             case BaseType.BOOL:
                 data.bool_data = bool(value)
             case BaseType.LIST_INT:
-                data.list_int_data.list.extend(list([int(x) for x in value]))
+                data.list_int_data.list.extend(list([int(x) for x in value])) # type: ignore
             case BaseType.LIST_LONG:
-                data.list_long_data.list.extend(list([int(x) for x in value]))
+                data.list_long_data.list.extend(list([int(x) for x in value])) # type: ignore
             case BaseType.LIST_FLOAT:
-                data.list_float_data.list.extend(list([float(x) for x in value]))
+                data.list_float_data.list.extend(list([float(x) for x in value])) # type: ignore
             case BaseType.LIST_STRING:
-                data.list_string_data.list.extend(list([str(x) for x in value]))
+                data.list_string_data.list.extend(list([str(x) for x in value])) # type: ignore
             case BaseType.LIST_BOOL:
-                data.list_bool_data.list.extend(list([bool(x) for x in value]))
+                data.list_bool_data.list.extend(list([bool(x) for x in value])) # type: ignore
             case _:
                 raise ValueError(f"Unknown tag type {type}")
         return data
