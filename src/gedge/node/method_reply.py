@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from gedge.node import codes
-from gedge.py_proto.data_model import DataObject
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagBaseValue
+    from gedge.py_proto.data_model import DataObject
 
 @dataclass
 class MethodReply:

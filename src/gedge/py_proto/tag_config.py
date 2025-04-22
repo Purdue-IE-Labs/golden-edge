@@ -72,11 +72,10 @@ class TagConfig:
     
     @classmethod
     def from_json5(cls, json: Any):
+        from gedge.py_proto.data_model_config import DataModelItemConfig
         if not isinstance(json, dict):
             raise ValueError(f"invalid tag, tag must be a dict")
         
-        if not ("path" in json and "type" in json):
-            raise LookupError(f"tag must include both a path and a type: {json}")
         config = DataModelItemConfig.from_json5(json)
         writable = json.get("writable", False)
         responses = []

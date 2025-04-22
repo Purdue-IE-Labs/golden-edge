@@ -40,14 +40,14 @@ class DataModelObjectConfig:
     def to_json5(self) -> dict | str:
         return self.repr.to_json5()
     
-    def fetch(self, comm: Comm) -> bool:
+    def fetch(self, comm: Comm) -> DataModelConfig | None:
         if self.is_embedded():
-            return True
+            return None
         model = comm.pull_model(self.repr.path)
         if not model:
-            return False
+            return None
         self.repr = model
-        return True
+        return model
     
     def load(self, path: DataModelType) -> DataModelConfig:
         config = load(path)
@@ -61,9 +61,9 @@ class DataModelObjectConfig:
         return isinstance(self.repr, DataModelConfig)
     
     def get_path(self) -> DataModelType | None:
-        if not self.is_path():
-            return None
-        return self.repr # type: ignore
+        if self.is_path():
+            return self.repr # type: ignore
+        return self.repr.path # type: ignore
 
     def get_embedded(self) -> DataModelConfig | None:
         if not self.is_embedded():
@@ -73,7 +73,7 @@ class DataModelObjectConfig:
 
 def load(path: DataModelType) -> DataModelConfig:
     directory= Singleton().get_model_dir()
-    path_to_json = f"{directory}/{path.path}"
+    path_to_json = f"{directory}/{path.path}/v2.json5"
     with open(path_to_json, "r") as f:
         j = json5.load(f)
     config = DataModelConfig.from_json5(j)

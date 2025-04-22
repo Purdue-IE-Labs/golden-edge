@@ -11,6 +11,8 @@ from gedge.py_proto.singleton import Singleton
 def push(args):
     print("PUSH COMMAND")
     path = args.path
+    model_dir = args.model_dir
+    s = Singleton(model_dir)
 
     with gedge.comm.comm.Comm([f"tcp/{args.ip_address}:7447"]) as comm:
         with open(path, "r") as f:
@@ -24,7 +26,7 @@ def push(args):
 def pull(args):
     print("PULL COMMAND")
     path = args.path
-    model_dir = args.output_dir
+    model_dir = args.model_dir
     s = Singleton(model_dir)
 
     with gedge.comm.comm.Comm([f"tcp/{args.ip_address}:7447"]) as comm:
@@ -40,6 +42,7 @@ def pull(args):
 def main():
     parser = argparse.ArgumentParser(prog="gedge", description="Handle models in golden-edge", epilog="Try 'gedge --help' for more info")
     parser.add_argument('--ip-address', type=str, default="192.168.4.60")
+    parser.add_argument("--model-dir", type=str, required=True, help="outptut directory where all pulled models will go")
 
     subparsers = parser.add_subparsers(title="subcommands", help="subcommand help")
 
@@ -49,7 +52,6 @@ def main():
 
     pull_parser = subparsers.add_parser("pull")
     pull_parser.add_argument("path", type=str, help="path where model lives in the historian")
-    pull_parser.add_argument("--output-dir", type=str, required=True, help="outptut directory where all pulled models will go")
     pull_parser.set_defaults(func=pull)
 
     args = parser.parse_args()

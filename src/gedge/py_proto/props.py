@@ -137,3 +137,9 @@ class Props:
     def add_prop(self, key: str, value: Any):
         self.props[key] = Prop.from_value(value)
     
+    def __iter__(self):
+        yield from self.props
+    
+    def __getitem__(self, key: str):
+        return self.props[key]
+    

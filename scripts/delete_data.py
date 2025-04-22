@@ -36,5 +36,4 @@ response = requests.post("http://localhost:8086/api/v2/delete?org=ielabs&bucket=
 print(response.status_code)
 print(response.text)
 
-# must run this is .\C:\Program Files\InfluxData
 # .\influx.exe delete --bucket "method" --start "2020-03-01T00:00:00Z" --stop "2025-11-14T00:00:00Z" --org "ielabs" --skip-verify --token "..."

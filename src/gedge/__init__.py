@@ -1,13 +1,7 @@
+from gedge.py_proto.singleton import Singleton
 from .comm.mock_comm import MockComm
 from .node.node import NodeConfig, NodeSession
-from .node.query import MethodQuery
-from .node.method import MethodResponse
-from .node.data_type import DataType
-from .node.method_reply import MethodReply
-from .node.tag_write_query import TagWriteQuery
-from .node.tag_write_reply import TagWriteReply
 from .node.test_node import TestNodeSession
-from .node.subnode import SubnodeSession
 
 import logging
 import os
@@ -31,3 +25,6 @@ def connect(config: NodeConfig, *connections: str) -> NodeSession:
 def mock_connect(config: NodeConfig) -> TestNodeSession:
     session = TestNodeSession(config, MockComm())
     return session
+
+def use_models(model_dir: str):
+    Singleton().set_model_dir(model_dir)

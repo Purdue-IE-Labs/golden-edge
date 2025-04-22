@@ -10,6 +10,7 @@ from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.config import Config
 from gedge.py_proto.data_model import DataObject
 from gedge.py_proto.data_model_config import DataModelConfig, DataModelItemConfig
+from gedge.py_proto.data_model_object_config import DataModelObjectConfig
 from gedge.py_proto.data_object_config import DataObjectConfig
 from gedge.py_proto.params_config import ParamsConfig
 from gedge.py_proto.props import Props
@@ -40,7 +41,7 @@ class NodeConfig:
         self.tags: dict[str, TagConfig] = dict()
         self.methods: dict[str, MethodConfig] = dict()
         self.subnodes: dict[str, SubnodeConfig] = dict()
-        self.models: dict[str, DataModelConfig] = dict()
+        self.models: dict[str, DataModelObjectConfig] = dict()
 
     @classmethod
     def from_json5(cls, path: str):
@@ -60,7 +61,15 @@ class NodeConfig:
         config = NodeConfig(obj["key"])
         for tag_json in obj.get("tags", []):
             tag = TagConfig.from_json5(tag_json)
-            config.tags[tag.config.path] = tag
+            config.tags[tag.path] = tag
+
+            model = tag.data_object_config.get_model_type()
+            if not model: continue
+            path = model.get_path()
+            if not path:
+                continue
+            config.models[path.path] = model
+
         for method_json in obj.get("methods", []):
             method = MethodConfig.from_json5(method_json)
             config.methods[method.path] = method
@@ -111,9 +120,6 @@ class NodeConfig:
         if name not in self.subnodes:
             raise ValueError(f"No subnode {name}") 
         return self.subnodes[name]
-    
-    def add_model(self, model: DataModelConfig):
-        self.models[model.path] = model
 
     def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> TagConfig:
         return self._add_readable_tag(path, type, props)
@@ -176,12 +182,13 @@ class NodeConfig:
             assert method.handler is not None, f"Method {path} has no handler"
 
     # essentially to_proto() for the node
-    def build_meta(self) -> Meta:
+    def build_meta(self, models: list[DataModelConfig]) -> Meta:
         self._verify_tags()
         tags: list[proto.TagConfig] = [t.to_proto() for t in self.tags.values()]
         methods: list[proto.MethodConfig] = [m.to_proto() for m in self.methods.values()]
         subnodes: list[proto.SubnodeConfig] = [s.to_proto() for s in self.subnodes.values()]
-        meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods, subnodes=subnodes)
+        ms: list[proto.DataModelConfig] = [m.to_proto() for m in models]
+        meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods, subnodes=subnodes, models=ms)
         return meta
 
     def _connect(self, connections: list[str]):
@@ -196,11 +203,13 @@ class NodeSession:
         self.connections: dict[str, RemoteConnection] = dict() # user_key -> RemoteConnection
         self.id = str(uuid.uuid4())
 
-        # TODO: subscribe to our own meta to handle changes to config during session?
-        self.meta = self.config.build_meta()
-
         # connect
         self._comm.connect()
+        self.models = self.fetch_models()
+
+        # TODO: subscribe to our own meta to handle changes to config during session?
+        self.meta = self.config.build_meta(self.models)
+        print(self.meta)
 
         self._startup()
         self.tags: dict[str, TagConfig] = self.config.tags
@@ -316,6 +325,16 @@ class NodeSession:
         
         for s in self.config.subnodes.values():
             add_subnode_callbacks(s)
+    
+    def fetch_models(self) -> list[DataModelConfig]:
+        models = []
+        for path in self.config.models:
+            m = self.config.models[path].fetch(self._comm)
+            print(m)
+            if not m:
+                raise Exception(f"no model at path {path}")
+            models.append(m)
+        return models
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
@@ -328,6 +347,7 @@ class NodeSession:
     
     def update_tag(self, path: str, value: Any | dict):
         tag = self.tags[path]
+        print(tag)
         res = DataObject.from_value(value, tag.config.config)
         self._comm.update_tag(self.ks, tag.config.path, res.to_proto())
     

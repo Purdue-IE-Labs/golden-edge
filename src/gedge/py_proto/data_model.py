@@ -83,13 +83,15 @@ class DataObject:
     @classmethod
     def from_model_value(cls, value: dict, config: DataObjectConfig) -> Self:
         res = cls([], config)
-        configs = config.get_config_items()
+        assert isinstance(res.data, list)
+        configs = config.get_model_items()
         if configs is None:
             raise Exception
-        for (key, val), c in zip(value.items(), configs):
-            if isinstance(val, dict):
-                res.data.append(cls.from_model_value(val, c)) # type: ignore
-            res.data.append(cls.from_py_value(val, c)) # type: ignore
+        configs = {c.path: c for c in configs}
+        for key, val in value.items():
+            if key not in configs:
+                raise Exception(f"No tag with name {key}")
+            res.data.append(cls.from_value(val, configs[key].config))
         return res
     
     @classmethod
@@ -104,8 +106,7 @@ class DataObject:
     def from_value(cls, value: Any | dict, config: DataObjectConfig) -> Self:
         if isinstance(value, dict):
             return cls.from_model_value(value, config)
-        else:
-            return cls.from_py_value(value, config) 
+        return cls.from_py_value(value, config) 
     
     def to_value(self) -> TagBaseValue | dict:
         if self.is_base_data():

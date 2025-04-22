@@ -107,6 +107,11 @@ class DataObjectConfig:
             return None
         return self.config.config.repr # type: ignore
     
+    def get_model_type(self) -> DataModelObjectConfig | None:
+        if not self.is_model_type():
+            return None
+        return self.config.config # type: ignore
+    
     def set_model_config(self, model: DataModelConfig) -> bool:
         if not self.is_model_type():
             return False
