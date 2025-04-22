@@ -59,17 +59,20 @@ class DataObject:
     @classmethod
     def from_proto(cls, proto: proto.DataObject, config: DataObjectConfig) -> Self:
         from gedge.py_proto.base_data import BaseData
-        if proto.base_data:
+        oneof = proto.WhichOneof("data")
+        if oneof == "base_data":
             type = config.get_base_type()
             if not type:
-                raise Exception
+                raise Exception(f"config is not base type but proto has {proto.base_data} base data, {proto.model_data}")
             data = BaseData.from_proto(proto.base_data, type)
-        else:
+        elif oneof == "model_data":
             data = list(proto.model_data.data)
             configs = config.get_config_items()
             if configs is None:
-                raise Exception
+                raise Exception(f"no items in config {config}, but we have a list of {data}")
             data = [DataObject.from_proto(d, c) for d, c in zip(data, configs)]
+        else:
+            raise Exception("none set")
         return cls(data, config)
     
     @classmethod

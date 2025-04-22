@@ -56,18 +56,22 @@ class Prop:
             return self.value.data.value # type: ignore
         j = {}
         data: list[DataObject] = self.value.data # type: ignore
+        model_path = self.config.get_model_object_config().get_path() # type: ignore
         configs = self.config.get_model_items()
         if configs is None:
             raise Exception
         for d, c in zip(data, configs):
-            j[c.path] = c.config.props.to_json5()
+            j["model_path"] = model_path
+            j["model"] = {
+                c.path: d.to_json5()
+            }
         return j
     
     @classmethod
-    def from_proto(cls, prop: proto.Prop) -> Self:
+    def from_proto(cls, proto: proto.Prop) -> Self:
         from gedge.py_proto.config import Config
-        config = Config.from_proto(prop.config)
-        value = DataObject.from_proto(prop.value, DataObjectConfig.from_config(config))
+        config = Config.from_proto(proto.config)
+        value = DataObject.from_proto(proto.value, DataObjectConfig.from_config(config))
         return cls(value)
     
     @classmethod
@@ -129,6 +133,9 @@ class Props:
     def to_json5(self) -> dict:
         j = {key:value.to_json5() for key, value in self.props.items()}
         return j
+    
+    def is_empty(self) -> bool:
+        return len(self.props) == 0
     
     @classmethod
     def empty(cls) -> Self:

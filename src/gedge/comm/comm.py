@@ -389,19 +389,69 @@ class Comm:
         except:
             return False
     
-    def pull_model(self, path: str) -> DataModelConfig | None:
+    def _pull_all_model_versions(self, path: str) -> list[DataModelConfig]:
+        models = []
         res = self.session.get(keys.model_fetch(path))
         for r in res:
             r: zenoh.Reply
-            if not r.ok:
+            if r.err:
                 continue
             result = r.result
+            assert isinstance(result, zenoh.Sample)
             try:
-                print(result.payload.to_bytes())
                 config = self.deserialize(proto.DataModelConfig(), result.payload.to_bytes())
-                print(config)
                 config = DataModelConfig.from_proto(config)
-            except Exception as e:
-                raise ValueError(f"Could not deserialize model from historian")
-            return config
-        return None
+                pulled_version = keys.version_from_model(str(result.key_expr))
+                if config.version != pulled_version:
+                    logger.warning(f"Versions do not match for model {path}, model says {config.version}, key says {pulled_version}")
+                    return []
+                models.append(config)
+            except:
+                raise ValueError(f"Could not deserialize model {result.payload.to_string()} from historian")
+        return models
+    
+    def _pull_model_with_version(self, path: str, version: int) -> DataModelConfig | None:
+        try:
+            res = self.session.get(keys.model_path(path, version)).recv()
+            if res.err:
+                raise Exception
+        except:
+            logger.warning(f"No model found at path {path} with version {version}")
+            return None
+        assert isinstance(res.result, zenoh.Sample)
+        s = res.result
+        try:
+            config = self.deserialize(proto.DataModelConfig(), s.payload.to_bytes())
+            config = DataModelConfig.from_proto(config)
+        except:
+            raise ValueError(f"Could not deserialize model {s.payload.to_string()} from historian")
+
+        pulled_version = keys.version_from_model(str(s.key_expr))
+        if config.version != pulled_version:
+            logger.warning(f"Versions do not match for model {path}, model says {config.version}, key says {pulled_version}")
+            return None
+        return config
+    
+    def pull_model(self, path: str, version: int | None = None) -> DataModelConfig | None:
+        if version is not None:
+            return self._pull_model_with_version(path, version)
+        
+        models = self._pull_all_model_versions(path)
+        if not models:
+            logger.warning(f"No model at path {path}")
+            return None
+        return max(models, key=lambda m : m.version)
+    
+    def push_model(self, model: DataModelConfig) -> bool:
+        res = self.pull_model(model.path)
+        if res and res.version + 1 != model.version:
+            logger.warning(f"Trying to update a model without adding 1 to the version, latest model in historian is {res.version}, you passed {model.version}")
+            return False
+        if not res and model.version not in {0, 1}:
+            logger.warning(f"New model must start at version 0 or 1")
+            return False
+        key_expr = keys.model_path(model.path, model.version)
+        print(model.to_proto())
+        self._send_proto(key_expr, model.to_proto())
+        return True
+        

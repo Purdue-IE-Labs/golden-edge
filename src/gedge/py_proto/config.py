@@ -19,10 +19,13 @@ class Config:
     
     @classmethod
     def from_proto(cls, proto: proto.Config) -> Self:
-        if proto.base_config:
+        oneof = proto.WhichOneof("config")
+        if oneof == "base_config":
             return cls(BaseType.from_proto(proto.base_config))
-        else:
+        elif oneof == "data_model_config":
             return cls(DataModelObjectConfig.from_proto(proto.data_model_config))
+        else:
+            raise Exception("neither set")
     
     @classmethod
     def from_json5(cls, json5: Any, is_base: bool = False) -> Self:

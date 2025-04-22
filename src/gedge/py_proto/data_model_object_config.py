@@ -26,10 +26,13 @@ class DataModelObjectConfig:
 
     @classmethod
     def from_proto(cls, proto: proto.DataModelObjectConfig) -> Self:
-        if proto.path:
+        oneof = proto.WhichOneof("repr")
+        if oneof == "path":
             return cls(DataModelType.from_proto(proto.path))
-        else:
+        elif oneof == "embedded":
             return cls(DataModelConfig.from_proto(proto.embedded))
+        else:
+            raise Exception("none of the fields set")
     
     @classmethod
     def from_json5(cls, json5: Any) -> Self:
@@ -72,8 +75,10 @@ class DataModelObjectConfig:
 
 
 def load(path: DataModelType) -> DataModelConfig:
-    directory= Singleton().get_model_dir()
-    path_to_json = f"{directory}/{path.path}/v2.json5"
+    directory = Singleton().get_model_dir()
+    print(directory, path.path)
+    # TODO: need to include version
+    path_to_json = f"{directory}/{path.path}/v1.json5"
     with open(path_to_json, "r") as f:
         j = json5.load(f)
     config = DataModelConfig.from_json5(j)

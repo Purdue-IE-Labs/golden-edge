@@ -20,19 +20,20 @@ def push(args):
         j = json5.loads(res)
         config = DataModelConfig.from_json5(j) 
         print(config)
-        proto_config = config.to_proto()
-        comm._send_proto(f"MODELS/{config.path}", proto_config)
+        if not comm.push_model(config):
+            print("Did not push model")
 
 def pull(args):
     print("PULL COMMAND")
     path = args.path
     model_dir = args.model_dir
+    version = args.version
     s = Singleton(model_dir)
 
     with gedge.comm.comm.Comm([f"tcp/{args.ip_address}:7447"]) as comm:
-        config = comm.pull_model(path)
+        config = comm.pull_model(path, version)
         if not config:
-            print(f"No model found at path {path}")
+            print(f"No model found at path {path} with version {version}")
             return
         j = config.to_json5()
         js = json5.dumps(j, indent=4)
@@ -42,7 +43,9 @@ def pull(args):
 def main():
     parser = argparse.ArgumentParser(prog="gedge", description="Handle models in golden-edge", epilog="Try 'gedge --help' for more info")
     parser.add_argument('--ip-address', type=str, default="192.168.4.60")
-    parser.add_argument("--model-dir", type=str, required=True, help="outptut directory where all pulled models will go")
+    
+    # currently for pushing, we search what we currently have
+    parser.add_argument("--model-dir", type=str, help="outptut directory where all pulled models will go")
 
     subparsers = parser.add_subparsers(title="subcommands", help="subcommand help")
 
@@ -51,6 +54,7 @@ def main():
     push_parser.set_defaults(func=push)
 
     pull_parser = subparsers.add_parser("pull")
+    pull_parser.add_argument("--version", type=int, default=None, help="version of the model to pull")
     pull_parser.add_argument("path", type=str, help="path where model lives in the historian")
     pull_parser.set_defaults(func=pull)
 

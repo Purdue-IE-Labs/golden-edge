@@ -32,7 +32,8 @@ class DataModelItemConfig:
     def to_json5(self) -> dict:
         j = {}
         j["path"] = self.path
-        j["props"] = self.config.props.to_json5()
+        if not self.config.props.is_empty():
+            j["props"] = self.config.props.to_json5()
         # TODO: this is gross lol, config.config.config
         # However, it allows for the flatter structure of the json5 
         # while the protobuf has more of a layered structure for 

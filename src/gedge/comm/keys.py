@@ -40,6 +40,7 @@ def method_key_prefix(prefix: str, name: str):
 
 def liveliness_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name)
+
 def subnodes_key_prefix(prefix: str, node_name: str):
     return key_join(node_key_prefix(prefix, node_name), SUBNODES)
 
@@ -49,7 +50,18 @@ def method_response_from_call(key_expr: str):
 def model_fetch(path: str):
     # * is version
     # return key_join(MODELS, path, "*")
-    return key_join(MODELS, path)
+    return key_join(MODELS, path, "*")
+
+def version_from_model(key_expr: str) -> int:
+    v = key_expr.split('/')[-1]
+    return int(v.strip("v"))
+
+def add_model_version(key_expr: str, version: int) -> str:
+    return key_join(key_expr, f"v{version}")
+
+def model_path(path: str, version: int) -> str:
+    key_expr = key_join(MODELS, path)
+    return add_model_version(key_expr, version)
 
 def internal_to_user_key(key_expr: str):
     prefix = NodeKeySpace.prefix_from_key(key_expr)
