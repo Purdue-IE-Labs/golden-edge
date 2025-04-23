@@ -40,9 +40,9 @@ class Prop:
         if isinstance(json5, dict):
             # we do not pull the model from the historian
             # we instead use a local version of it
-            path: str = json5["model_path"]
-            config = Config(DataModelObjectConfig(DataModelType(path)))
-            c = config.config.load(DataModelType(path)) # type: ignore
+            path = DataModelType.from_json5(json5["model_path"])
+            config = Config(DataModelObjectConfig(path))
+            c = config.config.load(path) # type: ignore
             res = DataObject.from_json5(json5["model"], DataObjectConfig.from_model_config(c))
             return cls(res)
         else:

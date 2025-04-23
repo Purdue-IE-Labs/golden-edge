@@ -45,7 +45,8 @@ class DataModelObjectConfig:
     def fetch(self, comm: Comm) -> DataModelConfig | None:
         if self.is_embedded():
             return None
-        model = comm.pull_model(self.repr.path)
+        path = self.repr
+        model = comm.pull_model(path.model_path(), path.version()) # type: ignore
         if not model:
             return None
         self.repr = model
@@ -77,9 +78,8 @@ def load(path: DataModelType) -> DataModelConfig:
     directory = Singleton().get_model_dir()
     if not directory:
         raise LookupError(f"Trying to find model {path.path} but no --model-dir passed in")
-    path_to_json = pathlib.Path(directory) / path.path
-    path_to_json = f"{str(path_to_json)}.json5"
-    return load_from_file(path_to_json)
+    path_to_json = pathlib.Path(directory) / path.to_file_path()
+    return load_from_file(str(path_to_json))
 
 def load_from_file(path: str) -> DataModelConfig:
     with open(path, "r") as f:

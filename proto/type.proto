@@ -16,9 +16,10 @@ enum BaseType {
 
 // The type specifies a path where 
 // that model can be found to be retrieved
+// if no version provided, we grab the latest
 message DataModelType {
     string path = 1;
-    // version?
+    optional int32 version = 2;
 }
 
 

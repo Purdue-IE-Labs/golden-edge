@@ -9,16 +9,16 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class DataModelConfig(_message.Message):
-    __slots__ = ("type", "extends_path", "version", "items")
-    TYPE_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("path", "extends_path", "version", "items")
+    PATH_FIELD_NUMBER: _ClassVar[int]
     EXTENDS_PATH_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
     ITEMS_FIELD_NUMBER: _ClassVar[int]
-    type: _type_pb2.DataModelType
+    path: str
     extends_path: str
     version: int
     items: _containers.RepeatedCompositeFieldContainer[DataModelItemConfig]
-    def __init__(self, type: _Optional[_Union[_type_pb2.DataModelType, _Mapping]] = ..., extends_path: _Optional[str] = ..., version: _Optional[int] = ..., items: _Optional[_Iterable[_Union[DataModelItemConfig, _Mapping]]] = ...) -> None: ...
+    def __init__(self, path: _Optional[str] = ..., extends_path: _Optional[str] = ..., version: _Optional[int] = ..., items: _Optional[_Iterable[_Union[DataModelItemConfig, _Mapping]]] = ...) -> None: ...
 
 class DataModelItemConfig(_message.Message):
     __slots__ = ("path", "config")

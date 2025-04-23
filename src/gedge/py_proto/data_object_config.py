@@ -4,8 +4,10 @@ from dataclasses import dataclass
 from multiprocessing import Value
 import pathlib
 from typing import Any, Self, TYPE_CHECKING, final
+import logging
 
 from gedge import proto
+from gedge.comm import keys
 from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.config import Config
 from gedge.py_proto.data_model_config import DataModelItemConfig
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
     from gedge.py_proto.data_model_config import DataModelConfig
     from gedge.py_proto.props import Props
     from gedge.comm.comm import Comm
+
+logger = logging.getLogger(__file__)
 
 @dataclass
 class DataObjectConfig:
@@ -127,10 +131,10 @@ class DataObjectConfig:
         self.config.config.repr = model # type: ignore
         return True
     
-    def set_model_path(self, path: str) -> bool:
+    def set_model_path(self, path: DataModelType) -> bool:
         if not self.is_model_type():
             return False
-        self.config.config.repr = DataModelType(path) # type: ignore
+        self.config.config.repr = path # type: ignore
         return True
     
     def to_model_path(self) -> bool:
@@ -139,7 +143,7 @@ class DataObjectConfig:
         model = self.get_model_config()
         if not model:
             return False
-        path = model.path
+        path = DataModelType.from_model(model)
         return self.set_model_path(path)
     
     def get_config_items(self) -> list[DataObjectConfig] | None:
@@ -158,7 +162,8 @@ class DataObjectConfig:
         path = self.get_model_path()
         if not path:
             return True
-        model = comm.pull_model(path.path)
+        logger.debug(f"Fetching model at path {path.path}")
+        model = comm.pull_model(path.path, path.version)
         if not model:
             return False
         self.set_model_config(model)

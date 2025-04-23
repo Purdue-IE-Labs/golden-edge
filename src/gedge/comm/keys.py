@@ -1,4 +1,5 @@
 from __future__ import annotations
+from sys import version
 
 NODE = "NODE"
 META = "META"
@@ -10,6 +11,7 @@ METHODS = "METHODS"
 RESPONSE = "RESPONSE"
 SUBNODES = "SUBNODES"
 MODELS = "MODELS"
+VERSION = "VERSION"
 
 def key_join(*components: str):
     return "/".join(components)
@@ -49,19 +51,28 @@ def method_response_from_call(key_expr: str):
 
 def model_fetch(path: str):
     # * is version
-    # return key_join(MODELS, path, "*")
-    return key_join(MODELS, path, "*")
+    return key_join(MODELS, path, VERSION, "*")
 
 def version_from_model(key_expr: str) -> int:
     v = key_expr.split('/')[-1]
-    return int(v.strip("v"))
+    return int(v)
+
+def parse_model_path(key_expr: str) -> tuple[str, int]:
+    version = version_from_model(key_expr)
+
+    # we ignore MODELS and version, so 1:-1
+    components = key_expr.split("/")
+    components = components[(components.index(MODELS) + 1) : components.index(VERSION)]
+    return key_join(*components), version
 
 def add_model_version(key_expr: str, version: int) -> str:
-    return key_join(key_expr, f"v{version}")
+    return key_join(key_expr, VERSION, str(version))
 
 def model_path(path: str, version: int) -> str:
-    key_expr = key_join(MODELS, path)
-    return add_model_version(key_expr, version)
+    return add_model_version(model_path_latest(path), version)
+
+def model_path_latest(path: str) -> str:
+    return key_join(MODELS, path)
 
 def internal_to_user_key(key_expr: str):
     prefix = NodeKeySpace.prefix_from_key(key_expr)

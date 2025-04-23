@@ -31,7 +31,9 @@ LIST_STRING: BaseType
 LIST_BOOL: BaseType
 
 class DataModelType(_message.Message):
-    __slots__ = ("path",)
+    __slots__ = ("path", "version")
     PATH_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
     path: str
-    def __init__(self, path: _Optional[str] = ...) -> None: ...
+    version: int
+    def __init__(self, path: _Optional[str] = ..., version: _Optional[int] = ...) -> None: ...

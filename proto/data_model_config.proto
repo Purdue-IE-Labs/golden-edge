@@ -10,7 +10,7 @@ import "data_model_session.proto";
 // If so, we could add a Config to this, but it would just need to 
 // be known that the config will always be the DataModelType
 message DataModelConfig {
-    DataModelType type = 1;
+    string path = 1; // we just use a path here because it should not include a version
     string extends_path = 2;
     uint32 version = 3;
 	repeated DataModelItemConfig items = 4;

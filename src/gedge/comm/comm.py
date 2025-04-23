@@ -434,17 +434,36 @@ class Comm:
     
     def pull_model(self, path: str, version: int | None = None) -> DataModelConfig | None:
         if version is not None:
-            return self._pull_model_with_version(path, version)
-        models = self._pull_all_model_versions(path)
-        if not models:
-            logger.warning(f"No model at path {path}")
-            return None
-        return max(models, key=lambda m : m.version)
+            model = self._pull_model_with_version(path, version)
+            if not model:
+                return None
+        else:
+            models = self._pull_all_model_versions(path)
+            if not models:
+                logger.warning(f"No model at path {path}")
+                return None
+            model = max(models, key=lambda m : m.version)
+        for tag in model.items:
+            tag.config.fetch(self)
+        return model
     
-    def push_model(self, model: DataModelConfig) -> bool:
+    def push_model(self, model: DataModelConfig, push_embedded: bool = True) -> bool:
+        # TODO: if they use an embedded model but pass push_embedded=False, we run the risk of losing that model
+        if push_embedded:
+            # Design decision: if we want to push recursively, we only do this for embedded models, not just path ones
+            # Embedded includes both model and model_file
+            for tag in model.items:
+                model_config = tag.config.get_model_config()
+                if not model_config:
+                    continue
+                logger.debug(f"Pushing embedded model {model_config.path}")
+                if not self.push_model(model_config, push_embedded):
+                    return False
+                tag.config.to_model_path()
+
         res = self.pull_model(model.path)
         if res and res.version + 1 != model.version:
-            logger.warning(f"Trying to update a model without incrementing version, latest model in historian is {res.version}, you passed {model.version}! Try passing in a model with version {res.version + 1}")
+            logger.warning(f"Trying to update a model at path {model.path} without incrementing version, latest model in historian is {res.version}, you passed {model.version}! Try passing in a model with version {res.version + 1}")
             return False
         if not res and model.version not in {0, 1}:
             logger.warning(f"New model must start at version 0 or 1, found version {model.version}")
@@ -452,4 +471,3 @@ class Comm:
         key_expr = keys.model_path(model.path, model.version)
         self._send_proto(key_expr, model.to_proto())
         return True
-        

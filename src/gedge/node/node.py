@@ -325,6 +325,7 @@ class NodeSession:
         for s in self.config.subnodes.values():
             add_subnode_callbacks(s)
     
+    # TODO: fix this
     def fetch_models(self) -> list[DataModelConfig]:
         models = []
         for path in self.config.models:

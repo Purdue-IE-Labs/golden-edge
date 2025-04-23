@@ -32,8 +32,6 @@ class DataModelItemConfig:
     def to_json5(self) -> dict:
         j = {}
         j["path"] = self.path
-        if not self.config.props.is_empty():
-            j["props"] = self.config.props.to_json5()
         # TODO: this is gross lol, config.config.config
         # However, it allows for the flatter structure of the json5 
         # while the protobuf has more of a layered structure for 
@@ -49,6 +47,9 @@ class DataModelItemConfig:
             j["model_path"] = c.to_json5()
         else:
             j["model"] = c.to_json5()
+
+        if not self.config.props.is_empty():
+            j["props"] = self.config.props.to_json5()
         return j
     
     @classmethod
@@ -61,28 +62,23 @@ class DataModelItemConfig:
 
 @dataclass
 class DataModelConfig:
-    type: DataModelType
+    path: str
     extends_path: str | None
     version: int
     items: list[DataModelItemConfig]
 
-    @property
-    def path(self):
-        return self.type.path
-
     def to_proto(self) -> proto.DataModelConfig:
         items = [i.to_proto() for i in self.items]
-        return proto.DataModelConfig(type=self.type.to_proto(), extends_path=self.extends_path, version=self.version, items=items)
+        return proto.DataModelConfig(path=self.path, extends_path=self.extends_path, version=self.version, items=items)
 
     @classmethod
     def from_proto(cls, proto: proto.DataModelConfig) -> Self:
-        type_ = DataModelType.from_proto(proto.type)
         items = [DataModelItemConfig.from_proto(i) for i in proto.items]
-        return cls(type_, proto.extends_path, proto.version, items)
+        return cls(proto.path, proto.extends_path, proto.version, items)
     
     def to_json5(self) -> dict[str, Any]:
         j = {}
-        j["model_path"] = self.type.path
+        j["model_path"] = self.path
         if self.extends_path:
             j["extends_path"] = self.extends_path
         j["version"] = self.version
@@ -117,7 +113,7 @@ class DataModelConfig:
     @classmethod
     def from_json5(cls, json5: Any) -> Self:
         assert isinstance(json5, dict)
-        path = DataModelType(json5["model_path"])
+        path = json5["model_path"]
         extends_path = json5.get("extends_path", None)
         version = json5["version"]
         tags = []
@@ -137,8 +133,8 @@ class DataModelConfig:
             if isinstance(c, BaseType):
                 continue
             if isinstance(c.repr, DataModelType):
-                path = c.repr.path
-                model = comm.pull_model(path)
+                path = c.repr
+                model = comm.pull_model(path.path, path.version)
                 if not model:
                     return False
                 c.repr = model
