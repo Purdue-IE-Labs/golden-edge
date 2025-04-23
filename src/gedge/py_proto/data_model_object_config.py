@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from tkinter import W
+import pathlib
 from typing import TYPE_CHECKING, Any, Self
 
 import json5
@@ -21,8 +21,7 @@ class DataModelObjectConfig:
     def to_proto(self) -> proto.DataModelObjectConfig:
         if isinstance(self.repr, DataModelType):
             return proto.DataModelObjectConfig(path=self.repr.to_proto())
-        else:
-            return proto.DataModelObjectConfig(embedded=self.repr.to_proto())
+        return proto.DataModelObjectConfig(embedded=self.repr.to_proto())
 
     @classmethod
     def from_proto(cls, proto: proto.DataModelObjectConfig) -> Self:
@@ -32,7 +31,7 @@ class DataModelObjectConfig:
         elif oneof == "embedded":
             return cls(DataModelConfig.from_proto(proto.embedded))
         else:
-            raise Exception("none of the fields set")
+            raise ValueError(f"none of fields for DataModelObjectConfig were set")
     
     @classmethod
     def from_json5(cls, json5: Any) -> Self:
@@ -76,10 +75,14 @@ class DataModelObjectConfig:
 
 def load(path: DataModelType) -> DataModelConfig:
     directory = Singleton().get_model_dir()
-    print(directory, path.path)
-    # TODO: need to include version
-    path_to_json = f"{directory}/{path.path}/v1.json5"
-    with open(path_to_json, "r") as f:
+    if not directory:
+        raise LookupError(f"Trying to find model {path.path} but no --model-dir passed in")
+    path_to_json = pathlib.Path(directory) / path.path
+    path_to_json = f"{str(path_to_json)}.json5"
+    return load_from_file(path_to_json)
+
+def load_from_file(path: str) -> DataModelConfig:
+    with open(path, "r") as f:
         j = json5.load(f)
     config = DataModelConfig.from_json5(j)
     return config

@@ -3,41 +3,45 @@ import pathlib
 import json5
 import gedge
 
-import gedge.comm
-import gedge.comm.comm
+from gedge.comm.comm import Comm
 from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.singleton import Singleton
+
+import logging
+logger = logging.getLogger(__name__)
 
 def push(args):
     print("PUSH COMMAND")
     path = args.path
     model_dir = args.model_dir
-    s = Singleton(model_dir)
+    json_dir: str | None = args.json_dir
+    if json_dir is None:
+        logger.debug("No json_dir set, using parent of json file passed in...")
+        json_dir = str(pathlib.Path(path).parent)
+    Singleton(model_dir, json_dir)
 
-    with gedge.comm.comm.Comm([f"tcp/{args.ip_address}:7447"]) as comm:
+    with Comm([f"tcp/{args.ip_address}:7447"]) as comm:
         with open(path, "r") as f:
             res = f.read()
         j = json5.loads(res)
         config = DataModelConfig.from_json5(j) 
-        print(config)
+        logger.debug(f"Parsed config at json path {path}: {config}")
         if not comm.push_model(config):
-            print("Did not push model")
+            logger.warning(f"Could not push model at path {path}")
 
 def pull(args):
     print("PULL COMMAND")
     path = args.path
-    model_dir = args.model_dir
     version = args.version
-    s = Singleton(model_dir)
+    model_dir = args.model_dir
+    if not model_dir:
+        raise LookupError("Argument '--model-dir' required for 'gedge pull' command")
+    Singleton(model_dir)
 
-    with gedge.comm.comm.Comm([f"tcp/{args.ip_address}:7447"]) as comm:
+    with Comm([f"tcp/{args.ip_address}:7447"]) as comm:
         config = comm.pull_model(path, version)
         if not config:
-            print(f"No model found at path {path} with version {version}")
-            return
-        j = config.to_json5()
-        js = json5.dumps(j, indent=4)
-        print(js)
+            raise LookupError(f"No model found at path {path} with version {version}")
         config.to_file(str(model_dir), comm)
 
 def main():
@@ -50,7 +54,8 @@ def main():
     subparsers = parser.add_subparsers(title="subcommands", help="subcommand help")
 
     push_parser = subparsers.add_parser("push")
-    push_parser.add_argument("path", type=str, help="path to json5 file describing file")
+    push_parser.add_argument("--json-dir", type=str, default=None, help="directory where we should search for json files (defaults to parent directory of path)")
+    push_parser.add_argument("path", type=str, help="path to json5 file describing model")
     push_parser.set_defaults(func=push)
 
     pull_parser = subparsers.add_parser("pull")

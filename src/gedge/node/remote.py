@@ -12,7 +12,6 @@ from gedge.node.error import MethodLookupError, SessionError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
-import uuid
 
 from typing import Any, Iterator, Callable, TYPE_CHECKING
 

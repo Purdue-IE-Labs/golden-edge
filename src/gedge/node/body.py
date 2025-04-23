@@ -20,7 +20,7 @@ class BodyConfig:
     @classmethod
     def from_json5(cls, j: Any) -> Self:
         if not isinstance(j, dict):
-            raise ValueError(f"invalid body {j}")
+            raise ValueError(f"invalid body config (must be a dictionary) {j}")
         body = {key: DataObjectConfig.from_json5(value) for key, value in j.items()}
         return cls(body)
     

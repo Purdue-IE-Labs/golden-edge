@@ -42,6 +42,7 @@ class BaseType(Enum):
     
     @classmethod
     def from_json5(cls, type: str) -> Self:
+        type = type.lower()
         mapping = {
             "int": BaseType.INT,
             "long": BaseType.LONG,

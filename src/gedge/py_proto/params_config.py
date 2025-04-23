@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from gedge.node.data_type import DataType
 from gedge.py_proto.data_object_config import DataObjectConfig
 from gedge.py_proto.props import Props
 from gedge import proto

@@ -384,7 +384,7 @@ class Comm:
         try:
             reply = self._query_liveliness(ks)
             if not reply.ok:
-                return False
+                raise Exception
             return reply.ok.kind == zenoh.SampleKind.PUT
         except:
             return False
@@ -407,7 +407,7 @@ class Comm:
                     return []
                 models.append(config)
             except:
-                raise ValueError(f"Could not deserialize model {result.payload.to_string()} from historian")
+                raise ValueError(f"Could not deserialize model at path {path} from historian")
         return models
     
     def _pull_model_with_version(self, path: str, version: int) -> DataModelConfig | None:
@@ -424,7 +424,7 @@ class Comm:
             config = self.deserialize(proto.DataModelConfig(), s.payload.to_bytes())
             config = DataModelConfig.from_proto(config)
         except:
-            raise ValueError(f"Could not deserialize model {s.payload.to_string()} from historian")
+            raise ValueError(f"Could not deserialize model at path {path} (version {version}) from historian")
 
         pulled_version = keys.version_from_model(str(s.key_expr))
         if config.version != pulled_version:
@@ -435,7 +435,6 @@ class Comm:
     def pull_model(self, path: str, version: int | None = None) -> DataModelConfig | None:
         if version is not None:
             return self._pull_model_with_version(path, version)
-        
         models = self._pull_all_model_versions(path)
         if not models:
             logger.warning(f"No model at path {path}")
@@ -445,13 +444,12 @@ class Comm:
     def push_model(self, model: DataModelConfig) -> bool:
         res = self.pull_model(model.path)
         if res and res.version + 1 != model.version:
-            logger.warning(f"Trying to update a model without adding 1 to the version, latest model in historian is {res.version}, you passed {model.version}")
+            logger.warning(f"Trying to update a model without incrementing version, latest model in historian is {res.version}, you passed {model.version}! Try passing in a model with version {res.version + 1}")
             return False
         if not res and model.version not in {0, 1}:
-            logger.warning(f"New model must start at version 0 or 1")
+            logger.warning(f"New model must start at version 0 or 1, found version {model.version}")
             return False
         key_expr = keys.model_path(model.path, model.version)
-        print(model.to_proto())
         self._send_proto(key_expr, model.to_proto())
         return True
         

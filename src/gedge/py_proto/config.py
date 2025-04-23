@@ -25,7 +25,7 @@ class Config:
         elif oneof == "data_model_config":
             return cls(DataModelObjectConfig.from_proto(proto.data_model_config))
         else:
-            raise Exception("neither set")
+            raise LookupError("No value set in Config proto")
     
     @classmethod
     def from_json5(cls, json5: Any, is_base: bool = False) -> Self:

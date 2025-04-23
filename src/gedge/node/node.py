@@ -5,7 +5,6 @@ import uuid
 from gedge.node.method import MethodConfig
 from gedge.node.method_response import MethodResponseConfig
 from gedge.node.tag_write_query import TagWriteQuery
-from gedge.node.data_type import DataType
 from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.config import Config
 from gedge.py_proto.data_model import DataObject
