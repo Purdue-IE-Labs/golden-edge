@@ -44,9 +44,9 @@ class DataModelObjectConfig:
     
     def fetch(self, comm: Comm) -> DataModelConfig | None:
         if self.is_embedded():
-            return None
+            return self.get_embedded()
         path = self.repr
-        model = comm.pull_model(path.model_path(), path.version()) # type: ignore
+        model = comm.pull_model(path.path, path.version)
         if not model:
             return None
         self.repr = model

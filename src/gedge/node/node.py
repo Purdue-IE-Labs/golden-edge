@@ -330,7 +330,6 @@ class NodeSession:
         models = []
         for path in self.config.models:
             m = self.config.models[path].fetch(self._comm)
-            print(m)
             if not m:
                 raise Exception(f"no model at path {path}")
             models.append(m)
@@ -347,7 +346,7 @@ class NodeSession:
     
     def update_tag(self, path: str, value: Any | dict):
         tag = self.tags[path]
-        print(tag)
+        logger.debug(f"Putting tag value {value} on path {path}")
         res = DataObject.from_value(value, tag.config.config)
         self._comm.update_tag(self.ks, tag.config.path, res.to_proto())
     
