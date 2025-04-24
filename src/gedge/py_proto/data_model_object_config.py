@@ -42,6 +42,7 @@ class DataModelObjectConfig:
     
     @classmethod
     def from_json5(cls, j: Any) -> Self:
+        from gedge.py_proto.data_model_config import DataModelConfig
         if not isinstance(j, dict):
             raise ValueError(f"Invalid json {j} for data model configuration")
 

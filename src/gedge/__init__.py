@@ -1,7 +1,9 @@
+from gedge.node.tag_write_query import TagWriteQuery
 from gedge.py_proto.singleton import Singleton
 from .comm.mock_comm import MockComm
 from .node.node import NodeConfig, NodeSession
 from .node.test_node import TestNodeSession
+
 
 import logging
 import os

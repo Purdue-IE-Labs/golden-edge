@@ -116,8 +116,7 @@ class RemoteConnection:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        if tag.config.config.is_base_type():
-            response = self._comm.write_tag(self.ks, tag.path, DataObject.from_py_value(value, tag.config.config).to_proto())
+        response = self._comm.write_tag(self.ks, tag.path, DataObject.from_value(value, tag.config.config).to_proto())
         code, error = response.code, response.error
 
         '''

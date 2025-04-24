@@ -1,17 +1,15 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
-from tkinter import W
 from typing import Any, Self, TYPE_CHECKING
 
 from gedge import proto
-from gedge.node.gtypes import TagBaseValue, TagValue
 from gedge.py_proto.base_type import BaseType
 
 if TYPE_CHECKING:
     from gedge.py_proto.config import Config
     from gedge.py_proto.data_object_config import DataObjectConfig
     from gedge.py_proto.base_data import BaseData
+    from gedge.node.gtypes import TagBaseValue, TagValue
 
 @dataclass
 class DataObject:

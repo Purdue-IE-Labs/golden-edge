@@ -30,6 +30,7 @@ class TagWriteResponseConfig:
     
     @classmethod
     def from_json5(cls, json: Any) -> Self:
+        from gedge.py_proto.props import Props
         if isinstance(json, int):
             return cls(json, Props.empty())
         if not isinstance(json, dict):
