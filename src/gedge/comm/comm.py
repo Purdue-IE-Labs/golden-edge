@@ -455,7 +455,7 @@ class Comm:
             if not tag.config.is_model_path():
                 continue
             if not self.fetch_model(tag.config.get_model_type()): # type: ignore
-                logger.warning(f"Unable to fetch model {tag.config.config.config.path} for tag at path {tag.path}") # type: ignore
+                logger.warning(f"Unable to fetch model {tag.config.path} for tag at path {tag.path}")
         return model
     
     def push_model(self, model: DataModelConfig, push_embedded: bool = True) -> bool:
