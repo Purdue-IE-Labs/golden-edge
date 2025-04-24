@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, Any, Self
 
 import json5
 
-from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.data_model_type import DataModelType
 from gedge import proto
 from gedge.py_proto.singleton import Singleton
 
 if TYPE_CHECKING:
     from gedge.comm.comm import Comm
+    from gedge.py_proto.data_model_config import DataModelConfig
 
 @dataclass
 class DataModelObjectConfig:
@@ -25,6 +25,7 @@ class DataModelObjectConfig:
 
     @classmethod
     def from_proto(cls, proto: proto.DataModelObjectConfig) -> Self:
+        from gedge.py_proto.data_model_config import DataModelConfig
         oneof = proto.WhichOneof("repr")
         if oneof == "path":
             return cls(DataModelType.from_proto(proto.path))
@@ -34,10 +35,23 @@ class DataModelObjectConfig:
             raise ValueError(f"none of fields for DataModelObjectConfig were set")
     
     @classmethod
-    def from_json5(cls, json5: Any) -> Self:
-        if isinstance(json5, dict):
-            return cls(DataModelConfig.from_json5(json5))
-        return cls(DataModelType.from_json5(json5))
+    def from_json5(cls, j: Any) -> Self:
+        if not isinstance(j, dict):
+            config = DataModelType.from_json5(j)
+
+        if not (("model_path" in j) ^ ("model" in j) ^ ("model_file" in j)):
+            raise LookupError(f"Model object must set one and only one of ['model_path', 'model', 'model_file']")
+        elif j.get("model_path"):
+            config = DataModelType.from_json5(j["model_path"])
+        elif j.get("model_file"):
+            json5_dir = Singleton().get_json5_dir()
+            if not json5_dir:
+                raise ValueError
+            path = pathlib.Path(json5_dir) / j["model_file"]
+            config = load_from_file(str(path))
+        else:
+            DataModelConfig.from_json5(j["model"])
+        return cls(config)
     
     def to_json5(self) -> dict | str:
         return self.repr.to_json5()
@@ -61,6 +75,7 @@ class DataModelObjectConfig:
         return isinstance(self.repr, DataModelType)
     
     def is_embedded(self):
+        from gedge.py_proto.data_model_config import DataModelConfig
         return isinstance(self.repr, DataModelConfig)
     
     def get_path(self) -> DataModelType | None:
@@ -72,6 +87,13 @@ class DataModelObjectConfig:
         if not self.is_embedded():
             return None
         return self.repr # type: ignore
+    
+    def to_file_path(self) -> str:
+        return self.repr.to_file_path()
+    
+    def to_model_path(self):
+        if self.is_embedded():
+            self.repr = DataModelType(self.repr.path, self.repr.version)
 
 
 def load(path: DataModelType) -> DataModelConfig:
@@ -82,6 +104,7 @@ def load(path: DataModelType) -> DataModelConfig:
     return load_from_file(str(path_to_json))
 
 def load_from_file(path: str) -> DataModelConfig:
+    from gedge.py_proto.data_model_config import DataModelConfig
     with open(path, "r") as f:
         j = json5.load(f)
     config = DataModelConfig.from_json5(j)

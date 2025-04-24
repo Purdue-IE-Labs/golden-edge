@@ -432,6 +432,8 @@ class Comm:
             return None
         return config
     
+    # TODO: just take a DataModelType
+    # we expand everything when we return it
     def pull_model(self, path: str, version: int | None = None) -> DataModelConfig | None:
         if version is not None:
             model = self._pull_model_with_version(path, version)
@@ -443,6 +445,9 @@ class Comm:
                 logger.warning(f"No model at path {path}")
                 return None
             model = max(models, key=lambda m : m.version)
+        
+        if model.parent is not None:
+            model.parent.fetch(self)
         for tag in model.items:
             tag.config.fetch(self)
         return model
@@ -450,6 +455,14 @@ class Comm:
     def push_model(self, model: DataModelConfig, push_embedded: bool = True) -> bool:
         # TODO: if they use an embedded model but pass push_embedded=False, we run the risk of losing that model
         if push_embedded:
+            if model.parent and model.parent.is_embedded():
+                m = model.parent.get_embedded()
+                if not m:
+                    return False
+                if not self.push_model(m, push_embedded):
+                    return False
+                model.parent.to_model_path()
+
             # Design decision: if we want to push recursively, we only do this for embedded models, not just path ones
             # Embedded includes both model and model_file
             for tag in model.items:

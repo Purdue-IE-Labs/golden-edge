@@ -32,13 +32,17 @@ class DataModelType:
 
     @classmethod
     def from_proto(cls, proto: proto.DataModelType):
-        return cls(proto.path, proto.version)
+        if proto.HasField("version"):
+            return cls(proto.path, proto.version)
+        return cls(proto.path)
     
     def to_json5(self) -> str:
         return self.full_path
     
     def to_file_path(self) -> str:
-        return f"{self.path}/v{self.version}.json5"
+        if not self.version:
+            raise Exception("Cannot do file path when we don't have the version")
+        return to_file_path(self.path, self.version)
     
     @classmethod
     def from_json5(cls, json5: Any) -> Self:
@@ -50,3 +54,5 @@ class DataModelType:
             return cls(path, version)
         return cls(keys.key_join(*components))
     
+def to_file_path(path: str, version: int):
+    return f"{path}/v{version}.json5"

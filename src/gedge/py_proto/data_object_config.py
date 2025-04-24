@@ -43,26 +43,12 @@ class DataObjectConfig:
         raise NotImplementedError
     
     @classmethod
-    def from_json5(cls, json: Any) -> Self:
+    def from_json5(cls, j: Any) -> Self:
         from gedge.py_proto.props import Props
-        if not isinstance(json, dict):
+        if not isinstance(j, dict):
             raise ValueError
-        props = Props.from_json5(json.get("props", {}))
-        if not (("base_type" in json) ^ ("model_path" in json) ^ ("model" in json) ^ ("model_file" in json)):
-            raise LookupError(f"Object must set one and only one of ['base_type', 'model_path', 'model', 'model_file']")
-        if json.get("base_type"):
-            config = Config.from_json5(json["base_type"], True)
-        elif json.get("model_path"):
-            config = Config.from_json5(json["model_path"], False)
-        elif json.get("model_file"):
-            json5_dir = Singleton().get_json5_dir()
-            if not json5_dir:
-                raise ValueError
-            path = pathlib.Path(json5_dir) / json["model_file"]
-            config = load_from_file(str(path))
-            config = Config.from_json5(config.to_json5(), False)
-        else:
-            config = Config.from_json5(json["model"], False)
+        config = Config.from_json5(j)
+        props = Props.from_json5(j.get("props", {}))
         return cls(config, props)
     
     @classmethod

@@ -205,10 +205,11 @@ class NodeSession:
         # connect
         self._comm.connect()
         self.models = self.fetch_models()
+        self.add_parent_tags()
 
         # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = self.config.build_meta(self.models)
-        print(self.meta)
+        logger.debug(f"Built meta: {self.meta}")
 
         self._startup()
         self.tags: dict[str, TagConfig] = self.config.tags
@@ -325,7 +326,6 @@ class NodeSession:
         for s in self.config.subnodes.values():
             add_subnode_callbacks(s)
     
-    # TODO: fix this
     def fetch_models(self) -> list[DataModelConfig]:
         models = []
         for path in self.config.models:
@@ -334,6 +334,10 @@ class NodeSession:
                 raise Exception(f"no model at path {path}")
             models.append(m)
         return models
+    
+    def add_parent_tags(self):
+        for model in self.models:
+            model.add_parent_tags()
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]

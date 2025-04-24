@@ -11,8 +11,8 @@ import "data_model_session.proto";
 // be known that the config will always be the DataModelType
 message DataModelConfig {
     string path = 1; // we just use a path here because it should not include a version
-    string extends_path = 2;
-    uint32 version = 3;
+    uint32 version = 2;
+    DataModelObjectConfig parent = 3; // we need both path and version here to know what are we depending on
 	repeated DataModelItemConfig items = 4;
 }
 

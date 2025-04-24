@@ -19,7 +19,7 @@ enum BaseType {
 // if no version provided, we grab the latest
 message DataModelType {
     string path = 1;
-    optional int32 version = 2;
+    optional uint32 version = 2;
 }
 
 
