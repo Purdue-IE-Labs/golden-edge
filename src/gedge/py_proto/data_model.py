@@ -89,12 +89,12 @@ class DataObject:
         assert isinstance(res.data, list)
         configs = config.get_model_items()
         if configs is None:
-            raise Exception
+            raise LookupError(f"No tags found on model {config.path}")
         configs = {c.path: c for c in configs}
-        for key, val in value.items():
-            if key not in configs:
-                raise Exception(f"No tag with name {key}")
-            res.data.append(cls.from_value(val, configs[key].config))
+        for k, v in configs.items():
+            if k not in value:
+                raise LookupError(f"No tag with path {k} included in model data for model {config.path}, but that tag is in the model definition!")
+            res.data.append(cls.from_value(value[k], v.config))
         return res
     
     @classmethod

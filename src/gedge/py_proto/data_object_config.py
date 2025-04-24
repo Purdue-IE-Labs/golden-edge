@@ -27,6 +27,16 @@ class DataObjectConfig:
     config: Config
     props: Props
 
+    @property
+    def path(self) -> str | None:
+        """
+        Get the path of the model if this DataObjectConfig is not a 
+        BaseType, else None
+        """
+        if self.config.is_model_object_config():
+            return self.config.config.path # type: ignore
+        return None
+
     def to_proto(self) -> proto.DataObjectConfig:
         props = self.props.to_proto()
         config = self.config.to_proto()
