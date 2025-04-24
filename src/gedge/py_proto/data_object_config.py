@@ -50,7 +50,10 @@ class DataObjectConfig:
         return cls(config, props)
     
     def to_json5(self) -> dict:
-        raise NotImplementedError
+        j = {}
+        j.update(self.config.to_json5())
+        j.update(self.props.to_json5())
+        return j
     
     @classmethod
     def from_json5(cls, j: Any) -> Self:

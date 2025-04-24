@@ -25,7 +25,7 @@ class BaseType(Enum):
     def from_proto(cls, proto: proto.BaseType) -> Self:
         return cls(int(proto))
     
-    def to_json5(self) -> str:
+    def to_json5(self) -> dict:
         mapping = {
             BaseType.INT: "int",
             BaseType.LONG: "long",
@@ -38,10 +38,14 @@ class BaseType(Enum):
             BaseType.LIST_STRING: "list[string]",
             BaseType.LIST_BOOL: "list[bool]",
         }
-        return mapping[self]
+        j = {
+            "base_type": mapping[self]
+        }
+        return j
     
     @classmethod
-    def from_json5(cls, type: str) -> Self:
+    def from_json5(cls, j: dict) -> Self:
+        type: str = j["base_type"]
         type = type.lower()
         mapping = {
             "int": BaseType.INT,

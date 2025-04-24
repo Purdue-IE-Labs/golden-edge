@@ -386,7 +386,7 @@ class Comm:
         try:
             reply = self._query_liveliness(ks)
             if not reply.ok:
-                raise Exception
+                raise Exception # generic exception to trigger the except:
             return reply.ok.kind == zenoh.SampleKind.PUT
         except:
             return False

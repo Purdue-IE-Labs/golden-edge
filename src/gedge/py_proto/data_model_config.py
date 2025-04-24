@@ -37,24 +37,7 @@ class DataModelItemConfig:
     def to_json5(self) -> dict:
         j = {}
         j["path"] = self.path
-        # TODO: this is gross lol, config.config.config
-        # However, it allows for the flatter structure of the json5 
-        # while the protobuf has more of a layered structure for 
-        # reusability
-        c = self.config.config.config
-        if self.config.is_base_type():
-            j["base_type"] = c.to_json5()
-        elif self.config.is_model_path():
-            # we do not pull the model here
-            path = self.config.get_model_path()
-            if not path:
-                raise Exception
-            j["model_path"] = c.to_json5()
-        else:
-            j["model"] = c.to_json5()
-
-        if not self.config.props.is_empty():
-            j["props"] = self.config.props.to_json5()
+        j.update(self.config.to_json5())
         return j
     
     @classmethod
@@ -147,11 +130,11 @@ class DataModelConfig:
         return [i.config for i in self.items]
     
     def add_parent_tags(self):
-        model_dir = Singleton().get_model_dir()
-        if not model_dir:
-            raise Exception
         if not self.parent:
             return
+        model_dir = Singleton().get_model_dir()
+        if not model_dir:
+            raise LookupError(f"No model directory provided, needed to find parent of model {self.path}")
         path = pathlib.Path(model_dir) / self.parent.to_file_path()
         model = load_from_file(str(path))
         model.add_parent_tags()

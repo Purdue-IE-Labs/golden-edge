@@ -41,7 +41,7 @@ class DataModelType:
     
     def to_file_path(self) -> str:
         if not self.version:
-            raise Exception("Cannot do file path when we don't have the version")
+            raise LookupError(f"Must provide version to get file path of model {self.full_path}")
         return to_file_path(self.path, self.version)
     
     @classmethod

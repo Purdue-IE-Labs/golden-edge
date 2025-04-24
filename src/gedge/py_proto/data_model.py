@@ -19,20 +19,20 @@ class DataObject:
     config: DataObjectConfig
 
     @classmethod
-    def from_json5(cls, json5: Any, config: DataObjectConfig) -> Self:
+    def from_json5(cls, j: Any, config: DataObjectConfig) -> Self:
         from gedge.py_proto.base_data import BaseData
-        if not isinstance(json5, dict):
+        if not isinstance(j, dict):
             type = config.get_base_type()
             if not type:
-                raise Exception
-            data = BaseData.from_value(json5, type)
+                raise ValueError(f"Data model configuration has a base type here, but you passed a model {j}")
+            data = BaseData.from_value(j, type)
             return cls(data, config)
 
         config_objects = config.get_config_items()
         if config_objects is None:
-            raise Exception
+            raise ValueError(f"No tags found for model {config.path}")
         data = []
-        for c, value in zip(config_objects, json5.values()):
+        for c, value in zip(config_objects, j.values()):
             data.append(DataObject.from_json5(value, c))
         return cls(data, config)
 
@@ -40,12 +40,12 @@ class DataObject:
         if self.is_base_data():
             return self.data.to_py() # type: ignore
         if not self.config.is_model_object():
-            raise Exception
+            raise ValueError(f"Trying to put a data object into json without having the model ({self.config.path}) pulled")
         res = {}
         data: list[DataObject] = self.data # type: ignore
         configs = self.config.get_model_items()
         if configs is None:
-            raise Exception
+            raise ValueError(f"No tags defined on model {self.config.path}")
         for d, c in zip(data, configs):
             res[c.path] = d.to_json5()
         return res
@@ -63,16 +63,16 @@ class DataObject:
         if oneof == "base_data":
             type = config.get_base_type()
             if not type:
-                raise Exception(f"config is not base type but proto has {proto.base_data} base data, {proto.model_data}")
+                raise ValueError(f"config is not base type but proto has {proto.base_data} base data, {proto.model_data}")
             data = BaseData.from_proto(proto.base_data, type)
         elif oneof == "model_data":
             data = list(proto.model_data.data)
             configs = config.get_config_items()
             if configs is None:
-                raise Exception(f"no items in config {config}, but we have a list of {data}")
+                raise ValueError(f"No items in config {config}, but we have a list of {data}")
             data = [DataObject.from_proto(d, c) for d, c in zip(data, configs)]
         else:
-            raise Exception("none set")
+            raise LookupError("No values set in protobuf DataObject")
         return cls(data, config)
     
     @classmethod
@@ -102,7 +102,7 @@ class DataObject:
         from gedge.py_proto.base_data import BaseData
         type = config.get_base_type()
         if type is None:
-            raise Exception(value, config)
+            raise LookupError(f"Passed in python value {value}, but configuration is a model!")
         return cls(BaseData.from_value(value, type), config)
     
     @classmethod
@@ -118,7 +118,7 @@ class DataObject:
         data: list[DataObject] = self.data # type: ignore
         configs = self.config.get_model_items()
         if configs is None:
-            raise Exception
+            raise LookupError(f"No tags defined for model {self.config.path}")
         j = {}
         for d, c in zip(data, configs):
             j[c.path] = d.to_value()

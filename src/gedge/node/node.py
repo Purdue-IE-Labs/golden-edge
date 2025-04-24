@@ -331,7 +331,7 @@ class NodeSession:
         for path in self.config.models:
             m = self._comm.fetch_model(self.config.models[path])
             if not m:
-                raise Exception(f"no model at path {path}")
+                raise LookupError(f"No model found at path {path}, version {self.config.models[path].path}")
             models.append(m)
         return models
     

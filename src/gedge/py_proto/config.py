@@ -30,15 +30,16 @@ class Config:
     @classmethod
     def from_json5(cls, j: Any) -> Self:
         if not isinstance(j, dict):
-            raise Exception
+            raise ValueError(f"Invalid json for configuration of tag, expected dict, found {j}")
+
         if not (("base_type" in j) ^ ("model_path" in j) ^ ("model" in j) ^ ("model_file" in j)):
             raise LookupError(f"Object must set one and only one of ['base_type', 'model_path', 'model', 'model_file']")
 
         if j.get("base_type"):
-            return cls(BaseType.from_json5(j["base_type"]))
+            return cls(BaseType.from_json5(j))
         return cls(DataModelObjectConfig.from_json5(j))
     
-    def to_json5(self):
+    def to_json5(self) -> dict:
         return self.config.to_json5()
     
     def is_base_type(self) -> bool:

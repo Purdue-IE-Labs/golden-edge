@@ -19,7 +19,7 @@ class DataModelObjectConfig:
     repr: DataModelType | DataModelConfig
 
     @property
-    def path(self):
+    def path(self) -> str:
         if self.is_path():
             return self.repr.full_path # type: ignore
         return DataModelType(self.repr.path, self.repr.version).full_path
@@ -43,10 +43,11 @@ class DataModelObjectConfig:
     @classmethod
     def from_json5(cls, j: Any) -> Self:
         if not isinstance(j, dict):
-            config = DataModelType.from_json5(j)
+            raise ValueError(f"Invalid json {j} for data model configuration")
 
         if not (("model_path" in j) ^ ("model" in j) ^ ("model_file" in j)):
             raise LookupError(f"Model object must set one and only one of ['model_path', 'model', 'model_file']")
+
         elif j.get("model_path"):
             config = DataModelType.from_json5(j["model_path"])
         elif j.get("model_file"):
@@ -56,11 +57,20 @@ class DataModelObjectConfig:
             path = pathlib.Path(json5_dir) / j["model_file"]
             config = load_from_file(str(path))
         else:
-            DataModelConfig.from_json5(j["model"])
+            config = DataModelConfig.from_json5(j["model"])
         return cls(config)
     
-    def to_json5(self) -> dict | str:
-        return self.repr.to_json5()
+    def to_json5(self) -> dict:
+        """
+        We never put the file back in the json when we're writing it, that's only a convenience things for the user
+        """
+        j = {}
+        if self.is_embedded():
+            j["model"] = self.repr.to_json5()
+        else:
+            j["model_path"] = self.repr.to_json5()
+
+        return j
     
     def load(self, path: DataModelType) -> DataModelConfig:
         config = load(path)

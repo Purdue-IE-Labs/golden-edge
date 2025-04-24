@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 @dataclass
 class Prop:
-    # TODO: could remove config because DataObject has a DataObjectConfig?
     value: DataObject
 
     @property
@@ -59,7 +58,8 @@ class Prop:
         model_path = self.config.get_model_object_config().get_path() # type: ignore
         configs = self.config.get_model_items()
         if configs is None:
-            raise Exception
+            raise ValueError(f"No model items defined on model {model_path.full_path}") # type: ignore
+
         for d, c in zip(data, configs):
             j["model_path"] = model_path
             j["model"] = {
@@ -131,8 +131,10 @@ class Props:
         return cls(props)
     
     def to_json5(self) -> dict:
+        if self.is_empty():
+            return {}
         j = {key:value.to_json5() for key, value in self.props.items()}
-        return j
+        return {"props": j}
     
     def is_empty(self) -> bool:
         return len(self.props) == 0
