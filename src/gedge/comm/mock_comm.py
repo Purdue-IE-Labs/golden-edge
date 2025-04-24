@@ -61,6 +61,12 @@ class MockComm(Comm):
     def __enter__(self):
         logger.info(f"Mock connection")
         return self
+
+    def connect(self):
+        '''
+        Creates and opens the Zenoh session
+        '''
+        self.__enter__()
     
     def __exit__(self, *exc):
         logger.info(f"Closing mock connection")
@@ -77,7 +83,13 @@ class MockComm(Comm):
     
     def cancel_subscription(self, key_expr: str):
         self.subscribers[key_expr] = []
-    
+
+    def is_closed(self):
+        if (self.subscribers == defaultdict(list) and self.active_methods == dict() and self.metas == dict()):
+            return True
+        else:
+            return False
+        
     def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> MockCallback:
         def _on_reply(reply: MockSample) -> None:
             assert type(reply.value) == proto.ResponseData

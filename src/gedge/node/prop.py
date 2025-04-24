@@ -35,24 +35,24 @@ class Prop:
     def intuit_type(value: Any) -> DataType:
         if isinstance(value, str):
             return DataType.STRING
+        elif isinstance(value, bool):
+            return DataType.BOOL
         elif isinstance(value, int):
             return DataType.INT
         elif isinstance(value, float):
             return DataType.FLOAT
-        elif isinstance(value, bool):
-            return DataType.BOOL
         elif isinstance(value, list):
             if len(value) == 0:
                 return DataType.LIST_INT
             val0 = value[0]
             if isinstance(val0, str):
                 return DataType.LIST_STRING
+            elif isinstance(val0, bool):
+                return DataType.LIST_BOOL
             elif isinstance(val0, int):
                 return DataType.LIST_INT
             elif isinstance(val0, float):
                 return DataType.LIST_FLOAT
-            elif isinstance(val0, bool):
-                return DataType.LIST_BOOL
         raise ValueError(f"Illegal type for property. Allowed properties are str, int, float, bool. value is of type {type(value)}")
     
     def __repr__(self):

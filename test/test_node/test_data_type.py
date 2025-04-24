@@ -122,8 +122,10 @@ class TestSanity:
         (proto.DataType.LIST_STRING, DataType.LIST_STRING),
         (proto.DataType.LIST_BOOL, DataType.LIST_BOOL),
     ])
-    def test_to_proto_from_proto(self, proto_enum):
+    def test_to_proto_from_proto(self, proto_enum, expected_value):
         instance = DataType.from_proto(proto_enum)
+        assert instance == expected_value
+        assert instance.to_proto() == proto_enum
 
 
     # Round trip, make a DataType object, get the to_proto then make another with from_proto and see if it works

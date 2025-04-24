@@ -1,3 +1,10 @@
+import gedge.comm
+import gedge.comm.comm
+import gedge.node
+import gedge.node.prop
+import gedge.node.remote
+import gedge.node.subnode
+import gedge.node.tag
 import pytest
 import gedge
 import pathlib
@@ -31,7 +38,7 @@ class TestSanity:
         def tag_data_callback_handler():
             print("Yeah dawg")
 
-        remote.add_tag_data_callback("tag/write", tag_data_callback_handler)        
+        remote.add_tag_data_callback("tag/write", tag_data_callback_handler)    
 
         assert comm.subscribers != []
 
@@ -82,7 +89,7 @@ class TestSanity:
         assert comm.subscribers != []
 
     # MockComm doesn't have a session attribute, so liveliness callback can't be initialized
-    @pytest.mark.skip
+    # @pytest.mark.skip
     def test_add_liveliness_callback(self):
         
         here = pathlib.Path(__file__).parent
@@ -108,8 +115,7 @@ class TestSanity:
 
 
     # MockComm doesn't have a session attribute, so TagBind can't be initialized
-
-    @pytest.mark.skip
+    # @pytest.mark.skip
     def test_tag_binds(self):
 
         # Create some tags
@@ -145,8 +151,7 @@ class TestSanity:
         pytest.fail("Yeah dawg")
 
     # MockComm doesn't have a session attribute, so TagBind can't be initialized
-
-    @pytest.mark.skip
+    # @pytest.mark.skip
     def test_tag_bind(self):
 
         # Create some tags
@@ -171,4 +176,55 @@ class TestSanity:
         remote.tag_bind("tag/write")
 
 
+        pytest.fail("Yeah dawg")
+
+    def test_subnode(self):
+
+        here = pathlib.Path(__file__).parent
+    
+        config = gedge.NodeConfig.from_json5(str(here / "test_writee.json5"))
+
+        config.tags['tag/write']._writable = False
+
+        properties = {
+        'tag1': 'int',
+        'tag2': 'float',
+        'tag3': 'str'
+        }
+
+        tag = gedge.node.tag.Tag("tag/path", gedge.DataType.INT, gedge.node.prop.Props.from_value(properties), False, [], None)
+        
+        subnode = gedge.node.subnode.SubnodeConfig("my_subnode", config.ks, {'tag': tag}, {}, {})
+
+        config.subnodes = {'subnode': subnode}
+        
+        node = gedge.mock_connect(config)
+
+        remote = node.connect_to_remote("test/tag/writes/writee")
+
+        subnodeConnection = remote.subnode(subnode.name)
+
+        assert isinstance(subnodeConnection, gedge.node.subnode.RemoteSubConnection)
+
+        assert subnodeConnection.key == subnode.name
+        assert str(subnodeConnection.ks) == str(subnode.ks)
+        assert subnodeConnection.node_id == remote.node_id
+
+    # This is dependent upon comm.write_tag which doesn't exist in MockComm and there's nothing that returns WriteResponseData
+    @pytest.mark.skip
+    def test_write_tag(self):
+        # Note, just try remote.write_tag since it runs _write_tag
+        pytest.fail("Yeah dawg")
+
+    @pytest.mark.skip
+    def test_write_tag_async(self):
+        # Specifically try to test the asynchronous behaviour
+        pytest.fail("Yeah dawg")
+
+    @pytest.mark.skip
+    def test_call_method(self):
+        pytest.fail("Yeah dawg")
+
+    @pytest.mark.skip
+    def test_call_method_iter(self):
         pytest.fail("Yeah dawg")

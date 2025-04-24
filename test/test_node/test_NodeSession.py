@@ -1,7 +1,8 @@
 import gedge
 import pytest
 
-from gedge.node.node import NodeConfig, Tag, Method
+from gedge.comm.mock_comm import MockComm
+from gedge.node.node import NodeConfig, Tag, Method, NodeSession
 from gedge.node.subnode import SubnodeConfig
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
@@ -9,6 +10,13 @@ from gedge.node.tag import WriteResponse
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.proto import Meta
 from gedge import proto
+
+class TestSanity:
+    def test_init(self):
+        instance_str = "instance/str"
+        nodeConfig_instance = NodeConfig(instance_str)
+        nodeSession = NodeSession(nodeConfig_instance, comm=MockComm())
+
 
 
 def test_close():

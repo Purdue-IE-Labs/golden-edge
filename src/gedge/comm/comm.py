@@ -87,6 +87,9 @@ class Comm:
         for s in subscriptions:
             s.undeclare()
 
+    def is_closed(self):
+        return self.session.is_closed()
+
     def serialize(self, proto: ProtoMessage) -> bytes:
         '''
         Converts the passed ProtoMessage to a base 64 encoded bytes object

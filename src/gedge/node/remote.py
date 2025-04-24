@@ -166,8 +166,8 @@ class RemoteConnection:
             RemoteSubConnection: The new connection for the subnode
         '''
         from gedge.node.subnode import RemoteSubConnection
-        def on_close(key):
-            pass
+        # def on_close(key):
+        #     pass
         if "/" in name:
             curr_node = self
             subnodes = name.split("/")
@@ -179,14 +179,14 @@ class RemoteConnection:
             # different uuid or same?
             from gedge.node.subnode import SubnodeConfig
             assert isinstance(curr_node, SubnodeConfig)
-            r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+            r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, None)
             return r
 
         if name not in self.subnodes:
             raise ValueError(f"No subnode {name}") 
         curr_node = self.subnodes[name]
-        logger.debug(self._comm.session.is_closed())
-        r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
+        logger.debug(self._comm.is_closed())
+        r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, None)
         return r
 
     def _write_tag(self, path: str, value: Any) -> TagWriteReply:

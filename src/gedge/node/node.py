@@ -387,7 +387,7 @@ class NodeConfig:
         return NodeSession(self, Comm(connections))
 
 class NodeSession:
-    def __init__(self, config: NodeConfig, comm: Comm):
+    def __init__(self, config: NodeConfig, comm: Comm | MockComm):
         self._comm = comm
         self.config = config
         self.ks = config.ks
