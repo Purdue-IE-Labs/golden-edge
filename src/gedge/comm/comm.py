@@ -418,7 +418,7 @@ class Comm:
             if res.err:
                 raise Exception
         except:
-            logger.warning(f"No model found at path {path} with version {version}")
+            logger.info(f"No model found at path {path} with version {version}")
             return None
         assert isinstance(res.result, zenoh.Sample)
         s = res.result
@@ -440,11 +440,12 @@ class Comm:
         if version is not None:
             model = self._pull_model_with_version(path, version)
             if not model:
+                logger.info(f"No model at path {path} with version {version}")
                 return None
         else:
             models = self._pull_all_model_versions(path)
             if not models:
-                logger.warning(f"No model at path {path}")
+                logger.info(f"No model at path {path}")
                 return None
             model = max(models, key=lambda m : m.version)
         
