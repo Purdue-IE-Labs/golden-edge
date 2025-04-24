@@ -37,12 +37,12 @@ def push(args):
     _push(path, args.ip_address)
 
 def _push(path: str, ip_address: str) -> DataModelConfig | None:
+    with open(path, "r") as f:
+        res = f.read()
+    j = json5.loads(res)
+    config = DataModelConfig.from_json5(j) 
+    logger.debug(f"Parsed config at json path {path}: {config}")
     with Comm([f"tcp/{ip_address}:7447"]) as comm:
-        with open(path, "r") as f:
-            res = f.read()
-        j = json5.loads(res)
-        config = DataModelConfig.from_json5(j) 
-        logger.debug(f"Parsed config at json path {path}: {config}")
         if not comm.push_model(config, True):
             logger.warning(f"Could not push model at path {path}")
             return None
@@ -64,10 +64,10 @@ def _pull(path: str, version: int | None, ip_address: str, model_dir: str):
         config = comm.pull_model(path, version)
         if not config:
             raise LookupError(f"No model found at path {path} with version {version if version else "latest"}")
-        logger.info(f"Pulled config at path {path}, writing to file...")
-        logger.debug(f"Config: {config}")
-        if not config.to_file(model_dir, comm):
-            raise LookupError("Could not convert config to file")
+    logger.info(f"Pulled config at path {path}, writing to file...")
+    logger.debug(f"Config: {config}")
+    if not config.to_file(model_dir):
+        raise LookupError("Could not convert config to file")
     logger.info(f"Model written to file {str(pathlib.Path(model_dir) / path)}")
 
 def main():

@@ -21,6 +21,8 @@ from gedge.node.method_response import MethodResponseConfig
 from gedge.node.param import params_proto_to_py
 from gedge.node.body import BodyConfig
 from gedge.py_proto.data_model_config import DataModelConfig
+from gedge.py_proto.data_model_object_config import DataModelObjectConfig
+from gedge.py_proto.data_object_config import DataObjectConfig
 from gedge.py_proto.props import Props
 from gedge.node.query import MethodQuery
 from gedge.py_proto.tag_config import TagConfig, TagWriteResponseConfig
@@ -447,9 +449,13 @@ class Comm:
             model = max(models, key=lambda m : m.version)
         
         if model.parent is not None:
-            model.parent.fetch(self)
+            if not self.fetch_model(model.parent):
+                logger.warning(f"Unable to fetch parent model {model.parent.path}")
         for tag in model.items:
-            tag.config.fetch(self)
+            if not tag.config.is_model_path():
+                continue
+            if not self.fetch_model(tag.config.get_model_type()): # type: ignore
+                logger.warning(f"Unable to fetch model {tag.config.config.config.path} for tag at path {tag.path}") # type: ignore
         return model
     
     def push_model(self, model: DataModelConfig, push_embedded: bool = True) -> bool:
@@ -484,3 +490,13 @@ class Comm:
         key_expr = keys.model_path(model.path, model.version)
         self._send_proto(key_expr, model.to_proto())
         return True
+
+    def fetch_model(self, config: DataModelObjectConfig) -> DataModelConfig | None:
+        if config.is_embedded():
+            return config.get_embedded()
+        path = config.repr
+        model = self.pull_model(path.path, path.version)
+        if not model:
+            return None
+        config.repr = model
+        return model

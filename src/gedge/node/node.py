@@ -329,7 +329,7 @@ class NodeSession:
     def fetch_models(self) -> list[DataModelConfig]:
         models = []
         for path in self.config.models:
-            m = self.config.models[path].fetch(self._comm)
+            m = self._comm.fetch_model(self.config.models[path])
             if not m:
                 raise Exception(f"no model at path {path}")
             models.append(m)

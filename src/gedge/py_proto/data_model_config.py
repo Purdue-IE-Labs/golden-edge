@@ -99,25 +99,18 @@ class DataModelConfig:
 
         return j
     
-    def to_file(self, model_dir: str, comm: Comm) -> bool:
+    def to_file(self, model_dir: str) -> bool:
         for tag in self.items:
             config = tag.config
-            if config.is_base_type():
+            if config.is_base_type() or config.is_model_path():
                 continue
-            if config.is_model_path():
-                if not config.fetch(comm):
-                    return False
             model = config.get_model_config()
-            if not (model and model.to_file(model_dir, comm) and config.to_model_path()):
+            if not (model and model.to_file(model_dir) and config.to_model_path()):
                 return False
-        if self.parent is not None:
+        if self.parent is not None and self.parent.is_embedded():
             p = self.parent
-            if p.is_path():
-                if not p.fetch(comm):
-                    logger.debug("could not fetch parent")
-                    return False
             model = p.get_embedded()
-            if not (model and model.to_file(model_dir, comm)):
+            if not (model and model.to_file(model_dir)):
                 logger.debug("could not write parent to file")
                 return False
             p.to_model_path()
@@ -149,26 +142,6 @@ class DataModelConfig:
             tags.append(DataModelItemConfig.from_json5(tag))
         
         return cls(path, parent, version, tags)
-    
-    def fetch(self, comm: Comm, recurse: bool = True) -> bool:
-        '''
-        Embed all models by fetching from path
-        '''
-
-        res = True
-        for item in self.items:
-            c = item.config.config.config
-            if isinstance(c, BaseType):
-                continue
-            if isinstance(c.repr, DataModelType):
-                path = c.repr
-                model = comm.pull_model(path.path, path.version)
-                if not model:
-                    return False
-                c.repr = model
-            elif isinstance(c.repr, DataModelConfig):
-                res = res and c.repr.fetch(comm, recurse)
-        return True
     
     def get_config_items(self) -> list[DataObjectConfig]:
         return [i.config for i in self.items]

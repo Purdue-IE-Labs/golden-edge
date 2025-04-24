@@ -18,6 +18,12 @@ if TYPE_CHECKING:
 class DataModelObjectConfig:
     repr: DataModelType | DataModelConfig
 
+    @property
+    def path(self):
+        if self.is_path():
+            return self.repr.full_path # type: ignore
+        return DataModelType(self.repr.path, self.repr.version).full_path
+
     def to_proto(self) -> proto.DataModelObjectConfig:
         if isinstance(self.repr, DataModelType):
             return proto.DataModelObjectConfig(path=self.repr.to_proto())
@@ -55,16 +61,6 @@ class DataModelObjectConfig:
     
     def to_json5(self) -> dict | str:
         return self.repr.to_json5()
-    
-    def fetch(self, comm: Comm) -> DataModelConfig | None:
-        if self.is_embedded():
-            return self.get_embedded()
-        path = self.repr
-        model = comm.pull_model(path.path, path.version)
-        if not model:
-            return None
-        self.repr = model
-        return model
     
     def load(self, path: DataModelType) -> DataModelConfig:
         config = load(path)

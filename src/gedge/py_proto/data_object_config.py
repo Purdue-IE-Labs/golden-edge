@@ -143,14 +143,3 @@ class DataObjectConfig:
         if model is None:
             return None
         return [i for i in model.items]
-    
-    def fetch(self, comm: Comm) -> bool:
-        path = self.get_model_path()
-        if not path:
-            return True
-        logger.debug(f"Fetching model at path {path.path}")
-        model = comm.pull_model(path.path, path.version)
-        if not model:
-            return False
-        self.set_model_config(model)
-        return True
