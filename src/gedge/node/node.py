@@ -74,7 +74,7 @@ class NodeConfig:
             config.subnodes[subnode.name] = subnode
         
         return config
-    
+
     def get_models_and_condense_to_paths(self) -> list[DataModelConfig]:
         models = []
         for tag in self.tags.values():
@@ -82,18 +82,21 @@ class NodeConfig:
                 continue
             m = tag.data_object_config.get_model_and_to_path()
             if m:
+                m.add_parent_tags()
                 models.append(m)
         for method in self.methods.values():
             for p in method.params.params:
                 c = method.params.params[p]
                 m = c.get_model_and_to_path()
                 if m:
+                    m.add_parent_tags()
                     models.append(m)
             for r in method.responses:
                 for b in r.body.body:
                     c = r.body.body[b]
                     m = c.get_model_and_to_path()
                     if m:
+                        m.add_parent_tags()
                         models.append(m)
         for subnode in self.subnodes.values():
             models += subnode.get_models_and_condense_to_paths()
@@ -230,17 +233,14 @@ class NodeSession:
         self.connections: dict[str, RemoteConnection] = dict() # user_key -> RemoteConnection
         self.id = str(uuid.uuid4())
         self.tags: dict[str, TagConfig] = self.config.tags
-        print(self.tags)
         self.tag_write_responses: dict[str, dict[int, TagWriteResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
         self.methods: dict[str, MethodConfig] = self.config.methods
         self.method_responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         self.subnodes: dict[str, SubnodeConfig] = self.config.subnodes
         self.models: dict[str, DataModelConfig] = self.config.models
-        print(self.models.keys())
 
         # connect
         self._comm.connect()
-        self.add_parent_tags()
 
         # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = self.config.build_meta()
@@ -378,10 +378,6 @@ class NodeSession:
                     config = response.body.body[body]
                     c = self.get_data_object_config(config)
                     response.body.body[body] = c
-
-    def add_parent_tags(self):
-        for model in self.models.values():
-            model.add_parent_tags()
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         return [self.tag_bind(path) for path in paths]
