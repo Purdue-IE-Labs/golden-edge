@@ -55,6 +55,10 @@ class DataModelConfig:
     version: int
     items: list[DataModelItemConfig]
 
+    @property
+    def full_path(self):
+        return DataModelType(self.path, self.version).full_path
+
     def to_proto(self) -> proto.DataModelConfig:
         items = [i.to_proto() for i in self.items]
         parent = None

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 import pathlib
+import re
 from typing import TYPE_CHECKING, Any, Self
 
 import json5
 
-from gedge.py_proto.data_model_type import DataModelType
+from gedge.py_proto.data_model_type import DataModelType, to_file_path
 from gedge import proto
 from gedge.py_proto.singleton import Singleton
 
@@ -102,12 +104,15 @@ class DataModelObjectConfig:
         if self.is_embedded():
             self.repr = DataModelType(self.repr.path, self.repr.version)
 
-
 def load(path: DataModelType) -> DataModelConfig:
     directory = Singleton().get_model_dir()
     if not directory:
         raise LookupError(f"Trying to find model {path.path} but no --model-dir passed in")
-    path_to_json = pathlib.Path(directory) / path.to_file_path()
+    try:
+        p = path.to_file_path()
+    except:
+        p = file_path_latest_version(directory, path)
+    path_to_json = pathlib.Path(directory) / p
     return load_from_file(str(path_to_json))
 
 def load_from_file(path: str) -> DataModelConfig:
@@ -116,3 +121,22 @@ def load_from_file(path: str) -> DataModelConfig:
         j = json5.load(f)
     config = DataModelConfig.from_json5(j)
     return config
+
+def file_path_latest_version(directory: str, path: DataModelType) -> str:
+    dir = pathlib.Path(directory) / path.path
+    version = find_latest_version(str(dir))
+    return str(pathlib.Path(directory) / to_file_path(path.path, version))
+
+def find_latest_version(dir: str) -> int:
+    max_version = -1
+    for f in os.listdir(dir):
+        print(f)
+        m = re.match(r'v(\d+).json5', f)
+        if m:
+            print(f"found a match in {f}")
+            version = int(m.group(1))
+            print(version)
+            max_version = max(max_version, version)
+    if max_version == -1:
+        raise LookupError(f"No local version of model found in {dir}")
+    return max_version

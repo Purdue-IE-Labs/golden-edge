@@ -17,6 +17,9 @@ from typing import Any, Iterator, Callable, TYPE_CHECKING
 
 from gedge.node.tag_write_reply import TagWriteReply
 from gedge.py_proto.data_model import DataObject
+from gedge.py_proto.data_model_config import DataModelConfig
+from gedge.py_proto.data_model_type import DataModelType
+from gedge.py_proto.data_object_config import DataObjectConfig
 from gedge.py_proto.tag_config import TagConfig
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
@@ -44,6 +47,7 @@ class RemoteConnection:
         methods: list[MethodConfig] = [MethodConfig.from_proto(m) for m in self.meta.methods]
         self.methods = {m.path: m for m in methods}
         self.responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.models: dict[str, DataModelConfig] = {DataModelType(m.path, m.version).full_path: DataModelConfig.from_proto(m) for m in self.meta.models}
 
         from gedge.node.subnode import SubnodeConfig
         subnodes: list[SubnodeConfig] = [SubnodeConfig.from_proto(s, self.ks) for s in self.meta.subnodes]
@@ -116,7 +120,8 @@ class RemoteConnection:
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
         tag = self.tags[path]
-        response = self._comm.write_tag(self.ks, tag.path, DataObject.from_value(value, tag.config.config).to_proto())
+        config = self.get_data_object_config(tag.data_object_config)
+        response = self._comm.write_tag(self.ks, tag.path, DataObject.from_value(value, config).to_proto())
         code, error = response.code, response.error
 
         '''
@@ -149,7 +154,7 @@ class RemoteConnection:
         params: dict[str, proto.DataObject] = {}
         for key, value in kwargs.items():
             config = method.params[key]
-            params[key] = DataObject.py_to_proto(value, config)
+            params[key] = DataObject.py_to_proto(value, self.get_data_object_config(config))
 
         logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
         self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
@@ -176,7 +181,9 @@ class RemoteConnection:
         params: dict[str, proto.DataObject] = {}
         for key, value in kwargs.items():
             config = method.params[key]
-            params[key] = DataObject.py_to_proto(value, config)
+            print(value, config)
+            params[key] = DataObject.py_to_proto(value, self.get_data_object_config(config))
+        print(params)
         
         replies: Queue[MethodReply] = Queue()
         def _on_reply(reply: MethodReply) -> None:
@@ -206,3 +213,31 @@ class RemoteConnection:
             yield res
             if res.code in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
                 return
+
+    def get_data_object_config(self, config: DataObjectConfig) -> DataObjectConfig:
+        """
+        What's happening here is that tags, methods, etc. are not embedded with the models in the meta.
+        For example, a tag in meta may look like this (simplified).
+            tag {
+                DataModelType type {
+                    string path
+                    int version
+                }
+                ...
+            }
+        
+        However, if we are going to serialize or deserialize this tag, we need to have the whole model, 
+        not just the DataModelType representation. Instead, we need the DataModelConfig representation.
+        Thus, if we look in the DataObjectConfig and find a path, we fetch the model from the definition 
+        of the model that is packaged into the meta message via meta.models.
+        """
+        if config.is_base_type():
+            return config
+        else:
+            c = config.get_model_config()
+            if c:
+                return config
+            p = config.get_model_path()
+            assert p is not None
+            print(self.models.keys())
+            return DataObjectConfig.from_model_config(self.models[p.full_path], config.props)

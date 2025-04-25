@@ -59,16 +59,16 @@ class DataObjectConfig:
     def from_json5(cls, j: Any) -> Self:
         from gedge.py_proto.props import Props
         if not isinstance(j, dict):
-            raise ValueError
+            raise ValueError(f"Expected dictionary for data object config, found {j}")
         config = Config.from_json5(j)
         props = Props.from_json5(j.get("props", {}))
         return cls(config, props)
     
     @classmethod
-    def from_model_config(cls, model: DataModelConfig) -> Self:
-        from gedge.py_proto.props import Props
+    def from_model_config(cls, model: DataModelConfig, props: Props | None = None) -> Self:
+        if props is None:
+            props = Props.empty()
         config = Config(DataModelObjectConfig(model))
-        props = Props.empty()
         return cls(config, props)
     
     @classmethod
@@ -154,5 +154,19 @@ class DataObjectConfig:
     def get_model_items(self) -> list[DataModelItemConfig] | None:
         model = self.get_model_config()
         if model is None:
+            logger.info("DataObjectConfig does not have a model config, either of type model path or base type")
             return None
         return [i for i in model.items]
+
+    def get_model_and_to_path(self) -> DataModelConfig | None:
+        if self.is_base_type():
+            return None
+        model = self.get_model_config()
+        if model:
+            self.to_model_path()
+            return model
+        path = self.get_model_path()
+        assert path is not None
+        model = load(path)
+        self.set_model_path(DataModelType.from_model(model))
+        return model

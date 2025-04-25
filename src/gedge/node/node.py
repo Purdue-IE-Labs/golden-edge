@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 from re import sub
 import uuid
 from gedge.node.method import MethodConfig
@@ -9,7 +10,7 @@ from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.config import Config
 from gedge.py_proto.data_model import DataObject
 from gedge.py_proto.data_model_config import DataModelConfig, DataModelItemConfig
-from gedge.py_proto.data_model_object_config import DataModelObjectConfig
+from gedge.py_proto.data_model_object_config import DataModelObjectConfig, find_latest_version, load, load_from_file
 from gedge.py_proto.data_object_config import DataObjectConfig
 from gedge.py_proto.params_config import ParamsConfig
 from gedge.py_proto.props import Props
@@ -18,6 +19,7 @@ from gedge.proto import Meta, State, MethodResponse, MethodCall
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
+from gedge.py_proto.singleton import Singleton
 from gedge.py_proto.tag_config import TagConfig, TagWriteResponseConfig
 from gedge import py_proto
 from gedge.node.tag_bind import TagBind
@@ -40,7 +42,7 @@ class NodeConfig:
         self.tags: dict[str, TagConfig] = dict()
         self.methods: dict[str, MethodConfig] = dict()
         self.subnodes: dict[str, SubnodeConfig] = dict()
-        self.models: dict[str, DataModelObjectConfig] = dict()
+        self.models: dict[str, DataModelConfig] = dict()
 
     @classmethod
     def from_json5(cls, path: str):
@@ -62,21 +64,40 @@ class NodeConfig:
             tag = TagConfig.from_json5(tag_json)
             config.tags[tag.path] = tag
 
-            model = tag.data_object_config.get_model_type()
-            if not model: continue
-            path = model.get_path()
-            if not path:
-                continue
-            config.models[path.path] = model
-
         for method_json in obj.get("methods", []):
             method = MethodConfig.from_json5(method_json)
             config.methods[method.path] = method
+
         from gedge.node.subnode import SubnodeConfig
         for subnode_json in obj.get("subnodes", []):
             subnode = SubnodeConfig.from_json5(subnode_json, config.ks)
             config.subnodes[subnode.name] = subnode
+        
         return config
+    
+    def get_models_and_condense_to_paths(self) -> list[DataModelConfig]:
+        models = []
+        for tag in self.tags.values():
+            if tag.is_base_type():
+                continue
+            m = tag.data_object_config.get_model_and_to_path()
+            if m:
+                models.append(m)
+        for method in self.methods.values():
+            for p in method.params.params:
+                c = method.params.params[p]
+                m = c.get_model_and_to_path()
+                if m:
+                    models.append(m)
+            for r in method.responses:
+                for b in r.body.body:
+                    c = r.body.body[b]
+                    m = c.get_model_and_to_path()
+                    if m:
+                        models.append(m)
+        for subnode in self.subnodes.values():
+            models += subnode.get_models_and_condense_to_paths()
+        return models
 
     @property
     def key(self):
@@ -181,17 +202,24 @@ class NodeConfig:
             assert method.handler is not None, f"Method {path} has no handler"
 
     # essentially to_proto() for the node
-    def build_meta(self, models: list[DataModelConfig]) -> Meta:
+    def build_meta(self) -> Meta:
         self._verify_tags()
         tags: list[proto.TagConfig] = [t.to_proto() for t in self.tags.values()]
         methods: list[proto.MethodConfig] = [m.to_proto() for m in self.methods.values()]
         subnodes: list[proto.SubnodeConfig] = [s.to_proto() for s in self.subnodes.values()]
-        ms: list[proto.DataModelConfig] = [m.to_proto() for m in models]
+        ms: list[proto.DataModelConfig] = [m.to_proto() for m in self.models.values()]
         meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods, subnodes=subnodes, models=ms)
+        print(f"Bytes of meta message: {len(meta.SerializeToString())}")
         return meta
 
     def _connect(self, connections: list[str]):
         logger.info(f"Node {self.key} attempting to connect to network")
+        models = self.get_models_and_condense_to_paths()
+        print('CONNECTING')
+        print(self.methods)
+        print(self.tags)
+        print(self.subnodes)
+        self.models = {m.full_path: m for m in models}
         return NodeSession(self, Comm(connections))
 
 class NodeSession:
@@ -201,22 +229,29 @@ class NodeSession:
         self.ks = config.ks
         self.connections: dict[str, RemoteConnection] = dict() # user_key -> RemoteConnection
         self.id = str(uuid.uuid4())
-
-        # connect
-        self._comm.connect()
-        self.models = self.fetch_models()
-        self.add_parent_tags()
-
-        # TODO: subscribe to our own meta to handle changes to config during session?
-        self.meta = self.config.build_meta(self.models)
-        logger.debug(f"Built meta: {self.meta}")
-
-        self._startup()
         self.tags: dict[str, TagConfig] = self.config.tags
+        print(self.tags)
         self.tag_write_responses: dict[str, dict[int, TagWriteResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
         self.methods: dict[str, MethodConfig] = self.config.methods
         self.method_responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         self.subnodes: dict[str, SubnodeConfig] = self.config.subnodes
+        self.models: dict[str, DataModelConfig] = self.config.models
+        print(self.models.keys())
+
+        # connect
+        self._comm.connect()
+        self.add_parent_tags()
+
+        # TODO: subscribe to our own meta to handle changes to config during session?
+        self.meta = self.config.build_meta()
+
+        # order here is important, we build the meta with the models having just their path in the tags, methods, subnodes, but embedded in the models
+        # however, for simplicity of coding afterward, we embed the models
+        self.fetch_models()
+        logger.debug(f"Built meta: {self.meta}")
+
+        self._startup()
+        print(f"models: {self.models}")
 
     def __enter__(self):
         return self
@@ -326,17 +361,26 @@ class NodeSession:
         for s in self.config.subnodes.values():
             add_subnode_callbacks(s)
     
-    def fetch_models(self) -> list[DataModelConfig]:
-        models = []
-        for path in self.config.models:
-            m = self._comm.fetch_model(self.config.models[path])
-            if not m:
-                raise LookupError(f"No model found at path {path}, version {self.config.models[path].path}")
-            models.append(m)
-        return models
-    
+    def fetch_models(self):
+        # fetch all things for now
+        for path in self.tags:
+            c = self.get_tag_config(path)
+            self.tags[path].config.config = c
+
+        for path in self.methods:
+            for key in self.methods[path].params.params:
+                # TODO: why do I write lines of code like this
+                config = self.methods[path].params.params[key]
+                c = self.get_data_object_config(config)
+                self.methods[path].params.params[key] = c
+            for response in self.methods[path].responses:
+                for body in response.body.body:
+                    config = response.body.body[body]
+                    c = self.get_data_object_config(config)
+                    response.body.body[body] = c
+
     def add_parent_tags(self):
-        for model in self.models:
+        for model in self.models.values():
             model.add_parent_tags()
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
@@ -351,8 +395,49 @@ class NodeSession:
     def update_tag(self, path: str, value: Any | dict):
         tag = self.tags[path]
         logger.debug(f"Putting tag value {value} on path {path}")
-        res = DataObject.from_value(value, tag.config.config)
+
+        config = self.get_tag_config(path)
+        res = DataObject.from_value(value, config)
         self._comm.update_tag(self.ks, tag.config.path, res.to_proto())
+    
+    def get_tag_config(self, path: str) -> DataObjectConfig:
+        """
+        we should just be able to do tag.config.config.
+        However, we do not embed the models in tags or methods, only in the models part of meta,
+        so if it is a model path, we must look it up
+        """
+        tag = self.tags[path]
+        if tag.is_base_type():
+            return tag.data_object_config
+        else:
+            c = tag.get_model_config()
+            if c:
+                return tag.data_object_config
+            p = tag.get_model_path()
+            assert p is not None
+            return DataObjectConfig.from_model_config(self.models[p.full_path], tag.data_object_config.props)
+
+    def get_data_object_config(self, config: DataObjectConfig) -> DataObjectConfig:
+        if config.is_base_type():
+            return config
+        else:
+            c = config.get_model_config()
+            if c:
+                return config
+            p = config.get_model_path()
+            assert p is not None
+            print(self.models.keys())
+            return DataObjectConfig.from_model_config(self.models[p.full_path], config.props)
+            
+    def get_model_from_meta(self, config: DataModelObjectConfig) -> DataModelConfig:
+        c = config.get_embedded()
+        if not c:
+            p = config.get_path()
+            assert p is not None
+            if self.models.get(p.full_path) is None:
+                raise LookupError(f"No model with path {p} in meta")
+            return self.models[p.full_path]
+        return c
     
     def update_state(self, online: bool):
         online_str = "online" if online else "offline"

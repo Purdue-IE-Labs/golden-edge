@@ -5,6 +5,10 @@ from gedge import proto
 
 from typing import Any, Self, TYPE_CHECKING
 
+from gedge.py_proto.base_type import BaseType
+from gedge.py_proto.data_model_config import DataModelConfig
+from gedge.py_proto.data_model_object_config import DataModelObjectConfig
+from gedge.py_proto.data_model_type import DataModelType
 from gedge.py_proto.data_object_config import DataObjectConfig
 if TYPE_CHECKING:
     from gedge.py_proto.data_model_config import DataModelItemConfig
@@ -104,3 +108,21 @@ class TagConfig:
     
     def add_prop(self, key: str, value: Any):
         self.config.config.props.add_prop(key, value)
+    
+    def is_base_type(self) -> bool:
+        return self.config.config.is_base_type()
+    
+    def is_model_type(self) -> bool:
+        return self.config.config.is_model_type()
+    
+    def get_base_type(self) -> BaseType | None:
+        return self.config.config.get_base_type()
+    
+    def get_model_type(self) -> DataModelObjectConfig | None:
+        return self.config.config.get_model_type()
+    
+    def get_model_config(self) -> DataModelConfig | None:
+        return self.config.config.get_model_config()
+    
+    def get_model_path(self) -> DataModelType | None:
+        return self.config.config.get_model_path()
