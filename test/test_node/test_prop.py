@@ -124,6 +124,29 @@ class TestProp:
 
             assert str(prop) == str(value)
 
+
+    class TestEmpty:
+        def test_init(self):
+            prop = Prop(None, None)
+        
+        def test_to_proto(self):
+            prop = Prop(type=None, value=None)
+
+            prop.to_proto()
+
+        def test_to_value(self):
+            prop = Prop(None, None)
+
+            prop.to_value()
+
+        def test_from_proto(self):
+            prop = Prop.from_proto(None)
+
+        def test_from_value(self):
+            with pytest.raises(ValueError, match="Illegal type for property. Allowed properties are str, int, float, bool. value is of type <class 'NoneType'>"):
+                prop = Prop.from_value(None)
+
+
 from gedge.node.prop import Props
 
 class TestProps:
