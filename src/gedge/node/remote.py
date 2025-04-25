@@ -143,7 +143,7 @@ class RemoteConnection:
         Returns:
             TagBind: The new TagBind
 
-        Example::
+        **Example**::
 
             remote = session.connect_to_remote(...)
             my_tag = remote.tag_bind("my/tag")
@@ -235,7 +235,7 @@ class RemoteConnection:
         Returns:
             TagWriteReply: The reply from the tag write
 
-        Example::
+        **Example**::
 
             remote = session.connect_to_remote(...)
             reply = remote.write_tag("example/path", value=n)
@@ -257,7 +257,7 @@ class RemoteConnection:
         Returns:
             TagWriteReply: The reply from the tag write
 
-        Example::
+        **Example**::
 
             remote = session.connect_to_remote(...)
             reply = await remote.write_tag_async("example/path", param=n)
@@ -278,7 +278,7 @@ class RemoteConnection:
         Returns:
             None: None
 
-        Example::
+        **Example**::
 
             def my_callback(reply):
                     if reply.error:
@@ -319,7 +319,7 @@ class RemoteConnection:
         Returns:
             Iterator[MethodReply]: The generator corresponding to the replies from the method
 
-        Example::
+        **Example**::
         
             remote = session.connect_to_remote("example/path")
             responses = remote.call_method_iter("example/path", param0=x, param1=y)

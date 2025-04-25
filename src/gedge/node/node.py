@@ -516,7 +516,7 @@ class NodeSession:
         Returns:
             RemoteConnection: The new connection between the current node and remote node
 
-        Example::
+        **Example**::
 
             def state_callback(str, state):
                 print(f"State changed: {state} for {str}")
@@ -655,7 +655,7 @@ class NodeSession:
         Returns:
             TagBind: The new TagBind
 
-        Example::
+        **Example**::
 
             config = gedge.NodeConfig.from_json5("...")
             config.add_method_handler("...", handler=x)
