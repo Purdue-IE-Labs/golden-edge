@@ -20,7 +20,7 @@ def key_join(*components: str):
     Returns:
         str: The passed components with a slash between each component
 
-    Example::
+    **Example**::
 
         key = key_join("part0", "part1", "part2")
         key == "part0/part1/part2"
@@ -38,7 +38,7 @@ def node_key_prefix(prefix: str, name: str):
     Returns:
         str: The joined node key
 
-    Example::
+    **Example**::
 
         key = node_key_prefix("prefix", "name")
         key == "prefix/NODE/name"
@@ -56,7 +56,7 @@ def meta_key_prefix(prefix: str, name: str):
     Returns:
         str: The joined meta key
 
-    Example::
+    **Example**::
 
         key = meta_key_prefix("prefix", "name")
         key == "prefix/NODE/name/META"
@@ -74,7 +74,7 @@ def tag_data_key_prefix(prefix: str, name: str):
     Returns:
         str: The joined tag data key prefix
 
-    Example::
+    **Example**::
         
         key = tag_data_key_prefix("prefix", "name")
         key == "prefix/NODE/name/TAGS/DATA"
@@ -93,7 +93,7 @@ def tag_data_key(prefix: str, name: str, key: str):
     Returns:
         str: The joined tag data key
 
-    Example::
+    **Example**::
 
         key = tag_data_key("prefix", "name", "key")
         key == "prefix/NODE/name/TAGS/DATA/key"
@@ -111,7 +111,7 @@ def tag_write_key_prefix(prefix: str, name: str):
     Returns:
         str: The joined tag write key prefix
 
-    Example::
+    **Example**::
 
         key = tag_write_key_prefix("prefix", "name")
         key == "prefix/NODE/name/TAGS/WRITE"
@@ -130,7 +130,7 @@ def tag_write_key(prefix: str, name: str, key: str):
     Returns:
         str: The joined tag write key
 
-    Example::
+    **Example**::
 
         key = tag_write_key("prefix", "name", "key")
         key == "prefix/NODE/name/TAGS/WRITE/key"
@@ -148,7 +148,7 @@ def state_key_prefix(prefix: str, name: str):
     Returns:
         str: The joined state key prefix
 
-    Example::
+    **Example**::
 
         key = state_key_prefix("prefix", "name")
         key == "prefix/NODE/name/STATE"
@@ -166,7 +166,7 @@ def method_key_prefix(prefix: str, name: str):
     Returns:
         str: The joined method key prefix
 
-    Example::
+    **Example**::
 
         key = method_key_prefix("prefix", "name")
         key == "prefix/NODE/name/METHODS"
@@ -184,7 +184,7 @@ def liveliness_key_prefix(prefix: str, name: str):
     Returns:
         str: The joined liveliness key prefix
 
-    Example::
+    **Example**::
 
         key = liveliness_key_prefix("prefix", "name")
         key == "prefix/NODE/name"
@@ -202,7 +202,7 @@ def subnodes_key_prefix(prefix: str, node_name: str):
     Returns:
         str: The joined subnodes key prefix
 
-    Example::
+    **Example**::
 
         key = subnodes_key_prefix("prefix", "node_name")
         key == "prefix/NODE/node_name/SUBNODES"
@@ -219,7 +219,7 @@ def method_response_from_call(key_expr: str):
     Returns:
         str: The joined method response from call key
 
-    Example::
+    **Example**::
 
         key = method_response_from_call("key_expr")
         key == "key_expr/RESPONSE"
