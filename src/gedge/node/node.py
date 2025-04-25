@@ -516,29 +516,26 @@ class NodeSession:
         Returns:
             RemoteConnection: The new connection between the current node and remote node
 
-        Example:
-            `def state_callback(str, state):`
+        Example::
 
-            `(...)`
+            def state_callback(str, state):
+                print(f"State changed: {state} for {str}")
 
-            `def meta_callback(meta_data):`
-            
-            `(...)`
+            def meta_callback(meta_data):
+                print(f"Received metadata: {meta_data}")
 
-            `def liveliness_callback(str, liveliness_status):`
-            
-            `(...)`
+            def liveliness_callback(str, liveliness_status):
+                print(f"Liveliness status: {liveliness_status}, {str}")
 
-            `def tag_data_callback(path, data):`
+            def tag_data_callback(path, data):
+                print(f"Tag data at {path}: {data}")
             
-            `(...)`
-            
-            `remote = session.connect_to_remote(`
-                    `key="path",`
-                    `on_state=state_callback,` 
-                    `on_meta=meta_callback,` 
-                    `on_liveliness_change=liveliness_callback,` 
-                    `tag_data_callbacks={"tag": tag_data_callback})`
+            remote = session.connect_to_remote(
+                key="path", 
+                on_state=state_callback, 
+                on_meta=meta_callback, 
+                on_liveliness_change=liveliness_callback, 
+                tag_data_callbacks={"tag": tag_data_callback})
         '''
         logger.info(f"Node {self.config.key} connecting to remote node {key}")
 
@@ -649,8 +646,8 @@ class NodeSession:
 
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
         '''
-        Updates the tag at the passed back on your own node with an optional passed value    
-
+        Updates the tag at the passed back on your own node with an optional passed value
+            
         Args:
             path (str): The path of the tag
             value (Any | Optional): The value for the TagBind
@@ -658,15 +655,15 @@ class NodeSession:
         Returns:
             TagBind: The new TagBind
 
-        Example:
-            `config = gedge.NodeConfig.from_json5("...")`
+        Example::
 
-            `config.add_method_handler("...", handler=?)`
+            config = gedge.NodeConfig.from_json5("...")
+            config.add_method_handler("...", handler=x)
             
-            `with gedge.connect(config, "...") as session:`
-                `session.tag_bind(path="...")`
+            with gedge.connect(config, "...") as session:
+                session.tag_bind(path="...")
                 OR
-                `session.tag_bind(path="...", value=?)`
+                session.tag_bind(path="...", value=y)
         '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
