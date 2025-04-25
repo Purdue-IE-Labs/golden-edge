@@ -39,12 +39,12 @@ class NodeConfig:
         '''
         Creates a new node by loading the opening the parameter path with read persmissions to json5 and returns the NodeConfig of the new node
         
-        Arguments:
+        Args:
             cls (type[Self@NodeConfig]): The NodeConfig class
             path (str): The path being opened on and loaded into json5
 
         Returns:
-            NodeConfig
+            NodeConfig: The newly created NodeConfig object
         '''
         with open(path, "r") as f:
             node: dict[str, Any] = json5.load(f)
@@ -55,12 +55,12 @@ class NodeConfig:
         '''
         Creates a new node by loading the parameter string to json5 and returns the NodeConfig of the new node
         
-        Arguments:
+        Args:
             cls (type[Self@NodeConfig]): The NodeConfig class
             string (str): The string being directly loaded to json5
 
         Returns:
-            NodeConfig
+            NodeConfig: The newly created NodeConfig
         '''
         node: dict[str, Any] = json5.loads(string) # type: ignore
         return cls._config_from_json5_obj(node)
@@ -87,8 +87,8 @@ class NodeConfig:
         '''
         Returns the user key of the current NodeConfig
         
-        Arguments:
-            None
+        Args:
+            None: None
         
         Returns:
             str: The user key of the current NodeConfig
@@ -100,11 +100,11 @@ class NodeConfig:
         '''
         Sets the user key to the passed key and sets the corresponding NodeKeySpace in self.ks
 
-        Arguments:
+        Args:
             key (str): The passed key for the user
         
         Returns:
-            None
+            None: None
         '''
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
@@ -114,8 +114,9 @@ class NodeConfig:
         '''
         Checks if paths already exist in the current Node and prints a warning if there's a duplicate value
 
-        Arguments:
+        Args:
             func(any): The function being checked
+
         Returns:
             Any
         '''
@@ -132,7 +133,7 @@ class NodeConfig:
         '''
         Adds a new readable tag with the passed path, type, and properties
 
-        Arguments:
+        Args:
             path (str): The path to the tag
             type (Type): The type of the new tag
             props (dict[str, TagValue]): The properties of the new tag
@@ -149,11 +150,11 @@ class NodeConfig:
         '''
         Outlines the subnodes of the current node and returns the SubnodeConfig of the passed node
 
-        Arguments:
+        Args:
             name (str): The name of the Subnode
 
         Returns:
-            SubnodeConfig
+            SubnodeConfig: The newly created SubnodeConfig object
         '''
         if "/" in name:
             curr_node = self
@@ -172,7 +173,7 @@ class NodeConfig:
         '''
         Adds a new tag to the current node
 
-        Arguments:
+        Args:
             path (str): The path to the tag
             type (Type): The type of the tag
             props (dict[str, Any]): The properties of the tag
@@ -186,7 +187,7 @@ class NodeConfig:
         '''
         Adds a new tag to the current node and makes it writable
 
-        Arguments:
+        Args:
             path (str): The path to the tag
             type (Type): The type of the tag
             write_handler (TagWriteHandler): The handler of the tag
@@ -203,11 +204,12 @@ class NodeConfig:
         '''
         Adds the list of write responses to a current tag at the passed path
 
-        Arguments:
+        Args:
             path (str): The path of the tag
             responses (list[tuple[int. dict[str, Any]]]): The list of responses
+        
         Returns:
-            None
+            None: None
         '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -219,13 +221,13 @@ class NodeConfig:
         '''
         Adds a write handler to a tag at the passed path and defines the write response with the passed code and properties
 
-        Arguments:
+        Args:
             path (str): The path of the tag
             code (int): The code of the response
             props (dict[str, Any]): The properties of the response
 
         Returns:
-            None
+            None: None
         '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -235,12 +237,12 @@ class NodeConfig:
         '''
         Adds a TagWriteHandler to a current tag at the passed path
 
-        Arguments:
+        Args:
             path (str): The path to the tag
             handler (TagWriteHandler): The handler being added to the tag
 
         Returns:
-            None
+            None: None
         '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -250,12 +252,12 @@ class NodeConfig:
         '''
         Adds a MethodHandler to a current method at the passed path
 
-        Arguments:
+        Args:
             path (str): The path to the method
             handler (MethodHandler): The handler being added to the method
 
         Returns:
-            None
+            None: None
         '''
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
@@ -265,12 +267,12 @@ class NodeConfig:
         '''
         Adds the passed properties to a current tag at the passed path
 
-        Arguments:
+        Args:
             path (str): The path to the tag
             props (dict[str, Any]): The properties being added to the tag
 
         Returns:
-            None
+            None: None
         '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -280,11 +282,11 @@ class NodeConfig:
         '''
         Deletes the tag at the passed path
 
-        Arguments:
+        Args:
             path (str): The path to the tag
 
         Returns:
-            None
+            None: None
         '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -295,7 +297,7 @@ class NodeConfig:
         '''
         Adds a new method at the passed path with the passed handler and the passed properties
 
-        Arguments:
+        Args:
             path (str): The path to the method
             handler (any): The handler being added to the method
             props (dict[str, Any]): The properties being added to the method
@@ -312,11 +314,11 @@ class NodeConfig:
         '''
         Deletes the method at the passed path
 
-        Arguments:
+        Args:
             path (str): The path to the method
 
         Returns:
-            None
+            None: None
         '''
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
@@ -327,11 +329,11 @@ class NodeConfig:
         '''
         Verifies the tags of the node, checks the tag write handlers and the amount of responses for each tag
 
-        Arguments:
-            None
+        Args:
+            None: None
         
         Returns:
-            None
+            None: None
         '''
         for path in self.tags:
             tag = self.tags[path]
@@ -343,11 +345,11 @@ class NodeConfig:
         '''
         Verifies the methods of the node, checks the method handlers
 
-        Arguments:
-            None
+        Args:
+            None: None
         
         Returns:
-            None
+            None: None
         '''
         for path in self.methods:
             method = self.methods[path]
@@ -358,11 +360,11 @@ class NodeConfig:
         '''
         Passes the node's tags, methods, and subnodes to proto and creates a Meta object
 
-        Arguments:
-            None
+        Args:
+            None: None
         
         Returns:
-            Meta
+            Meta: The newly created Meta
         '''
         self._verify_tags()
         tags: list[proto.Tag] = [t.to_proto() for t in self.tags.values()]
@@ -375,7 +377,7 @@ class NodeConfig:
         '''
         Creates a NodeSession with the passed connections
 
-        Arguments:
+        Args:
             connections (list[str]): The connections created in the Session
 
         Returns:
@@ -416,11 +418,11 @@ class NodeSession:
         '''
         Closes the NodeSession
 
-        Arguments:
-            None
+        Args:
+            None: None
         
         Returns:
-            None
+            None: None
         '''
         for key in self.connections:
             self.disconnect_from_remote(key)
@@ -431,11 +433,11 @@ class NodeSession:
         '''
         Deletes the connections at the passed key
 
-        Arguments:
+        Args:
             key (str): The key of the remote connection
 
         Returns:
-            None
+            None: None
         '''
         del self.connections[key]
 
@@ -443,7 +445,7 @@ class NodeSession:
         '''
         Returns the online state of the node corresponding to the passed key
 
-        Arguments:
+        Args:
             key (str): The key of the node being checked
 
         Returns:
@@ -455,7 +457,7 @@ class NodeSession:
         '''
         Returns the Meta of the node that corresponds to the passed key
 
-        Arguments:
+        Args:
             key (str): The key of the node
 
         Returns:
@@ -468,7 +470,7 @@ class NodeSession:
         '''
         Returns a list of the Metas of all of the nodes in the current Zenoh session
 
-        Arguments:
+        Args:
             only_online (bool): The nodes only on the network
         
         Returns:
@@ -481,7 +483,7 @@ class NodeSession:
         '''
         Prints data about all the nodes on the network
 
-        Arguments:
+        Args:
             only_online (bool): The nodes only on the network
 
         Returns:
@@ -504,35 +506,39 @@ class NodeSession:
         '''
         Connects the current node to a remote node corresponding to the passed key, allows for optional inclusion of StateCallback, MetaCallback, LivelinessCallback, and dictionary of TagDataCallbacks
 
-        Example Implementation:
-            def state_callback(str, state):
-                print(f"State changed: {state} for {str}")
-
-            def meta_callback(meta_data):
-                print(f"Received metadata: {meta_data}")
-
-            def liveliness_callback(str, liveliness_status):
-                print(f"Liveliness status: {liveliness_status}, {str}")
-
-            def tag_data_callback(path, data):
-                print(f"Tag data at {path}: {data}")
-            
-                remote = session.connect_to_remote(
-                    key="path", 
-                    on_state=state_callback, 
-                    on_meta=meta_callback, 
-                    on_liveliness_change=liveliness_callback, 
-                    tag_data_callbacks={"tag": tag_data_callback})
-
-        Arguments:
+        Args:
             key (str): The key of the remote node
-            on_state (StateCallback | None): Optional StateCallback for the connection
-            on_meta (MetaCallback | None): Optional MetaCallback for the connection
-            on_liveliness_change (LivelinessCallback | None): Optional LivelinessCallback for the connection
-            tag_data_callbacks (dict[str, TagDataCallbacks] = {}): Optional Dictionary of TagDataCallbacks
+            on_state (StateCallback | None): *Optional* StateCallback for the connection
+            on_meta (MetaCallback | None): *Optional* MetaCallback for the connection
+            on_liveliness_change (LivelinessCallback | None): *Optional* LivelinessCallback for the connection
+            tag_data_callbacks (dict[str, TagDataCallbacks] = {}): *Optional* Dictionary of TagDataCallbacks
 
         Returns:
             RemoteConnection: The new connection between the current node and remote node
+
+        Example:
+            `def state_callback(str, state):`
+
+            `(...)`
+
+            `def meta_callback(meta_data):`
+            
+            `(...)`
+
+            `def liveliness_callback(str, liveliness_status):`
+            
+            `(...)`
+
+            `def tag_data_callback(path, data):`
+            
+            `(...)`
+            
+            `remote = session.connect_to_remote(`
+                    `key="path",`
+                    `on_state=state_callback,` 
+                    `on_meta=meta_callback,` 
+                    `on_liveliness_change=liveliness_callback,` 
+                    `tag_data_callbacks={"tag": tag_data_callback})`
         '''
         logger.info(f"Node {self.config.key} connecting to remote node {key}")
 
@@ -555,11 +561,11 @@ class NodeSession:
         '''
         Disconnects from the remote node that corresponds to the passed key
 
-        Arguments:
+        Args:
             key (str): The key to the remote node being disconnected from
 
         Returns:
-            None
+            None: None
         '''
         if key not in self.connections:
             raise ValueError(f"Node {key} not connected to {self.ks.user_key}")
@@ -571,11 +577,11 @@ class NodeSession:
         '''
         Verifies if the current node is NOT listed in the metas of the current connection
 
-        Arguments:
-            None
+        Args:
+            None: None
         
         Returns:
-            None
+            None: None
         '''
         # verify that key expression with this key prefix and name is not online
         metas = self._comm.pull_meta_messages(only_online=True)
@@ -585,11 +591,11 @@ class NodeSession:
         '''
         The startup sequence of the NodeSession: Basic verification, hooks up TagWrite and Method handlers, and adds subnode callbacks
 
-        Arguments:
-            None
+        Args:
+            None: None
         
         Returns:
-            None
+            None: None
         '''
         logger.debug(f"Verifying node collisions...")
         self._verify_node_collision()
@@ -633,7 +639,7 @@ class NodeSession:
 
         Note: To understand how an individual tag_bind functions look at the function tag_bind
 
-        Arguments:
+        Args:
             paths (list[str]): The list of paths for the tags
 
         Returns:
@@ -643,24 +649,24 @@ class NodeSession:
 
     def tag_bind(self, path: str, value: Any = None) -> TagBind:
         '''
-        Updates the tag at the passed back on your own node with an optional passed value
+        Updates the tag at the passed back on your own node with an optional passed value    
 
-        Example Implementation:
-            config = gedge.NodeConfig.from_json5("...")
-            config.add_method_handler("...", handler=?)
-            
-            with gedge.connect(config, "...") as session:
-                session.tag_bind(path="...")
-                OR
-                session.tag_bind(path="...", value=?)
-            
-
-        Arguments:
+        Args:
             path (str): The path of the tag
             value (Any | Optional): The value for the TagBind
 
         Returns:
             TagBind: The new TagBind
+
+        Example:
+            `config = gedge.NodeConfig.from_json5("...")`
+
+            `config.add_method_handler("...", handler=?)`
+            
+            `with gedge.connect(config, "...") as session:`
+                `session.tag_bind(path="...")`
+                OR
+                `session.tag_bind(path="...", value=?)`
         '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -671,12 +677,12 @@ class NodeSession:
         '''
         Updates the tag at the passed path with the passed value
 
-        Arguments:
+        Args:
             path (str): The path of the tag
             value (Any): the value being passed to the Tag
 
         Returns:
-            None
+            None: None
         '''
         if path not in self.tags:
             raise TagLookupError(path, self.ks.name)
@@ -688,11 +694,11 @@ class NodeSession:
         '''
         Updates the state of the current NodeKeySpace with the passed online state
 
-        Arguments:
+        Args:
             online (bool): The online state of the NodeKeySpace
 
         Returns:
-            None
+            None: None
         '''
         online_str = "online" if online else "offline"
         logger.info(f"Updating node state: {online_str}")
@@ -702,7 +708,7 @@ class NodeSession:
         '''
         Creates a SubnodeSession for the subnode that has the passed name
 
-        Arguments:
+        Args:
             name (str): The name of subnode
 
         Returns:
