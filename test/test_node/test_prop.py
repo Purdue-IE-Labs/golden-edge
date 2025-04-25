@@ -250,7 +250,7 @@ class TestProps:
 
             props.add_prop("11", 11)
 
-            prop_dictionary.update({"11": 11})
+            prop_dictionary.update({"11": Prop(DataType.INT, TagData.from_value(11, DataType.INT))})
 
             for i in range(0, 11):
                 assert props.props.get(f"{i}") == prop_dictionary.get(f"{i}")
