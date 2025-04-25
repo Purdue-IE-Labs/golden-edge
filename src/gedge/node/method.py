@@ -21,6 +21,28 @@ class Method:
     responses: list[MethodResponse]
 
     def to_proto(self) -> proto.Method:
+        '''
+        Creates a proto object of the current Method object
+
+        Args:
+            None: None
+
+        Returns:
+            proto.Method: The newly created Proto object
+
+        **Example**::
+
+            properties = {
+                'method0': 'yeah'
+            }
+            param = Param(DataType.INT, Props.from_value(properties))
+
+            methodResponse = MethodResponse(30, Props.from_value(properties), [])
+
+            method = Method("test/path", None, Props.from_value(properties), {'param0': param}, [])
+
+            protoMethod = method.to_proto()
+        '''
         params = {key:value.to_proto() for key, value in self.params.items()}
         responses = [r.to_proto() for r in self.responses]
         props = self.props.to_proto()
@@ -28,6 +50,30 @@ class Method:
 
     @classmethod
     def from_proto(cls, proto: proto.Method) -> Self:
+        '''
+        Creates a Method object from the passed proto.Method
+
+        Args:
+            proto (proto.Method): The proto object that the Method is being created from
+
+        Returns:
+            Method: The created Method object
+
+        **Example**::
+
+            properties = {
+                'method0': 'yeah'
+            }
+            param = Param(DataType.INT, Props.from_value(properties))
+
+            methodResponse = MethodResponse(30, Props.from_value(properties), [])
+
+            method = Method("test/path", None, Props.from_value(properties), {'param0': param}, [])
+
+            protoMethod = method.to_proto()
+
+            newMethod = Method.from_proto(protoMethod)
+        '''
         props = Props.from_proto(proto.props)
         params = {key:Param.from_proto(value) for key, value in proto.params.items()}
         responses = [MethodResponse.from_proto(r) for r in proto.responses]
@@ -35,6 +81,15 @@ class Method:
     
     @classmethod
     def from_json5(cls, json: Any) -> Self:
+        '''
+        Creates a Method object from the passed json5 
+
+        Args:
+            json (Any): The json5 beig used to create the Method object
+
+        Returns:
+            Method: The created Method object
+        '''
         if not isinstance(json, dict):
             raise ValueError(f"Invalid method {json}")
         
@@ -55,7 +110,34 @@ class Method:
 
         return cls(path, None, props, params, responses)
 
-    def add_response(self, code: int, props: dict[str, TagValue] = {}, body: dict[str, Body] = {}): 
+    def add_response(self, code: int, props: dict[str, TagValue] = {}, body: dict[str, Body] = {}):
+        '''
+        Adds a new response to the current Method
+
+        Args:
+            code (int): The code of the response
+            props (dict[str, TagValue]): *Optional* Properties of the new response
+            body (dict[str, body]): *Optional* Body of the new response
+
+        Returns:
+            MethodResponse: The newly created response
+
+        **Example**::
+
+            properties = {
+                'method0': 'yeah'
+            }
+            
+            param = Param(DataType.INT, Props.from_value(properties))
+
+            methodResponse = MethodResponse(30, Props.from_value(properties), [])
+
+            method = Method("test/path", None, Props.from_value(properties), {'param0': param}, [])
+
+            assert method.responses == []
+
+            method.add_response(20, properties, (...)))
+        '''
         props_ = Props.from_value(props)
         body_ = body
         response = MethodResponse(code, props_, body_)
