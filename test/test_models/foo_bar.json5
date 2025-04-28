@@ -15,7 +15,7 @@
         {
             path: "baz",
             // here, we pass a relative path to a json5 model definition
-            // if we do this, we also need to pass argument --json5-dir in the cli
+            // if we do this, we also need to pass argument --json-dir in the cli
             // this option is not available in a node definition that is using a model
             model_file: "./qux.json5",
             props: {
