@@ -485,14 +485,19 @@ class Comm:
 
         res = self.pull_model(model.path)
         if res and res.version + 1 != model.version:
-            logger.warning(f"Trying to update a model at path {model.path} without incrementing version, latest model in historian is {res.version}, you passed {model.version}! Try passing in a model with version {res.version + 1}")
-            return False
+            # TODO: here we may check for equality of models before updating the version, 
+            # but for now we just update and push
+            logger.info(f"Trying to update a model at path {model.path} without incrementing version, latest model in historian is {res.version}, you passed {model.version}! Updating model to version {res.version + 1}...")
+            model.version = res.version + 1
         if not res and model.version not in {0, 1}:
             logger.warning(f"New model must start at version 0 or 1, found version {model.version}")
             return False
+        self._put_model(model)
+        return True
+    
+    def _put_model(self, model: DataModelConfig):
         key_expr = keys.model_path(model.path, model.version)
         self._send_proto(key_expr, model.to_proto())
-        return True
 
     def fetch_model(self, config: DataModelObjectConfig) -> DataModelConfig | None:
         if config.is_embedded():
