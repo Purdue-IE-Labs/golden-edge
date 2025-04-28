@@ -34,7 +34,7 @@ message DataObjectConfig {
 // an embedded data model can take two forms: a path, or the whole config object
 message DataModelObjectConfig {
     /*
-    repr -> representation. The representation of of this model as either just path
+    repr -> representation. The representation of this model as either just path
     or as embedded
     */
     oneof repr {
