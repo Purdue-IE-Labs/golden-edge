@@ -77,9 +77,11 @@ class Comm:
 
     def serialize(self, proto: ProtoMessage) -> bytes:
         b = proto.SerializeToString()
+        logger.debug(f"Size of serialized protobuf: {len(b)}")
         # TODO: base64 is needed due to errors with carriage returns in influxdb
         # which we should try to address in a better way than this
         b = base64.b64encode(b)
+        logger.debug(f"Size of serialized protobuf base64 encoded {len(b)}")
         return b
     
     def deserialize(self, proto: ProtoMessage, payload: bytes) -> Any:

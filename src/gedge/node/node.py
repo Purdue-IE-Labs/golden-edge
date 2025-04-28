@@ -58,7 +58,7 @@ class NodeConfig:
     @staticmethod
     def _config_from_json5_obj(obj: dict[str, Any]):
         if "key" not in obj:
-            raise LookupError(f"Node must have a key")
+            raise LookupError(f"Keyword 'key' not found for node configuration")
         config = NodeConfig(obj["key"])
         for tag_json in obj.get("tags", []):
             tag = TagConfig.from_json5(tag_json)
@@ -212,16 +212,11 @@ class NodeConfig:
         subnodes: list[proto.SubnodeConfig] = [s.to_proto() for s in self.subnodes.values()]
         ms: list[proto.DataModelConfig] = [m.to_proto() for m in self.models.values()]
         meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods, subnodes=subnodes, models=ms)
-        print(f"Bytes of meta message: {len(meta.SerializeToString())}")
         return meta
 
     def _connect(self, connections: list[str]):
         logger.info(f"Node {self.key} attempting to connect to network")
         models = self.get_models_and_condense_to_paths()
-        print('CONNECTING')
-        print(self.methods)
-        print(self.tags)
-        print(self.subnodes)
         self.models = {m.full_path: m for m in models}
         return NodeSession(self, Comm(connections))
 
@@ -251,7 +246,6 @@ class NodeSession:
         logger.debug(f"Built meta: {self.meta}")
 
         self._startup()
-        print(f"models: {self.models}")
 
     def __enter__(self):
         return self
@@ -392,9 +386,7 @@ class NodeSession:
         tag = self.tags[path]
         logger.debug(f"Putting tag value {value} on path {path}")
 
-        config = self.get_tag_config(path)
-        res = DataObject.from_value(value, config)
-        self._comm.update_tag(self.ks, tag.config.path, res.to_proto())
+        self._comm.update_tag(self.ks, tag.path, DataObject.from_value(value, tag.data_object_config).to_proto())
     
     def get_tag_config(self, path: str) -> DataObjectConfig:
         """
@@ -422,7 +414,6 @@ class NodeSession:
                 return config
             p = config.get_model_path()
             assert p is not None
-            print(self.models.keys())
             return DataObjectConfig.from_model_config(self.models[p.full_path], config.props)
             
     def get_model_from_meta(self, config: DataModelObjectConfig) -> DataModelConfig:

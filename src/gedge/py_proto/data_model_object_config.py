@@ -46,7 +46,7 @@ class DataModelObjectConfig:
     def from_json5(cls, j: Any) -> Self:
         from gedge.py_proto.data_model_config import DataModelConfig
         if not isinstance(j, dict):
-            raise ValueError(f"Invalid json {j} for data model configuration")
+            raise ValueError(f"Invalid json for data model configuration, expected dict, found {j}")
 
         if not (("model_path" in j) ^ ("model" in j) ^ ("model_file" in j)):
             raise LookupError(f"Model object must set one and only one of ['model_path', 'model', 'model_file']")
@@ -56,7 +56,7 @@ class DataModelObjectConfig:
         elif j.get("model_file"):
             json5_dir = Singleton().get_json5_dir()
             if not json5_dir:
-                raise ValueError
+                raise ValueError("Passed path to model file without passing json5-dir in which to look")
             path = pathlib.Path(json5_dir) / j["model_file"]
             config = load_from_file(str(path))
         else:
@@ -125,7 +125,7 @@ def load_from_file(path: str) -> DataModelConfig:
 def file_path_latest_version(directory: str, path: DataModelType) -> str:
     dir = pathlib.Path(directory) / path.path
     version = find_latest_version(str(dir))
-    return str(pathlib.Path(directory) / to_file_path(path.path, version))
+    return str(to_file_path(path.path, version))
 
 def find_latest_version(dir: str) -> int:
     max_version = -1
@@ -133,9 +133,7 @@ def find_latest_version(dir: str) -> int:
         print(f)
         m = re.match(r'v(\d+).json5', f)
         if m:
-            print(f"found a match in {f}")
             version = int(m.group(1))
-            print(version)
             max_version = max(max_version, version)
     if max_version == -1:
         raise LookupError(f"No local version of model found in {dir}")

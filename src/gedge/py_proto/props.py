@@ -34,20 +34,24 @@ class Prop:
         return self.value.data
 
     @classmethod
-    def from_json5(cls, json5: Any):
+    def from_json5(cls, j: Any):
         from gedge.py_proto.config import Config
-        if isinstance(json5, dict):
+        if isinstance(j, dict):
             # we do not pull the model from the historian
             # we instead use a local version of it
-            path = DataModelType.from_json5(json5["model_path"])
+            if "model_path" not in j or "model" not in j:
+                raise ValueError("Model prop must include both a 'model_path' and a 'model'")
+
+            # TODO: there has to be a better way to do this
+            path = DataModelType.from_json5(j["model_path"])
             config = Config(DataModelObjectConfig(path))
             c = config.config.load(path) # type: ignore
-            res = DataObject.from_json5(json5["model"], DataObjectConfig.from_model_config(c))
+            res = DataObject.from_json5(j["model"], DataObjectConfig.from_model_config(c))
             return cls(res)
         else:
-            t = Prop.intuit_type(json5)
+            t = Prop.intuit_type(j)
             ob = DataObjectConfig.from_base_type(t)
-            res = DataObject.from_py_value(json5, ob)
+            res = DataObject.from_py_value(j, ob)
             return cls(res)
     
     def to_json5(self) -> dict | Any:
@@ -124,9 +128,14 @@ class Props:
         return cls({key:Prop.from_value(value) for key, value in props.items()})
     
     @classmethod
-    def from_json5(cls, props: Any) -> Self:
+    def from_json5(cls, j: Any) -> Self:
+        if not isinstance(j, dict):
+            raise ValueError(f"invalid props {j}")
+        if "props" not in j:
+            return cls.empty()
+        props = j["props"]
         if not isinstance(props, dict):
-            raise ValueError(f"invalid props {props}")
+            raise ValueError(f"props must be a dictionary, found {props}")
         props = {key:Prop.from_json5(value) for key, value in props.items()}
         return cls(props)
     

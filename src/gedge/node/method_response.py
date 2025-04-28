@@ -38,7 +38,7 @@ class MethodResponseConfig:
             raise LookupError(f"Method response must include code, {j}")
         code = int(j["code"])
 
-        props = Props.from_json5(j.get("props", {}))
+        props = Props.from_json5(j)
         body = BodyConfig.from_json5(j.get("body", {}))
         return cls(code, props, body)
     

@@ -32,22 +32,22 @@ class MethodConfig:
         return cls(proto.path, None, props, params, responses)
     
     @classmethod
-    def from_json5(cls, json: Any) -> Self:
-        if not isinstance(json, dict):
-            raise ValueError(f"Invalid method {json}")
+    def from_json5(cls, j: Any) -> Self:
+        if not isinstance(j, dict):
+            raise ValueError(f"Invalid method {j}")
         
-        if "path" not in json:
-            raise LookupError(f"Method must have path, {json}")
-        path = json["path"]
-        props = Props.from_json5(json.get("props", {}))
+        if "path" not in j:
+            raise LookupError(f"Method must have path, {j}")
+        path = j["path"]
+        props = Props.from_json5(j)
 
         params = ParamsConfig.empty()
-        if "params" in json and isinstance(json["params"], dict):
-            params = ParamsConfig.from_json5(json["params"])
+        if "params" in j and isinstance(j["params"], dict):
+            params = ParamsConfig.from_json5(j["params"])
         
         responses = []
-        if "responses" in json:
-            for response in json["responses"]:
+        if "responses" in j:
+            for response in j["responses"]:
                 r = MethodResponseConfig.from_json5(response)
                 responses.append(r)
 

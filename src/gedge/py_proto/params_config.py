@@ -26,7 +26,7 @@ class ParamsConfig:
     @classmethod
     def from_json5(cls, json: Any) -> Self:
         if not isinstance(json, dict):
-            raise ValueError
+            raise ValueError(f"Expected dictionary for method parameter config, found {json}")
         params = {}
         for key, value in json.items():
             params[key] = DataObjectConfig.from_json5(value)

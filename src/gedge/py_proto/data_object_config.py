@@ -61,11 +61,12 @@ class DataObjectConfig:
         if not isinstance(j, dict):
             raise ValueError(f"Expected dictionary for data object config, found {j}")
         config = Config.from_json5(j)
-        props = Props.from_json5(j.get("props", {}))
+        props = Props.from_json5(j)
         return cls(config, props)
     
     @classmethod
     def from_model_config(cls, model: DataModelConfig, props: Props | None = None) -> Self:
+        from gedge.py_proto.props import Props
         if props is None:
             props = Props.empty()
         config = Config(DataModelObjectConfig(model))

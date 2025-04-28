@@ -41,11 +41,15 @@ class DataModelItemConfig:
         return j
     
     @classmethod
-    def from_json5(cls, json5: Any) -> Self:
+    def from_json5(cls, j: Any) -> Self:
         from gedge.py_proto.data_object_config import DataObjectConfig
-        assert isinstance(json5, dict)
-        path = json5["path"]
-        config = DataObjectConfig.from_json5(json5)
+        if not isinstance(j, dict):
+            raise ValueError(f"Tag must be of type dictionary, found {j}")
+
+        if "path" not in j:
+            raise LookupError(f"Every tag must have a path! Tag provided with no keyword 'path': {j}")
+        path = j["path"]
+        config = DataObjectConfig.from_json5(j)
         return cls(path, config)
 
 @dataclass
@@ -76,7 +80,7 @@ class DataModelConfig:
     
     def to_json5(self) -> dict[str, Any]:
         j = {}
-        j["model_path"] = self.path
+        j["path"] = self.path
         if self.parent is not None:
             j["parent"] = self.parent.to_json5()
         j["version"] = self.version
@@ -117,15 +121,21 @@ class DataModelConfig:
         return path
     
     @classmethod
-    def from_json5(cls, json5: Any) -> Self:
-        assert isinstance(json5, dict)
-        path = json5["model_path"]
+    def from_json5(cls, j: Any) -> Self:
+        if not isinstance(j, dict):
+            raise ValueError(f"Expected model config to be dict, found {j}")
+        if "path" not in j:
+            raise LookupError(f"Model config must include keyword 'path', found {j}")
+        if "version" not in j:
+            raise LookupError(f"Model config must include version, found {j}")
+
+        path = j["path"]
         parent = None
-        if json5.get("parent"):
-            parent = DataModelObjectConfig.from_json5(json5["parent"])
-        version = json5["version"]
+        if j.get("parent"):
+            parent = DataModelObjectConfig.from_json5(j["parent"])
+        version = j["version"]
         tags = []
-        for tag in json5["tags"]:
+        for tag in j.get("tags", []):
             tags.append(DataModelItemConfig.from_json5(tag))
         
         return cls(path, parent, version, tags)

@@ -43,7 +43,7 @@ class TagWriteResponseConfig:
         if "code" not in json:
             raise LookupError(f"Tag write response must include code")
         code = int(json["code"])
-        props = Props.from_json5(json.get("props", {}))
+        props = Props.from_json5(json)
         return cls(code, props)
     
 
@@ -76,17 +76,24 @@ class TagConfig:
         return t
     
     @classmethod
-    def from_json5(cls, json: Any):
+    def from_json5(cls, j: Any):
         from gedge.py_proto.data_model_config import DataModelItemConfig
-        if not isinstance(json, dict):
+        if not isinstance(j, dict):
             raise ValueError(f"invalid tag, tag must be a dict")
         
-        config = DataModelItemConfig.from_json5(json)
-        writable = json.get("writable", False)
+        if "model_file" in j:
+            raise ValueError("Cannot provide path to json5 model file in node config! Use model_path.")
+        if "model" in j:
+            raise ValueError("Cannot provide model definition in node config! Use model_path.")
+        
+        config = DataModelItemConfig.from_json5(j)
+        writable = j.get("writable", False)
+
         responses = []
-        for response in json.get("responses", []):
-            r = TagWriteResponseConfig.from_json5(response)
-            responses.append(r)
+        if writable: 
+            for response in j.get("responses", []):
+                r = TagWriteResponseConfig.from_json5(response)
+                responses.append(r)
 
         return cls(config, writable, responses)
     
