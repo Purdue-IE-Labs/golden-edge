@@ -33,14 +33,24 @@ class MethodResponse:
         if isinstance(json, int):
             return cls(json, Props.empty(), {}) 
         if not isinstance(json, dict):
-            raise ValueError(f"Invalid method repsonse type, {json}")
+            raise ValueError(f"Invalid method response type, {json}")
         
         if "code" not in json:
             raise LookupError(f"Method response must include code, {json}")
-        code = int(json["code"])
+        
+        try:
+            code = int(json["code"])
+        except:
+            raise ValueError(f"The passed code cannot be converted to an integer: {json["code"]}")
 
+
+        try:
+            body = {key:Body.from_json5(value) for key, value in json.get("body", {}).items()}
+        except:
+            raise ValueError(f"The passed body is not a dict object: {json.get("body", {})}")
+        
         props = Props.from_json5(json.get("props", {}))
-        body = {key:Body.from_json5(value) for key, value in json.get("body", {}).items()}
+        
         return cls(code, props, body)
     
     def add_prop(self, key: str, value: Any):
