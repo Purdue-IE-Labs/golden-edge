@@ -1,0 +1,79 @@
+{
+    key: "test/data/models/tags",
+    tags: [
+        {
+            path: "tag/1",
+            model_path: "qux",
+            props: {
+                desc: "testing a data object",
+            },
+        }, 
+        {
+            path: "tag/2",
+            // these are both disallowed in node config, only allowed in model config
+            // model_file: "./bar.json5",
+            // model: {
+            //     path: "stuff",
+            //     version: 1
+            // },
+            model_path: "bar/VERSION/1",
+            writable: true,
+            responses: [100],
+            props: {
+                desc: "bar"
+            }
+        }
+    ],
+    methods: [
+        {
+            path: "call/method",
+            params: {
+                model: {
+                    model_path: "qux/VERSION/1",
+                    props: {
+                        desc: "a parameter to a method that is a data model (woah)"
+                    }
+                },
+                speed: {
+                    base_type: "int"
+                },
+            },
+            responses: [
+                {
+                    code: 200,
+                    body: {
+                        res1: {
+                            model_path: "bar/VERSION/1",
+                            props: {
+                                desc: "a body item of a method response that is a data model (woah)"
+                            }
+                        }
+                    },
+                    props: {
+                        desc: "successfully executed method"
+                    }
+                },
+                {
+                    code: 400,
+                    body: {
+                        res1: {
+                            base_type: "int"
+                        },
+                    },
+                    props: {
+                        desc: "speed must be in range [0, 100]"
+                    }
+                },
+                {
+                    code: 401,
+                    props: {
+                        desc: "name cannot be longer than 30 characters"
+                    }
+                }
+            ],
+            props: {
+                desc: "testing method calls"
+            },
+        }    
+    ]
+}

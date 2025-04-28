@@ -1,0 +1,13 @@
+{
+    path: "qux",
+    parent: {
+        "model_file": "./parent.json5"
+    },
+    version: 1,
+    tags: [
+        {
+            path: "tag",
+            base_type: "int",
+        }
+    ]
+}
