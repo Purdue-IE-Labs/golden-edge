@@ -56,7 +56,7 @@ class DataModelObjectConfig:
         elif j.get("model_file"):
             json5_dir = Singleton().get_json5_dir()
             if not json5_dir:
-                raise ValueError("Passed path to model file without passing json5-dir in which to look")
+                raise ValueError("Passed path to model file without passing json-dir in which to look")
             path = pathlib.Path(json5_dir) / j["model_file"]
             config = load_from_file(str(path))
         else:
