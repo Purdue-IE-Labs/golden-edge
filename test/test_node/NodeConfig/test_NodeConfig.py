@@ -11,6 +11,7 @@ from gedge.proto import Meta
 from gedge import proto
 from gedge.comm.comm import Comm
 
+import pathlib
 import logging
 
 @pytest.fixture
@@ -22,10 +23,92 @@ def method_handler():
     print("Yeah! Testing!!!")
 
 class TestSanity:
+    def test_from_json5(self):
+        here = pathlib.Path(__file__).parent
+        config = NodeConfig.from_json5(str(here / "normal.json5"))
+
+        assert config.key == "test/tag/writes/writee"
+        
+        # Tag Assetions
+        assert len(config.tags) == 1
+        assert config.tags.get("tag/write").type == DataType.INT
+        assert config.tags.get("tag/write").is_writable() == True
+        assert config.tags.get("tag/write").props.to_value().get("desc") == "testing a tag write"
+
+        # Response Assertions
+        assert len(config.tags.get("tag/write").responses) == 2
+        assert config.tags.get("tag/write").responses[0].code == 200
+        assert config.tags.get("tag/write").responses[0].props.to_value().get("desc") == "tag updated with value"
+        assert config.tags.get("tag/write").responses[1].code == 400
+        assert config.tags.get("tag/write").responses[1].props.to_value().get("desc") == "invalid value (>10)"
+        
+
+    def test_from_json5_str(self):
+        json_str1 = '''
+            {
+                "key": "test/tag/writes/writee",
+                "tags": [
+                    {
+                        "path": "tag/write",
+                        "type": "int",
+                        "writable": true,
+                        "props": {
+                            "desc": "testing a tag write",
+                        },
+                        "responses": [
+                            {
+                                "code": 200, 
+                                "props": {
+                                    "desc": "tag updated with value"
+                                }
+                            },
+                            {
+                                "code": 400,
+                                "props": {
+                                    "desc": "invalid value (>10)"
+                                }
+                            }
+                        ]
+                    },
+                ],
+            }
+            '''
+        config = NodeConfig.from_json5_str(json_str1)
+
+        assert config.key == "test/tag/writes/writee"
+        
+        # Tag Assetions
+        assert len(config.tags) == 1
+        assert config.tags.get("tag/write").type == DataType.INT
+        assert config.tags.get("tag/write").is_writable() == True
+        assert config.tags.get("tag/write").props.to_value().get("desc") == "testing a tag write"
+
+        # Response Assertions
+        assert len(config.tags.get("tag/write").responses) == 2
+        assert config.tags.get("tag/write").responses[0].code == 200
+        assert config.tags.get("tag/write").responses[0].props.to_value().get("desc") == "tag updated with value"
+        assert config.tags.get("tag/write").responses[1].code == 400
+        assert config.tags.get("tag/write").responses[1].props.to_value().get("desc") == "invalid value (>10)"
+
+    def test_get_key(self):
+        here = pathlib.Path(__file__).parent
+        config = NodeConfig.from_json5(str(here / "normal.json5"))
+
+        assert config.key == config._user_key
+
+    def test_set_key(self):
+        here = pathlib.Path(__file__).parent
+        config = NodeConfig.from_json5(str(here / "normal.json5"))
+
+        prevKey = config._user_key
+        prevKs = config.ks
+
+        config.key = "new/NODE/key"
+
+        assert config._user_key != prevKey
+        assert config.ks != prevKs
+
     def test_warn_duplicate_tag(self, caplog):
-        '''
-        Node: this is dependent on add_tag
-        '''
         instance_str = "instance/str"
         nodeConfig_instance = NodeConfig(instance_str)
 
