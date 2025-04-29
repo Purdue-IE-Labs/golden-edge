@@ -365,10 +365,9 @@ class RemoteConnection:
                 key_expr = method_response_from_call(key_expr)
                 self._comm.cancel_subscription(key_expr)
                 raise TimeoutError(f"Timeout of method call at path {method.path} exceeded")
-            # Design decision: we don't give a codes.DONE to the iterator that the user uses
-            # However, we do give them method and tag errors because they could be useful
             yield res
-            if res.code in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
+            if codes.is_final_method_response(res):
+                logger.debug("Ending call_method_iter iterator")
                 return
 
     def get_data_object_config(self, config: DataObjectConfig) -> DataObjectConfig:
@@ -396,5 +395,4 @@ class RemoteConnection:
                 return config
             p = config.get_model_path()
             assert p is not None
-            print(self.models.keys())
             return DataObjectConfig.from_model_config(self.models[p.full_path], config.props)

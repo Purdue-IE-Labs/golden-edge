@@ -13,7 +13,7 @@ from gedge.py_proto.data_object_config import DataObjectConfig
 
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagBaseValue
-    from gedge.py_proto.base_data import BaseData
+    from gedge.node.gtypes import TagValue
 
 @dataclass
 class Prop:
@@ -28,10 +28,8 @@ class Prop:
         value = self.value.to_proto()
         return proto.Prop(config=config, value=value) 
     
-    def to_value(self) -> BaseData:
-        from gedge.py_proto.base_data import BaseData
-        assert isinstance(self.value.data, BaseData)
-        return self.value.data
+    def to_value(self) -> TagValue:
+        return self.value.to_value()
 
     @classmethod
     def from_json5(cls, j: Any):
@@ -116,7 +114,7 @@ class Props:
     def to_proto(self) -> proto.Props:
         return proto.Props(props={key:value.to_proto() for key, value in self.props.items()})
     
-    def to_value(self) -> dict[str, Any]:
+    def to_value(self) -> dict[str, TagValue]:
         return {key:value.to_value() for key, value in self.props.items()}
     
     @classmethod

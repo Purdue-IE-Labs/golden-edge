@@ -13,6 +13,13 @@ message MethodConfig {
 
 message MethodResponseConfig {
     int32 code = 1;
+    MethodResponseType type = 4;
     Props props = 2;
     BodyConfig body = 3;
+}
+
+enum MethodResponseType {
+    OK = 0;
+    ERR = 1;
+    INFO = 2;
 }

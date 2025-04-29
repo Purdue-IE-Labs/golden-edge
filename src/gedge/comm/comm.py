@@ -7,7 +7,7 @@ import zenoh
 import json
 from gedge.comm.sequence_number import SequenceNumber
 from gedge.node import codes
-from gedge.node.error import NodeLookupError, TagLookupError
+from gedge.node.error import MethodEnd, NodeLookupError, TagLookupError
 from gedge import proto
 from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace, internal_to_user_key, method_response_from_call
@@ -17,7 +17,7 @@ from typing import Any, TYPE_CHECKING, Callable
 from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagBaseValue, TagValue, TagWriteHandler
 from gedge.node.method import MethodConfig
 from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponseConfig
+from gedge.node.method_response import MethodResponseConfig, MethodResponseType
 from gedge.node.param import params_proto_to_py
 from gedge.node.body import BodyConfig
 from gedge.py_proto.data_model_config import DataModelConfig
@@ -216,19 +216,20 @@ class Comm:
         they need to see the error ones to know that something went terribly wrong.
         '''
         logger.info(f"Received reply from method at path '{method.path}' with code {r.code}")
-        if r.code in {codes.DONE, codes.METHOD_ERROR}:
-            response_config: MethodResponseConfig = MethodResponseConfig(r.code, Props.empty(), BodyConfig.empty())
+        if r.code not in responses:
+            response_config = codes.config_from_code(r.code)
         else:
-            response_config: MethodResponseConfig = responses[r.code]
-        body: dict[str, DataObject] = {}
+            response_config = responses[r.code]
+
+        body: dict[str, TagValue] = {}
         for key, value in r.body.items():
             body_config = response_config.body[key]
             props = response_config.body[key].props
-            body[key] = DataObject.from_proto(value, body_config)
+            body[key] = DataObject.from_proto(value, body_config).to_value()
         props = response_config.props.to_value()
-        reply = MethodReply(key_expr, r.code, body, r.error, props)
+        reply = MethodReply(key_expr, r.code, body, response_config.type, props)
         on_reply(reply)
-        if r.code in {codes.DONE, codes.METHOD_ERROR}:
+        if codes.is_final_method_response(reply):
             logger.debug(f"remove subscription for key expr {key_expr}")
             self.cancel_subscription(key_expr)
     
@@ -271,17 +272,18 @@ class Comm:
                 reply(*response)
         return _on_write
     
-    def _method_reply(self, key_expr: str, method: MethodConfig) -> Callable[[int, dict[str, TagValue], str], None]:
+    def _method_reply(self, key_expr: str, method: MethodConfig) -> Callable[[int, dict[str, TagValue]], None]:
         responses = method.responses
-        def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
-            if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
-                raise ValueError(f"invalid repsonse code {code}")
+        def _reply(code: int, body: dict[str, TagValue] = {}) -> None:
             new_body: dict[str, proto.DataObject] = {}
             for key, value in body.items():
-                response = [i for i in responses if i.code == code][0]
-                config = response.body[key]
+                response = [i for i in responses if i.code == code]
+                if response:
+                    config = response[0].body[key]
+                else:
+                    config = codes.config_from_code(code).body[key]
                 new_body[key] = DataObject.py_to_proto(value, config)
-            r = proto.MethodResponse(code=code, body=new_body, error=error)
+            r = proto.MethodResponse(code=code, body=new_body)
             self._send_proto(key_expr=key_expr, value=r)
         return _reply
     
@@ -295,21 +297,24 @@ class Comm:
         params: dict[str, Any] = params_proto_to_py(dict(value.params), method.params)
         
         key_expr = method_response_from_call(key_expr)
-        reply = self._method_reply(key_expr, method)
-        q = MethodQuery(key_expr, params, reply, method.responses)
+        reply_func = self._method_reply(key_expr, method)
+        q = MethodQuery(key_expr, params, reply_func, method.responses)
         try:
             name = NodeKeySpace.user_key_from_key(key_expr)
             logger.info(f"Node {name} method call at path '{method.path}' with params {params}")
             logger.debug(f"Received from {key_expr}")
             assert method.handler is not None, "No method handler provided"
             method.handler(q)
-            code = codes.DONE
-            error = ""
+        except MethodEnd as e:
+            pass
         except Exception as e:
-            code = codes.METHOD_ERROR
-            error = repr(e)
+            body = {
+                "reason": str(e)
+            }
+            q._reply(codes.CALLBACK_ERR, body, MethodResponseType.ERR)
         finally:
-            reply(code, {}, error)
+            if not q._types_sent or q._types_sent[-1] == MethodResponseType.INFO:
+                q._reply(codes.CALLBACK_ERR, { "reason": "method handler did not finish function with OK or ERR message" }, MethodResponseType.ERR)
 
     def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> None:
         '''

@@ -109,7 +109,7 @@ class DataObject:
             return cls.from_model_value(value, config)
         return cls.from_py_value(value, config) 
     
-    def to_value(self) -> TagBaseValue | dict:
+    def to_value(self) -> TagValue:
         if self.is_base_data():
             return self.data.to_py() # type: ignore
 

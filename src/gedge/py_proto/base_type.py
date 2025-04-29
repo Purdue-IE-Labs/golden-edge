@@ -47,6 +47,10 @@ class BaseType(Enum):
     def from_json5(cls, j: dict) -> Self:
         type: str = j["base_type"]
         type = type.lower()
+        return cls.from_json5_base_type(type)
+    
+    @classmethod
+    def from_json5_base_type(cls, t: str) -> Self:
         mapping = {
             "int": BaseType.INT,
             "long": BaseType.LONG,
@@ -59,9 +63,9 @@ class BaseType(Enum):
             "list[string]": BaseType.LIST_STRING,
             "list[bool]": BaseType.LIST_BOOL,
         }
-        if type not in mapping:
-            raise ValueError(f"Invalid type {type}")
-        return cls(mapping[type])
+        if t not in mapping:
+            raise ValueError(f"Invalid type {t}")
+        return cls(mapping[t])
 
     def to_proto(self) -> proto.BaseType:
         return self.value # type: ignore

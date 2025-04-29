@@ -58,6 +58,11 @@ class DataObjectConfig:
     @classmethod
     def from_json5(cls, j: Any) -> Self:
         from gedge.py_proto.props import Props
+        if isinstance(j, str):
+            config = Config.from_json5_base_type(j)
+            props = Props.empty()
+            return cls(config, props)
+
         if not isinstance(j, dict):
             raise ValueError(f"Expected dictionary for data object config, found {j}")
         config = Config.from_json5(j)

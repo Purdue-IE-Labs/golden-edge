@@ -6,7 +6,7 @@
             type: "int",
             params: {
                 name: {
-                    type: "string",
+                    base_type: "string",
                     props: {
                         desc: "name of the project"
                     }
@@ -16,9 +16,10 @@
             responses: [
                 {
                     code: 200,
+                    type: "ok",
                     body: {
                         res1: {
-                            type: "int",
+                            base_type: "int",
                             props: {
                                 desc: "a body item named res1"
                             }
@@ -30,6 +31,7 @@
                 },
                 {
                     code: 400,
+                    type: "err",
                     body: {
                         res1: "int",
                     },
@@ -39,6 +41,7 @@
                 },
                 {
                     code: 401,
+                    type: "err",
                     props: {
                         desc: "name cannot be longer than 30 characters"
                     }
