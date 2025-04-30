@@ -8,6 +8,7 @@ import logging
 
 from gedge import proto
 from gedge.comm import keys
+from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.config import Config
 from gedge.py_proto.data_model_config import DataModelItemConfig

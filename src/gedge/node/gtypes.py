@@ -30,3 +30,9 @@ LivelinessCallback = Callable[[KeyExpr, bool], None]
 ZenohCallback = Callable[[zenoh.Sample], None]
 ZenohQueryCallback = Callable[[zenoh.Query], None]
 ZenohReplyCallback = Callable[[zenoh.Reply], None]
+
+def is_base_value(value: TagValue) -> bool:
+    return not isinstance(value, dict)
+
+def is_model_value(value: TagValue) -> bool:
+    return isinstance(value, dict)

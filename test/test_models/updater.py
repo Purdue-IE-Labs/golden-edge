@@ -14,13 +14,12 @@ def handler(query: gedge.MethodQuery):
     print(f"got model: {model}")
 
     if speed < 0 or speed > 100:
-        query.reply(400, body={"res1": speed})
-        return
+        query.reply_err(400, body={"res1": speed})
 
     response_model = {
         "tag10": 10.4
     }
-    query.reply(200, body={"res1": response_model})
+    query.reply_ok(200, body={"res1": response_model})
 
 here = pathlib.Path(__file__).parents[2] / "models"
 gedge.use_models(str(here))
@@ -36,4 +35,9 @@ with gedge.connect(config, "192.168.4.60") as session:
         session.update_tag("tag/1", {
             "foo/bar/baz/qux": random.random(),
             "tag": random.randint(0, 10),
+            "tag/2": {
+                "foo/bar/baz": 10.23,
+                "baz": True,
+                "qux": 2,
+            }
         })

@@ -8,6 +8,10 @@
         {
             path: "tag",
             base_type: "int",
+        }, 
+        {
+            path: "tag/2",
+            model_path: "bar",
         }
     ]
 }

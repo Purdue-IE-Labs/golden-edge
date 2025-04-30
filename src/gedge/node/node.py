@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pathlib
 from re import sub
+from tkinter import W
 import uuid
+from gedge.node.gtypes import TagValue
 from gedge.node.method import MethodConfig
 from gedge.node.method_response import MethodResponseConfig
 from gedge.node.tag_write_query import TagWriteQuery
@@ -719,7 +721,7 @@ class NodeSession:
         bind = TagBind(self.ks, self._comm, self.tags[path], value, self.update_tag)
         return bind
     
-    def update_tag(self, path: str, value: Any | dict):
+    def update_tag(self, path: str, value: TagValue):
         '''
         Updates the tag at the passed path with the passed value
 
@@ -735,7 +737,12 @@ class NodeSession:
         tag = self.tags[path]
         logger.debug(f"Putting tag value {value} on path {path}")
 
-        self._comm.update_tag(self.ks, tag.path, DataObject.from_value(value, tag.data_object_config).to_proto())
+        do = DataObject.from_value(value, tag.data_object_config)
+        flat_value = do.to_flat_value()
+        print(flat_value)
+        do1 = DataObject.from_flat_value(flat_value, tag.data_object_config)
+        # self._comm.update_tag(self.ks, tag.path, DataObject.from_value(value, tag.data_object_config).to_proto())
+        self._comm.update_tag_split(self.ks, tag.path, do.to_flat_proto(), tag.data_object_config)
     
     def get_tag_config(self, path: str) -> DataObjectConfig:
         """
@@ -746,13 +753,18 @@ class NodeSession:
         tag = self.tags[path]
         if tag.is_base_type():
             return tag.data_object_config
-        else:
-            c = tag.get_model_config()
-            if c:
-                return tag.data_object_config
-            p = tag.get_model_path()
-            assert p is not None
-            return DataObjectConfig.from_model_config(self.models[p.full_path], tag.data_object_config.props)
+        self.unpack_models(tag.data_object_config)
+        return tag.data_object_config
+    
+    def unpack_models(self, d: DataObjectConfig):
+        if not d.is_model_path():
+            return
+        p = d.get_model_path()
+        assert p is not None
+        d.set_model_config(self.models[p.full_path])
+        for item in d.get_model_items(): # type: ignore
+            self.unpack_models(item.config)
+        return
 
     def get_data_object_config(self, config: DataObjectConfig) -> DataObjectConfig:
         if config.is_base_type():

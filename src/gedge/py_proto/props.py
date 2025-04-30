@@ -9,7 +9,6 @@ from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.data_model import DataObject
 from gedge.py_proto.data_model_object_config import DataModelObjectConfig
 from gedge.py_proto.data_model_type import DataModelType
-from gedge.py_proto.data_object_config import DataObjectConfig
 
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagBaseValue
@@ -34,6 +33,7 @@ class Prop:
     @classmethod
     def from_json5(cls, j: Any):
         from gedge.py_proto.config import Config
+        from gedge.py_proto.data_object_config import DataObjectConfig
         if isinstance(j, dict):
             # we do not pull the model from the historian
             # we instead use a local version of it
@@ -71,6 +71,7 @@ class Prop:
     
     @classmethod
     def from_proto(cls, proto: proto.Prop) -> Self:
+        from gedge.py_proto.data_object_config import DataObjectConfig
         from gedge.py_proto.config import Config
         config = Config.from_proto(proto.config)
         value = DataObject.from_proto(proto.value, DataObjectConfig.from_config(config))
@@ -78,6 +79,7 @@ class Prop:
     
     @classmethod
     def from_value(cls, value: TagBaseValue) -> Self:
+        from gedge.py_proto.data_object_config import DataObjectConfig
         type_ = cls.intuit_type(value)
         ob = DataObjectConfig.from_base_type(type_)
         value_ = DataObject.from_py_value(value, ob)

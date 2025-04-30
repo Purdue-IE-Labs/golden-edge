@@ -13,4 +13,4 @@ with gedge.connect(config, "192.168.4.60") as session:
     }
     responses = remote.call_method_iter("call/method", model=qux, speed=100)
     for response in responses:
-        print(response.code, response.props, response.body, response.error)
+        print(response.code, response.props, response.body)

@@ -1,5 +1,5 @@
 {
-    model_path: "bar",
+    path: "bar",
     version: 1,
     tags: [
         {
@@ -19,14 +19,6 @@
         {
             path: "qux",
             base_type: "int",
-            props: {
-                my_model_prop: {
-                    model_path: "qux",
-                    model: {
-                        tag: 19
-                    }
-                }
-            }
         }
     ]
 }

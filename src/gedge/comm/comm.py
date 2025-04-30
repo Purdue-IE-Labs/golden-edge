@@ -10,16 +10,17 @@ from gedge.node import codes
 from gedge.node.error import MethodEnd, NodeLookupError, TagLookupError
 from gedge import proto
 from gedge.comm import keys
-from gedge.comm.keys import NodeKeySpace, internal_to_user_key, method_response_from_call
+from gedge.comm.keys import NodeKeySpace, internal_to_user_key, key_join, method_response_from_call
 
 from typing import Any, TYPE_CHECKING, Callable
 
-from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagBaseValue, TagValue, TagWriteHandler
+from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagBaseValue, TagValue, TagWriteHandler, is_base_value
 from gedge.node.method import MethodConfig
 from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import MethodResponseConfig, MethodResponseType
 from gedge.node.param import params_proto_to_py
 from gedge.node.body import BodyConfig
+from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.data_model_object_config import DataModelObjectConfig
 from gedge.py_proto.data_object_config import DataObjectConfig
@@ -31,7 +32,7 @@ from gedge.node.tag_write_query import TagWriteQuery
 if TYPE_CHECKING:
     from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
-ProtoMessage = proto.Meta | proto.DataObject | proto.TagWriteResponse | proto.State | proto.MethodCall | proto.MethodResponse | proto.DataModelConfig
+ProtoMessage = proto.Meta | proto.DataObject | proto.TagWriteResponse | proto.State | proto.MethodCall | proto.MethodResponse | proto.DataModelConfig | proto.BaseData
 
 import logging
 logger = logging.getLogger(__name__)
@@ -137,7 +138,7 @@ class Comm:
         Returns:
             None
         '''
-        logger.debug(f"putting proto on key_expr '{key_expr}'")
+        logger.debug(f"putting proto on key_expr '{key_expr}' with value {value}")
         b = self.serialize(value)
 
         # TODO: how should sequence numbers be handled with queries and all that
@@ -546,6 +547,15 @@ class Comm:
         '''
         key_expr = ks.tag_data_path(path)
         self._send_proto(key_expr, value)
+    
+    def update_tag_split(self, ks: NodeKeySpace, path: str, value: dict[str, proto.BaseData], config: DataObjectConfig):
+        key_expr = ks.tag_data_path(path)
+        model_config = config.get_model_config()
+        if not model_config:
+            raise LookupError(f"model provided for tag {path} but no config provided")
+        for p, val in value.items(): # type: ignore
+            k = key_join(key_expr, p)
+            self._send_proto(k, val)
 
     def write_tag(self, ks: NodeKeySpace, path: str, value: proto.DataObject) -> proto.TagWriteResponse:
         '''
