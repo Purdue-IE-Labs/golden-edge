@@ -148,10 +148,10 @@ class NodeConfig:
     
     def subnode(self, name: str) -> SubnodeConfig:
         '''
-        Outlines the subnodes of the current node and returns the SubnodeConfig of the passed node
+        Returns the subnode within the current NodeConfig whose corresponding string in the dict matches name
 
         Arguments:
-            name (str): The name of the Subnode
+            name (str): The dict name for the Subnode
 
         Returns:
             SubnodeConfig

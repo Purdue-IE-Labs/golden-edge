@@ -10,6 +10,8 @@ from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.proto import Meta
 from gedge import proto
 from gedge.comm.comm import Comm
+from gedge.comm.mock_comm import MockComm
+from gedge.comm.keys import NodeKeySpace
 
 import pathlib
 import logging
@@ -23,6 +25,15 @@ def method_handler():
     print("Yeah! Testing!!!")
 
 class TestSanity:
+    def test_init(self):
+        config = NodeConfig("my/node")
+
+        assert config.key == "my/node"
+        assert str(config.ks) == str(NodeKeySpace.from_user_key(config.key))
+        assert config.tags == dict()
+        assert config.methods == dict()
+        assert config.subnodes == dict()
+
     def test_from_json5(self):
         here = pathlib.Path(__file__).parent
         config = NodeConfig.from_json5(str(here / "normal.json5"))
@@ -131,6 +142,41 @@ class TestSanity:
         # Optionally, check the level of the logged message
         assert caplog.records[0].levelname == "WARNING"  # Ensure the log level is WARNING
 
+    def test_add_readable_tag(self):
+        config = NodeConfig("my/node")
+
+        assert config.tags == dict()
+
+        createdTag = config._add_readable_tag("tag/path", int, {'value0': 20})
+
+        # Tag Tests
+        assert createdTag.path == "tag/path"
+        assert createdTag.type == DataType.INT
+        assert createdTag.props.props['value0'].to_value() == 20
+
+        # Tag Added Tests
+        assert len(config.tags) == 1
+        assert config.tags.get("tag/path") != None
+
+        assert config.tags.get("tag/path").path == createdTag.path
+        assert config.tags.get("tag/path").type == createdTag.type
+        assert config.tags.get("tag/path").props.props.items() == createdTag.props.props.items()
+
+    def test_subnode(self):
+        config = NodeConfig("my/node")
+
+        manSubnode = SubnodeConfig("my/subnode", config.ks, {}, {}, {})
+
+        config.subnodes.update({'subnode0': manSubnode})
+
+        createdSubnode = config.subnode("subnode0")
+
+        assert createdSubnode.ks == manSubnode.ks
+        assert createdSubnode.name == manSubnode.name
+        assert createdSubnode.methods == manSubnode.methods
+        assert createdSubnode.subnodes == manSubnode.subnodes
+        assert createdSubnode.tags == manSubnode.tags
+
     def test_add_tag(self):
         instance_str = "instance/str"
         nodeConfig_instance = NodeConfig(instance_str)
@@ -153,6 +199,111 @@ class TestSanity:
         assert nodeConfig_instance.tags['test_path']._writable == expected_tag._writable
         assert nodeConfig_instance.tags['test_path'].write_handler == expected_tag.write_handler
 
+    def test_add_writable_tag(self):
+        config = NodeConfig("my/node")
+
+        assert config.tags == dict()
+
+        def handler(query: gedge.TagWriteQuery) -> None:
+            if query.value > 10:
+                query.reply(400)
+                return
+            query.reply(200)
+
+        createdTag = config.add_writable_tag(path="my/tag", type=int, write_handler=handler, responses=[
+            [10, {
+                'desc': 'response 0'
+            }],
+            [20, {
+                'desc': 'other response'
+            }]
+        ], props={})
+
+        # Tag Tests
+        assert createdTag.path == "my/tag"
+        assert createdTag.type == DataType.INT
+        assert createdTag.write_handler == handler
+
+        response0 = WriteResponse(10, Props.from_value({'desc': 'response 0'}))
+        assert str(createdTag.responses[0]) == str(response0)
+
+        response1 = WriteResponse(20, Props.from_value({'desc': 'other response'}))
+        assert str(createdTag.responses[1]) == str(response1)
+
+        assert createdTag.props.props == {}
+        assert createdTag.is_writable() == True
+
+        # Node Tests
+        assert config.tags.get("my/tag").path == createdTag.path
+        assert config.tags.get("my/tag").type == createdTag.type
+        assert config.tags.get("my/tag").write_handler == createdTag.write_handler
+        assert config.tags.get("my/tag").responses == createdTag.responses
+        assert config.tags.get("my/tag").props.to_value() == createdTag.props.to_value()
+        assert config.tags.get("my/tag").is_writable() == createdTag.is_writable()
+
+    def test_add_write_responses(self):
+        config = NodeConfig("my/node")
+
+        config.add_tag("my/tag", int, {})
+
+        assert config.tags.get("my/tag").responses == []
+
+        config.add_write_responses("my/tag", [
+            (10, {
+                'desc': 'response 0'
+            }),
+            (20, {
+                'desc': 'response 1'
+            })
+        ])
+
+        assert len(config.tags.get("my/tag").responses) == 2
+
+        response0 = WriteResponse(10, Props.from_value({'desc': 'response 0'}))
+        assert str(config.tags.get("my/tag").responses[0]) == str(response0)
+
+        response1 = WriteResponse(20, Props.from_value({'desc': 'response 1'}))
+        assert str(config.tags.get("my/tag").responses[1]) == str(response1)
+
+    def test_add_tag_write_handler(self):
+        config = NodeConfig("my/node")
+
+        def handler(query: gedge.TagWriteQuery) -> None:
+            if query.value > 10:
+                query.reply(400)
+                return
+            query.reply(200)
+
+        config.add_tag("my/tag", int, {})
+
+        assert config.tags.get("my/tag").write_handler == None
+
+        config.add_tag_write_handler("my/tag", handler)
+
+        assert config.tags.get("my/tag").write_handler == handler
+
+    def test_add_method_handler(self):
+        config = NodeConfig("my/node")
+
+        def handler(query: gedge.MethodQuery):
+            name = query.params["name"]
+            speed = query.params["speed"]
+            if len(name) > 30:
+                query.reply(401)
+                return
+            if speed < 0 or speed > 100:
+                query.reply(400, body={"res1": speed})
+                return
+            query.reply(200, body={"res1": speed})
+
+        config.add_method("my/method", None, {})
+
+        assert config.methods.get("my/method").handler == None
+
+        config.add_method_handler("my/method", handler)
+
+        assert config.methods.get("my/method").handler == handler
+
     def test_add_props(self):
         instance_str = "instance/str"
         nodeConfig_instance = NodeConfig(instance_str)
@@ -173,29 +324,36 @@ class TestSanity:
 
         assert nodeConfig_instance.tags['test_path'].props.to_value() == expected_tag.props.to_value()
 
-    # Note: Maybe some more in-depth testing of delete tag would be good
-    # Example Cases:
-    #   1) First Tag
-    #   2) Middle Tag
-    #   3) Last Tag
+    class TestTagDelete:
+        @pytest.fixture
+        def create_node(self) -> NodeConfig:
+            config = NodeConfig("my/node")
 
-    def test_delete_tag(self):
-        instance_str = "instance/str"
-        nodeConfig_instance = NodeConfig(instance_str)
+            for i in range(0, 3):
+                config.add_tag(f"my/tag{i}", int, {})
 
-        properties = {
-            'tag1': 'int',
-            'tag2': 'float',
-            'tag3': 'str'
-        }
+            return config
+        
+        def test_first(self, create_node: NodeConfig):
+            tagDict = {'my/tag1': create_node.tags.get("my/tag1"), 'my/tag2': create_node.tags.get("my/tag2")}
+            
+            create_node.delete_tag("my/tag0")
 
-        nodeConfig_instance.add_tag("test_path", int, properties)
+            assert create_node.tags == tagDict
+        
+        def test_middle(self, create_node: NodeConfig):
+            tagDict = {'my/tag0': create_node.tags.get("my/tag0"), 'my/tag2': create_node.tags.get("my/tag2")}
+            
+            create_node.delete_tag("my/tag1")
 
-        assert nodeConfig_instance.tags['test_path'] != None
+            assert create_node.tags == tagDict
 
-        nodeConfig_instance.delete_tag("test_path")
+        def test_last(self, create_node: NodeConfig):
+            tagDict = {'my/tag0': create_node.tags.get("my/tag0"), 'my/tag1': create_node.tags.get("my/tag1")}
+            
+            create_node.delete_tag("my/tag2")
 
-        assert nodeConfig_instance.tags == {}
+            assert create_node.tags == tagDict
 
     def test_add_method(self):
         nodeConfig_instance = NodeConfig("instance/str")
@@ -218,24 +376,73 @@ class TestSanity:
         assert nodeConfig_instance.methods['test_path'].params == expected_method.params
         assert nodeConfig_instance.methods['test_path'].responses == expected_method.responses
 
-    def test_delete_method(self):
-        nodeConfig_instance = NodeConfig("instance/str")
+    class TestMethodDelete:
+        @pytest.fixture
+        def create_node(self) -> NodeConfig:
+            config = NodeConfig("my/node")
 
-        properties = {
-            'method1': 'int',
-            'method2': 'float',
-            'method3': 'str'
-        }
+            for i in range(0, 3):
+                config.add_method(f"my/method{i}", None, {})
 
-        nodeConfig_instance.add_method("test_path", method_handler, properties)
+            return config
+        
+        def test_first(self, create_node: NodeConfig):
+            methodDict = {'my/method1': create_node.methods.get("my/method1"), 'my/method2': create_node.methods.get("my/method2")}
+            
+            create_node.delete_method("my/method0")
 
-        expected_method = Method("test_path", method_handler, Props.from_value(properties), {}, [])
+            assert create_node.methods == methodDict
+        
+        def test_middle(self, create_node: NodeConfig):
+            methodDict = {'my/method0': create_node.methods.get("my/method0"), 'my/method2': create_node.methods.get("my/method2")}
+            
+            create_node.delete_method("my/method1")
 
-        assert nodeConfig_instance.methods != {}
+            assert create_node.methods == methodDict
 
-        nodeConfig_instance.delete_method("test_path")
+        def test_last(self, create_node: NodeConfig):
+            methodDict = {'my/method0': create_node.methods.get("my/method0"), 'my/method1': create_node.methods.get("my/method1")}
+            
+            create_node.delete_method("my/method2")
 
-        assert nodeConfig_instance.methods == {}
+            assert create_node.methods == methodDict
+
+    def test_verify_tags(self):
+        config = NodeConfig("my/node")
+
+        def handler(query: gedge.TagWriteQuery) -> None:
+            if query.value > 10:
+                query.reply(400)
+                return
+            query.reply(200)
+
+        config.add_tag("my/tag0", int, {})
+
+        config.add_writable_tag("my/tag1", int, handler, [
+            (10, {
+                'desc': 'response 0'
+            })
+        ], {})
+
+        config._verify_tags()
+
+    def test_verify_methods(self):
+        config = NodeConfig("my/node")
+
+        def handler(query: gedge.MethodQuery):
+            name = query.params["name"]
+            speed = query.params["speed"]
+            if len(name) > 30:
+                query.reply(401)
+                return
+            if speed < 0 or speed > 100:
+                query.reply(400, body={"res1": speed})
+                return
+            query.reply(200, body={"res1": speed})
+
+        config.add_method("my/method", handler, {})
+
+        config._verify_methods()
 
     def test_build_meta(self):
     
@@ -255,57 +462,17 @@ class TestSanity:
 
         assert expected_meta == nodeConfig_instance.build_meta()
 
+    @pytest.mark.skip
     def test_connect(self):
-
-        '''
-        config_instance = NodeConfig("instance/str")
+        config = NodeConfig("my/node")
         connections = [
             "connection0",
             "connection1"
         ]
-        session_instance = NodeSession(config_instance, Comm(connections))
 
-        '''
-    
-        #TODO
-        pytest.fail("Go to the Github and Look at test/test_test_methods for examples of MockComm")
+        session = config._connect(connections)
 
     class TestWriteResponses:
-
-        def test_add_write_response(self, tag_handler):
-
-            instance_str = "instance/str"
-            nodeConfig_instance = NodeConfig(instance_str)
-
-            properties = {
-                'tag1': 'int',
-                'tag2': 'float',
-                'tag3': 'str'
-            }
-
-            responses = [
-                (200, {"status": "success", "message": "Request was successful"}),
-                (404, {"status": "error", "message": "Not Found"}),
-                (500, {"status": "error", "message": "Internal Server Error"}),
-            ]
-
-            nodeConfig_instance.add_writable_tag("test_path", int, tag_handler, responses, properties)
-
-            expected_tag = Tag("test_path", DataType.INT, Props.from_value(properties), False, [], None)
-
-            expected_tag.writable(tag_handler, responses)
-
-            additional_response = {
-                "message": "Request was successful"
-            }
-
-            assert nodeConfig_instance.tags['test_path'].props.to_value() == expected_tag.props.to_value()
-
-            nodeConfig_instance.add_write_response("test_path", 300, additional_response)
-
-            expected_tag.add_write_response(300, Props.from_value(additional_response))
-
-            assert nodeConfig_instance.tags['test_path'].props.to_value() == expected_tag.props.to_value()
     
         def test_add_write_response_no_tag(self):
             instance_str = "instance/str"
@@ -317,42 +484,6 @@ class TestSanity:
 
             with pytest.raises(TagLookupError, match="Tag test_path not found on node str"):
                 nodeConfig_instance.add_write_response("test_path", 300, additional_response)
-        
-        def test_add_write_responses(self, tag_handler):
-            instance_str = "instance/str"
-            nodeConfig_instance = NodeConfig(instance_str)
-
-            properties = {
-                'tag1': 'int',
-                'tag2': 'float',
-                'tag3': 'str'
-            }
-
-            responses = [
-                (200, {"status": "success", "message": "Request was successful"}),
-                (404, {"status": "error", "message": "Not Found"}),
-                (500, {"status": "error", "message": "Internal Server Error"}),
-            ]
-
-            nodeConfig_instance.add_writable_tag("test_path", int, tag_handler, responses, properties)
-
-            expected_tag = Tag("test_path", DataType.INT, Props.from_value(properties), False, [], None)
-
-            expected_tag.writable(tag_handler, responses)
-
-            additional_responses = [
-                (300, {"status": "Success", "message": "Request was also successful"}),
-                (600, {"status": "error", "message": "uh oh"})
-            ]
-
-            assert str(nodeConfig_instance.tags['test_path'].responses) == str(expected_tag.responses)
-
-            nodeConfig_instance.add_write_responses("test_path", additional_responses)
-
-            expected_tag.add_write_response(300, Props.from_value({"status": "Success", "message": "Request was also successful"}))
-            expected_tag.add_write_response(600, Props.from_value({"status": "error", "message": "uh oh"}))
-
-            assert str(nodeConfig_instance.tags['test_path'].responses) == str(expected_tag.responses)
     
         def test_add_write_responses_no_tag(self):
             instance_str = "instance/str"
