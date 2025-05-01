@@ -6,6 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 import zenoh
 import json
+import base64
 from gedge.comm.comm import Comm
 from gedge.node import codes
 from gedge.node.body import BodyData
@@ -48,6 +49,48 @@ It would be maybe nice to subclass from zenoh.Subscriber, but it is marked as
 final so we cannot do that. Need to find another workaround
 '''
 
+# Mock for zenoh.Reply, with 'ok' attribute
+class MockReply:
+    def __init__(self, ok: bool, result: MockResult):
+        self.ok = ok
+        self.result = result
+
+class MockResult:
+    def __init__(self, payload: bytes):
+        self.payload = payload
+
+    def to_bytes(self):
+        # Simulate converting payload to bytes
+        return self.payload
+
+class MockSession:
+    def __init__(self):
+        self.storage = {}  # A simple dictionary to mimic key-value storage
+
+    def put(self, key_expr: str, value: str):
+        # Mimic storing data in key-value format
+        self.storage[key_expr] = value
+        print(f"Putting: {key_expr} -> {value}")
+
+    def get(self, key_expr: str) -> str:
+        # Mimic retrieving data from storage
+        print(f"Getting: {key_expr}")
+        '''
+        replies = []
+        for key, value in self.storage:
+            # TODO: Support key expansion (wildcarding)
+            if (key.__contains__(key_expr))
+                replies.append(value)
+
+        return replies
+        '''
+        return self.storage.get(key_expr, None)
+
+    def close(self):
+        # Mimic closing the session
+        print("Closing session.")
+
+
 # TODO: handle Zenoh queries
 # for now, we will not worry about Zenoh queries, because we 
 # may be removing them from Comm soon, anyway, due to timeout issues
@@ -57,19 +100,34 @@ class MockComm(Comm):
         self.subscribers: dict[str, list[MockCallback]] = defaultdict(list)
         self.active_methods: dict[str, MethodReplyCallback] = dict()
         self.metas: dict[str, proto.Meta] = dict()
+        
+        self.session = MockSession()
 
     def __enter__(self):
         logger.info(f"Mock connection")
         return self
 
     def connect(self):
-        '''
-        Creates and opens the Zenoh session
-        '''
         self.__enter__()
     
     def __exit__(self, *exc):
         logger.info(f"Closing mock connection")
+
+    def close_remote(self, ks: NodeKeySpace):
+        '''
+        Closes the node to mock connection by undeclaring the current subscriptions
+
+        Arguments:
+            ks (NodeKeySpace): The key space of the node losing the connection
+
+        Returns:
+            None
+        '''
+
+        logger.info(f"Closing remote connection to {ks.user_key}")
+        subscriptions = [s for s in self.subscribers if ks.contains(str(s.key_expr))]
+        for s in subscriptions:
+            s.undeclare()
 
     def _send_proto(self, key_expr: str, value: ProtoMessage):
         for key in self.subscribers:

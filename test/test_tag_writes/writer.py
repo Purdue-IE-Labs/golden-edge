@@ -37,6 +37,6 @@ with gedge.connect(config, "192.168.4.60") as session:
     reply = remote.write_tag("tag/write", value=5)
     print(f"got reply: {reply}\n")
     print(f"response props: {reply.props}")
-
+    
     while True:
         pass
