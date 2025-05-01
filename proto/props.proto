@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "type.proto";
+import "data_model_session.proto";
+
+// We require a Prop object because it is distinct from Body and Param
+// In those cases, we are specifying strictly configurations (i.e. 
+// type and props) while a Prop is a type and a value
+// We include it in this file because otherwise we get recursive imports
+message Prop {
+    Type type = 1;
+    DataObject value = 2;
+}
+
+message Props {
+    map<string, Prop> props = 1;
+}
