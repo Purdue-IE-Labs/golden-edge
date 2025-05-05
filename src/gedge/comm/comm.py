@@ -15,7 +15,6 @@ from gedge.comm.keys import NodeKeySpace, internal_to_user_key, key_join, method
 
 from typing import Any, TYPE_CHECKING, Callable
 
-from gedge.node.param import params_proto_to_py
 from gedge.node.reply import Response
 from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.conversions import props_to_json5
@@ -290,7 +289,7 @@ class Comm:
         return _on_query
 
     def _handle_method_query(self, method: MethodConfig, key_expr: str, value: proto.MethodCall):
-        params: dict[str, Any] = params_proto_to_py(dict(value.params), method.params)
+        params: dict[str, TagValue] = method.params_proto_to_py(dict(value.params))
         
         key_expr = method_response_from_call(key_expr)
         reply_func = self._method_reply(key_expr, method)

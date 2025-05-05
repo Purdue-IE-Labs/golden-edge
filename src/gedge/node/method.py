@@ -1,6 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
+from gedge.node.gtypes import TagValue
+from gedge.py_proto.base_data import BaseData
+from gedge.py_proto.data_model import DataItem
 from gedge.py_proto.data_model_config import DataItemConfig
 from gedge.py_proto.props import Prop
 from gedge import proto
@@ -49,3 +52,20 @@ class MethodConfig:
         responses = list_from_json5(ResponseConfig, j.get("responses", []))
 
         return cls(path, params, responses, props, None)
+    
+    def params_proto_to_py(self, params: dict[str, proto.DataItem]) -> dict[str, TagValue]:
+        params_config = self.params
+        config = {i.path: i for i in params_config}
+        new_params: dict[str, Any] = {}
+        for key, value in params.items():
+            type = config[key].type
+            t = type.get_base_type()
+            if not t:
+                return {}
+            new_params[key] = BaseData.proto_to_py(value.base_data, t)
+        return new_params
+    
+    def params_py_to_proto(self, params: dict[str, TagValue]) -> dict[str, proto.DataItem]:
+        c: dict[str, DataItemConfig] = {i.path: i for i in self.params}
+        proto = {k: DataItem.from_value(v, c[k]).to_proto() for k, v in params.items()}
+        return proto

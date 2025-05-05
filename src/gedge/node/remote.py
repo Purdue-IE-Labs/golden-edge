@@ -288,8 +288,7 @@ class RemoteConnection:
             raise MethodLookupError(_path, self.ks.name)
         
         method = self.methods[_path]
-
-        params: dict[str, proto.DataItem] = dict_value_to_proto(kwargs.items(), method.params) # type: ignore
+        params = method.params_py_to_proto(kwargs.items()) # type: ignore
         logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
         self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
     

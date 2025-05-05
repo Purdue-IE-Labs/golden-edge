@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 """
 We love inheritance, until we don't :)
 """
-
 @dataclass
 class Query:
     key_expr: str
