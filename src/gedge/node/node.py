@@ -18,7 +18,7 @@ from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.py_proto.singleton import Singleton
-from gedge.py_proto.tag_config import Tag, TagConfig, get_config_from_path
+from gedge.py_proto.tag_config import Tag, TagConfig
 from gedge import py_proto
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
@@ -575,7 +575,7 @@ class NodeSession:
             tag = self.config.tag_config.get_tag(path)
             if not tag.is_writable():
                 continue
-            self._comm.tag_queryable_v2(self.ks, tag, path) 
+            self._comm.tag_queryable(self.ks, tag, path) 
         for path in self.config.methods:
             # hook up method handlers
             method = self.config.methods[path]
@@ -586,7 +586,7 @@ class NodeSession:
                 tag = config.tag_config[path]
                 if not tag.is_writable():
                     continue
-                self._comm.tag_queryable_v2(config.ks, tag, path) 
+                self._comm.tag_queryable(config.ks, tag, path) 
             for path in config.methods:
                 method = config.methods[path]
                 self._comm.method_queryable(config.ks, method) 
@@ -666,7 +666,7 @@ class NodeSession:
         config = tag.get_config(path)
         logger.debug(f"Putting tag value {value} on path {path}")
         d = BaseData.from_value(value, config.get_base_type()).to_proto() # type: ignore
-        self._comm.update_tag_basic(self.ks.tag_data_path(path), d)
+        self._comm.update_tag(self.ks, path, d)
 
     def get_model_from_meta(self, config: DataModelRef) -> DataModelConfig:
         if self.models.get(config.full_path) is None:

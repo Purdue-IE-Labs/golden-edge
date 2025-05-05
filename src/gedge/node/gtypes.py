@@ -2,9 +2,8 @@ from typing import Callable, Any
 import zenoh
 from gedge import proto
 from gedge.node.query import MethodQuery
-from gedge.node.method_reply import MethodReply
+from gedge.node.reply import Response
 from gedge.node.tag_write_query import TagWriteQuery
-from gedge.py_proto.base_type import BaseType
 # from gedge.py_proto.data_model import DataObject
 
 # a node defines this on its own config for its writable tags
@@ -14,7 +13,7 @@ TagValue = TagBaseValue | dict[str, Any]
 
 TagWriteHandler = Callable[[TagWriteQuery], None]
 MethodHandler = Callable[[MethodQuery], None]
-MethodReplyCallback = Callable[[MethodReply], None]
+MethodReplyCallback = Callable[[Response], None]
 
 KeyExpr = str
 StateCallback = Callable[[KeyExpr, proto.State], None]

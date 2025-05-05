@@ -3,12 +3,16 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 from gedge.node import codes
+from gedge.py_proto.data_model import DataItem
 from gedge.py_proto.data_model_config import DataItemConfig
 from gedge.py_proto.props import Prop
 from gedge import proto
 from typing import Any, Self, TYPE_CHECKING
 
 from gedge.py_proto.conversions import list_from_proto, list_to_proto, props_from_json5
+
+if TYPE_CHECKING:
+    from gedge.node.gtypes import TagValue
 
 # CONFIG object
 @dataclass
@@ -56,10 +60,24 @@ class ResponseConfig:
     def is_info(self) -> bool:
         return self.type == ResponseType.INFO
     
+    def body_proto_to_value(self, body: dict[str, proto.DataItem]) -> dict[str, TagValue]:
+        new_body: dict[str, TagValue] = {}
+        for key, value in body.items():
+            body_config = [c for c in self.body if c.path == key][0]
+            new_body[key] = DataItem.from_proto(value, body_config).to_value()
+        return new_body
+    
+    def body_value_to_proto(self, body: dict[str, TagValue]) -> dict[str, proto.DataItem]:
+        new_body: dict[str, proto.DataItem] = {}
+        for key, value in body.items():
+            body_config = [c for c in self.body if c.path == key][0]
+            new_body[key] = DataItem.from_value(value, body_config).to_proto()
+        return new_body
+    
 def get_response_config(code: int, responses: list[ResponseConfig]) -> ResponseConfig:
     res = {r.code: r for r in responses}
     if code not in res:
-        return codes.config_from_code(code)
+        return codes.config_from_predefined_code(code)
     r = res[code]
     return r
 

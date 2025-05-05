@@ -6,7 +6,7 @@ from datetime import datetime
 import zenoh
 
 from gedge.py_proto.data_model import DataItem
-from gedge.py_proto.tag_config import Tag, TagConfig
+from gedge.py_proto.tag_config import Tag
 
 class TagBind:
     def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any, Tag], Any]):

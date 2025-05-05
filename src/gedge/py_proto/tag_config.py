@@ -143,23 +143,10 @@ class Tag:
         responses, _ = self.write_config[path]
         self.write_config[path] = (responses, handler)
 
-def get_config_from_path(tags: dict[str, Tag], path: str) -> DataItemConfig:
-    best_match = max(list(tags.keys()), key = lambda p : len(os.path.commonprefix([p, path])))
-    tag = tags[best_match]
-    return tag.get_config(path)
-
-def add_writable_config_json5(tags: list[Tag], j: Any):
-    if not isinstance(j, list):
-        raise LookupError("writable config must be a list")
-
-    for config in j:
-        if isinstance(config, str):
-            path = config
-        else:
-            path = config["path"]
-        t = [t for t in tags if path.startswith(t.path)][0]
-        if t.is_valid_path(path):
-            t.add_writable_config_json5(config)
+# def get_config_from_path(tags: dict[str, Tag], path: str) -> DataItemConfig:
+#     best_match = max(list(tags.keys()), key = lambda p : len(os.path.commonprefix([p, path])))
+#     tag = tags[best_match]
+#     return tag.get_config(path)
 
 '''
 TODO: this is a little hard to reason about 
@@ -203,14 +190,15 @@ class TagConfig:
         return cls({t.path: t for t in tags})
     
     @classmethod
-    def from_json5(cls, tags: Any, writable_tags: Any):
+    def from_json5(cls, tags: Any, writable_tags: Any) -> Self:
         if not isinstance(tags, list):
             raise ValueError(f"invalid tags, tags must be a list, got {tags}")
         if not isinstance(writable_tags, list):
             raise ValueError(f"writable tags")
         ts: list[Tag] = [Tag.from_json5(t) for t in tags]
-        add_writable_config_json5(ts, writable_tags)
-        return cls({t.path: t for t in ts}) 
+        self = cls({t.path: t for t in ts})
+        self.add_writable_config_json5(writable_tags)
+        return self
     
     def add_writable_config_json5(self, j: Any):
         if not isinstance(j, list):
@@ -247,6 +235,9 @@ class TagConfig:
         if path in self.tags:
             return self.tags[path]
         return [t for t in self.tags.values() if t.is_valid_path(path)][0]
+
+    def get_config(self, path: str) -> DataItemConfig:
+        return self.get_tag(path).get_config(path)
 
     def __setitem__(self, path: str, tag: Tag):
         self.tags[path] = tag

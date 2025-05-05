@@ -50,7 +50,7 @@ class MethodQuery:
         if not self._is_valid_code(code):
             return False
         if codes.is_predefined_code(code):
-            config = codes.config_from_code(code)
+            config = codes.config_from_predefined_code(code)
         else:
             config = [i for i in self._responses if i.code == code][0]
         return config.type == type

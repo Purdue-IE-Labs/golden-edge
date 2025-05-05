@@ -5,7 +5,7 @@ from typing import Any
 import gedge
 
 def tag_write(query: gedge.TagWriteQuery):
-    query.reply(2000, {})
+    query.reply_ok(2000)
 
 def handler(query: gedge.MethodQuery):
     model: dict[str, Any] = query.params["model"]

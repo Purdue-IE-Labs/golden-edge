@@ -3,8 +3,8 @@
 # reserved: 0-99 (TODO: check in outward facing functions that they don't violate this)
 # TODO: change classes to dataclasses
 
-from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import ResponseConfig, ResponseType
+from gedge.node.reply import Response
 
 
 DONE = 10
@@ -51,7 +51,13 @@ CALLBACK_ERR_CONFIG = ResponseConfig.from_json5(
     }
 )
 
-def config_from_code(code: int) -> ResponseConfig:
+def config_from_code(code: int, responses: list[ResponseConfig]) -> ResponseConfig:
+    r = {r.code: r for r in responses}
+    if code in r:
+        return r[code]
+    return config_from_predefined_code(code)
+
+def config_from_predefined_code(code: int) -> ResponseConfig:
     mapping = {
         OK: OK_CONFIG,
         ERR: ERR_CONFIG,
@@ -65,7 +71,7 @@ def config_from_code(code: int) -> ResponseConfig:
 def is_predefined_code(code: int) -> bool:
     return code in {OK, ERR, CALLBACK_ERR}
 
-def is_final_method_response(response: MethodReply) -> bool:
+def is_final_method_response(response: Response) -> bool:
     return is_predefined_code(response.code) or response.type in {ResponseType.OK, ResponseType.ERR}
 
 def is_ok(code: int) -> bool:

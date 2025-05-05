@@ -4,7 +4,6 @@ from queue import Queue, Empty
 import time
 from gedge.node.gtypes import TagBaseValue, TagValue
 from gedge.node.method import MethodConfig
-from gedge.node.method_reply import MethodReply
 from gedge.node.method_response import ResponseConfig, get_response_config
 from gedge.node import codes
 from gedge import proto
@@ -15,13 +14,13 @@ from gedge.comm.keys import *
 
 from typing import Any, Iterator, Callable, TYPE_CHECKING
 
-from gedge.node.tag_write_reply import TagWriteReply
+from gedge.node.reply import Response
 from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.conversions import dict_proto_to_value, dict_value_to_proto, list_from_proto, props_to_json5
 from gedge.py_proto.data_model import DataItem
 from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.data_model_ref import DataModelRef
-from gedge.py_proto.tag_config import Tag, TagConfig, get_config_from_path
+from gedge.py_proto.tag_config import Tag, TagConfig 
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
     from gedge.node.subnode import RemoteSubConnection
@@ -82,7 +81,7 @@ class RemoteConnection:
         if path not in self.tag_config:
             raise TagLookupError(path, self.ks.name)
 
-        self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tag_config.tags)
+        self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tag_config)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
         '''
@@ -193,7 +192,7 @@ class RemoteConnection:
         r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r
 
-    def _write_tag(self, path: str, value: TagBaseValue, tag: Tag) -> TagWriteReply:
+    def _write_tag(self, path: str, value: TagBaseValue, tag: Tag) -> Response:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
@@ -205,11 +204,11 @@ class RemoteConnection:
             TagWriteReply: The reply from the tag write
         '''
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
-        config = get_config_from_path(self.tag_config.tags, path)
+        config = self.tag_config.get_config(path)
         base_type = config.get_base_type()
         if not base_type:
-            raise ValueError
-        response = self._comm.write_tag(self.ks, path, BaseData.from_value(value, base_type).to_proto())
+            raise ValueError("cannot write to model type")
+        response = self._comm.write_tag(self.ks, path, BaseData.from_value(value, base_type))
         code = response.code
 
         responses, _ = self.tag_config.all_writable_tags()[path]
@@ -218,10 +217,10 @@ class RemoteConnection:
         body: dict[str, TagValue] = dict_proto_to_value(dict(response.body), config.body)
         props = props_to_json5(config.props)
 
-        reply = TagWriteReply(self.ks.tag_write_path(path), code, body, value, props)
+        reply = Response(self.ks.tag_write_path(path), code, config.type, body, props)
         return reply
 
-    def write_tag(self, path: str, value: Any) -> TagWriteReply:
+    def write_tag(self, path: str, value: Any) -> Response:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
@@ -241,7 +240,7 @@ class RemoteConnection:
         tag = self.tag_config.get_tag(path)
         return self._write_tag(path, value, tag)
 
-    async def write_tag_async(self, path: str, value: Any) -> TagWriteReply:
+    async def write_tag_async(self, path: str, value: Any) -> Response:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
@@ -297,7 +296,7 @@ class RemoteConnection:
     # CAUTION: because this is a generator, just calling it (session.call_method_iter(...)) will do nothing,
     # it must be iterated upon to actually run
     # timeout in milliseconds
-    def call_method_iter(self, _path: str, _timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
+    def call_method_iter(self, _path: str, _timeout: float | None = None, **kwargs) -> Iterator[Response]:
         '''
         Calls the method along the passed path with an optional timeout
 
@@ -330,8 +329,8 @@ class RemoteConnection:
                 raise LookupError(f"Parameter {param} defined in config but not included in method call for method {method.path}")
         
         params: dict[str, proto.DataItem] = dict_value_to_proto(kwargs.items(), method.params) # type: ignore
-        replies: Queue[MethodReply] = Queue()
-        def _on_reply(reply: MethodReply) -> None:
+        replies: Queue[Response] = Queue()
+        def _on_reply(reply: Response) -> None:
             replies.put(reply)
 
         logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")

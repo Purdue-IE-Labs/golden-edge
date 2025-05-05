@@ -12,13 +12,11 @@ from gedge.node import codes
 from gedge.node.method_response import ResponseType
 
 @dataclass
-class MethodReply:
+class Response:
     key_expr: str
     code: int
-    body: dict[str, TagValue]
     type: ResponseType
-    # method_config: Method
-    # response_config: MethodResponse
+    body: dict[str, TagValue]
     props: dict[str, TagValue]
 
     def is_ok(self):
@@ -26,12 +24,3 @@ class MethodReply:
     
     def is_err(self):
         return codes.is_err(self.code) or self.type == ResponseType.ERR
-
-    def is_error(self):
-        warnings.warn("is_error is deprecated, use is_err", category=DeprecationWarning)
-        return self.code == codes.METHOD_ERROR
-    
-    def is_done(self):
-        warnings.warn("is_done is deprecated, use is_ok", category=DeprecationWarning)
-        return self.code == codes.DONE
-    
