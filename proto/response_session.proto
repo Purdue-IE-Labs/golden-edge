@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+import "data_model_session.proto";
+
+message Response {
+    int32 code = 1;
+    map<string, DataItem> body = 2;
+}

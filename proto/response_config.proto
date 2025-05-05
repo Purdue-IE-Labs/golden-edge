@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "data_model_config.proto";
+import "prop.proto";
+
+message ResponseConfig {
+    int32 code = 1;
+    ResponseType type = 2;
+    repeated DataItemConfig body = 3;
+    repeated Prop props = 4;
+}
+
+enum ResponseType {
+    OK = 0;
+    ERR = 1;
+    INFO = 2;
+}

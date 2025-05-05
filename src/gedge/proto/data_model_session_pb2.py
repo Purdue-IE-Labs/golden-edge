@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from . import base_data_pb2 as base__data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18\x64\x61ta_model_session.proto\x1a\x0f\x62\x61se_data.proto\"&\n\tDataModel\x12\x19\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\x0b.DataObject\"V\n\nDataObject\x12\x1e\n\tbase_data\x18\x01 \x01(\x0b\x32\t.BaseDataH\x00\x12 \n\nmodel_data\x18\x02 \x01(\x0b\x32\n.DataModelH\x00\x42\x06\n\x04\x64\x61tab\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x18\x64\x61ta_model_session.proto\x1a\x0f\x62\x61se_data.proto\"$\n\tDataModel\x12\x17\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\t.DataItem\"T\n\x08\x44\x61taItem\x12\x1e\n\tbase_data\x18\x01 \x01(\x0b\x32\t.BaseDataH\x00\x12 \n\nmodel_data\x18\x02 \x01(\x0b\x32\n.DataModelH\x00\x42\x06\n\x04\x64\x61tab\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,7 +33,7 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'data_model_session_pb2', _g
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_DATAMODEL']._serialized_start=45
-  _globals['_DATAMODEL']._serialized_end=83
-  _globals['_DATAOBJECT']._serialized_start=85
-  _globals['_DATAOBJECT']._serialized_end=171
+  _globals['_DATAMODEL']._serialized_end=81
+  _globals['_DATAITEM']._serialized_start=83
+  _globals['_DATAITEM']._serialized_end=167
 # @@protoc_insertion_point(module_scope)

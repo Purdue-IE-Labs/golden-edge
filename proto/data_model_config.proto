@@ -1,23 +1,20 @@
 syntax = "proto3";
 
 import "type.proto";
-import "data_model_session.proto";
+import "prop.proto";
 
 // Although both path and version can be found in the keyspace, we include them 
 // here for traceability back to where we originally got the model
 message DataModelConfig {
     string path = 1;
     uint32 version = 2;
-    DataModelType parent = 3;
-	repeated DataModelItemConfig items = 4;
+    optional DataModelRef parent = 3;
+	repeated DataItemConfig items = 4;
 }
 
-message DataModelItemConfig {
+message DataItemConfig {
+    // in the case of params and body, this should not have any "/" in it, it's just a name
     string path = 1;
-    DataObjectConfig config = 2;
-}
-
-message DataObjectConfig {
     Type type = 2;
-    Props props = 3;
+    repeated Prop props = 3;
 }

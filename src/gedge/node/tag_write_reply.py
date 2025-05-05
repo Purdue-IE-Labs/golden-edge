@@ -8,9 +8,8 @@ from typing import Any
 class TagWriteReply:
     key_expr: str
     code: int
-    error: str | None
+    body: dict[str, Any]
     attempted_write_value: Any
-    # tag_config: Tag
     props: dict[str, Any]
 
     def is_error(self):

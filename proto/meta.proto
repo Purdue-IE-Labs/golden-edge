@@ -4,12 +4,13 @@ import "method_config.proto";
 import "tag_config.proto";
 import "subnode_config.proto";
 import "data_model_config.proto";
+import "prop.proto";
 
 message Meta {
-    optional bool tracking = 1;
-    string key = 2;
-    repeated TagConfig tags = 3;
-    repeated MethodConfig methods = 4;
-    repeated SubnodeConfig subnodes = 5;
-    repeated DataModelConfig models = 6;
+    string key = 1;
+    TagConfig tags = 2;
+    repeated MethodConfig methods = 3;
+    repeated SubnodeConfig subnodes = 4;
+    repeated DataModelConfig models = 5;
+    repeated Prop props = 6;
 }

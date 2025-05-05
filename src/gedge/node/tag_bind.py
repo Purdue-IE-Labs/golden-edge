@@ -5,15 +5,15 @@ from typing import Any, Callable
 from datetime import datetime
 import zenoh
 
-from gedge.py_proto.data_model import DataObject
-from gedge.py_proto.tag_config import TagConfig
+from gedge.py_proto.data_model import DataItem
+from gedge.py_proto.tag_config import Tag, TagConfig
 
 class TagBind:
-    def __init__(self, ks: NodeKeySpace, comm: Comm, tag: TagConfig, value: Any | None, on_set: Callable[[str, Any], Any]):
+    def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any, Tag], Any]):
         self.path = tag.path
         self._on_set = on_set # what function should we run before we set the value? (i.e. a write_tag or update_tag, for example)
         if value:
-            self._on_set(self.path, value)
+            self._on_set(self.path, value, tag)
         self._value = value
         self.last_received: datetime = datetime.now()
         self.is_valid: bool = True
@@ -27,12 +27,12 @@ class TagBind:
 
     @value.setter
     def value(self, value):
-        self._on_set(self.path, value)
+        self._on_set(self.path, value, self.tag)
         self._value = value
 
     def _on_value(self, sample: zenoh.Sample):
-        tag_data = self._comm.deserialize(proto.DataObject(), sample.payload.to_bytes())
-        value = DataObject.from_proto(tag_data, self.tag.data_object_config)
+        tag_data = self._comm.deserialize(proto.DataItem(), sample.payload.to_bytes())
+        value = DataItem.from_proto(tag_data, self.tag.config)
         self.last_received = datetime.now()
         self.value = value
 

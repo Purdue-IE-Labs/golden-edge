@@ -26,7 +26,7 @@ from . import method_config_pb2 as method__config__pb2
 from . import tag_config_pb2 as tag__config__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14subnode_config.proto\x1a\x13method_config.proto\x1a\x10tag_config.proto\"y\n\rSubnodeConfig\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x04tags\x18\x02 \x03(\x0b\x32\n.TagConfig\x12\x1e\n\x07methods\x18\x03 \x03(\x0b\x32\r.MethodConfig\x12 \n\x08subnodes\x18\x04 \x03(\x0b\x32\x0e.SubnodeConfigb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14subnode_config.proto\x1a\x13method_config.proto\x1a\x10tag_config.proto\"y\n\rSubnodeConfig\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x04tags\x18\x02 \x01(\x0b\x32\n.TagConfig\x12\x1e\n\x07methods\x18\x03 \x03(\x0b\x32\r.MethodConfig\x12 \n\x08subnodes\x18\x04 \x03(\x0b\x32\x0e.SubnodeConfigb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)

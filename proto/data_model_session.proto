@@ -3,11 +3,10 @@ syntax = "proto3";
 import "base_data.proto";
 
 message DataModel {
-    // TODO: names here?
-    repeated DataObject data = 1;
+    repeated DataItem data = 1;
 }
 
-message DataObject {
+message DataItem {
     oneof data {
         BaseData base_data = 1;
         DataModel model_data = 2;

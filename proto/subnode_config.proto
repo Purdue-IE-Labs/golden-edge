@@ -5,7 +5,7 @@ import "tag_config.proto";
 
 message SubnodeConfig {
     string name = 1;
-    repeated TagConfig tags = 2;
+    TagConfig tags = 2;
     repeated MethodConfig methods = 3;
     repeated SubnodeConfig subnodes = 4;
 }

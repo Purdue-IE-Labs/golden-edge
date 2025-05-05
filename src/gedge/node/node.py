@@ -1,36 +1,34 @@
 from __future__ import annotations
 
-import pathlib
-from re import sub
-from tkinter import W
 import uuid
 from gedge.node.gtypes import TagValue
 from gedge.node.method import MethodConfig
-from gedge.node.method_response import MethodResponseConfig
+from gedge.node.method_response import ResponseConfig
 from gedge.node.tag_write_query import TagWriteQuery
+from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.base_type import BaseType
-from gedge.py_proto.config import Config
-from gedge.py_proto.data_model import DataObject
-from gedge.py_proto.data_model_config import DataModelConfig, DataModelItemConfig
-from gedge.py_proto.data_model_object_config import DataModelObjectConfig, find_latest_version, load, load_from_file
-from gedge.py_proto.data_object_config import DataObjectConfig
-from gedge.py_proto.params_config import ParamsConfig
-from gedge.py_proto.props import Props
+from gedge.py_proto.conversions import props_from_json5
+from gedge.py_proto.data_model import DataItem
+from gedge.py_proto.data_model_config import DataModelConfig, DataItemConfig
+from gedge.py_proto.data_model_ref import DataModelRef
+from gedge.py_proto.props import Prop
 from gedge.node.remote import RemoteConnection
-from gedge.proto import Meta, State, MethodResponse, MethodCall
+from gedge.proto import Meta, State, MethodCall
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.py_proto.singleton import Singleton
-from gedge.py_proto.tag_config import TagConfig, TagWriteResponseConfig
+from gedge.py_proto.tag_config import Tag, TagConfig, get_config_from_path
 from gedge import py_proto
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
 import json5
 
 from typing import Self, Any, TYPE_CHECKING
+
+from gedge.py_proto.type import Type
 if TYPE_CHECKING:
-    from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagBaseValue, Type, ZenohQueryCallback, TagWriteHandler, MethodHandler
+    from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagBaseValue, ZenohQueryCallback, TagWriteHandler, MethodHandler
     from gedge.node.subnode import SubnodeConfig
     from gedge.node.subnode import SubnodeSession
 
@@ -41,7 +39,7 @@ class NodeConfig:
     def __init__(self, key: str):
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
-        self.tags: dict[str, TagConfig] = dict()
+        self.tag_config = TagConfig({})
         self.methods: dict[str, MethodConfig] = dict()
         self.subnodes: dict[str, SubnodeConfig] = dict()
         self.models: dict[str, DataModelConfig] = dict()
@@ -82,9 +80,7 @@ class NodeConfig:
         if "key" not in obj:
             raise LookupError(f"Keyword 'key' not found for node configuration")
         config = NodeConfig(obj["key"])
-        for tag_json in obj.get("tags", []):
-            tag = TagConfig.from_json5(tag_json)
-            config.tags[tag.path] = tag
+        config.tag_config = TagConfig.from_json5(obj.get("tags", []), obj.get("writable_config", []))
 
         for method_json in obj.get("methods", []):
             method = MethodConfig.from_json5(method_json)
@@ -97,31 +93,56 @@ class NodeConfig:
         
         return config
 
-    def get_models_and_condense_to_paths(self) -> list[DataModelConfig]:
+    # def get_models_and_condense_to_paths(self) -> list[DataModelConfig]:
+    #     models = []
+    #     for tag in self.tags.values():
+    #         if tag.is_base_type():
+    #             continue
+    #         m = tag.data_object_config.get_model_and_to_path()
+    #         if m:
+    #             m.add_parent_tags()
+    #             models.append(m)
+    #     for method in self.methods.values():
+    #         for p in method.params.params:
+    #             c = method.params.params[p]
+    #             m = c.get_model_and_to_path()
+    #             if m:
+    #                 m.add_parent_tags()
+    #                 models.append(m)
+    #         for r in method.responses:
+    #             for b in r.body.body:
+    #                 c = r.body.body[b]
+    #                 m = c.get_model_and_to_path()
+    #                 if m:
+    #                     m.add_parent_tags()
+    #                     models.append(m)
+    #     for subnode in self.subnodes.values():
+    #         models += subnode.get_models_and_condense_to_paths()
+    #     return models
+
+    def get_models(self) -> list[DataModelConfig]:
         models = []
-        for tag in self.tags.values():
+        for tag in self.tag_config.tag_list():
             if tag.is_base_type():
                 continue
-            m = tag.data_object_config.get_model_and_to_path()
+            m = tag.load_model()
             if m:
                 m.add_parent_tags()
                 models.append(m)
         for method in self.methods.values():
-            for p in method.params.params:
-                c = method.params.params[p]
-                m = c.get_model_and_to_path()
+            for p in method.params:
+                m = p.type.load_model()
                 if m:
                     m.add_parent_tags()
                     models.append(m)
             for r in method.responses:
-                for b in r.body.body:
-                    c = r.body.body[b]
-                    m = c.get_model_and_to_path()
+                for b in r.body:
+                    m = b.load_model()
                     if m:
                         m.add_parent_tags()
                         models.append(m)
         for subnode in self.subnodes.values():
-            models += subnode.get_models_and_condense_to_paths()
+            models += subnode.get_models()
         return models
 
     @property
@@ -164,7 +185,7 @@ class NodeConfig:
         '''
         def wrapper(self: Self, *args, **kwargs):
             path = args[0]
-            if path in self.tags:
+            if path in self.tag_config.tags:
                 logger.warning(f"Tag with path '{path}' already exists on node '{self.key}', overwriting...")
             result = func(self, *args, **kwargs)
             return result
@@ -183,9 +204,8 @@ class NodeConfig:
         Returns:
             Tag: The added tag
         '''
-        config = DataModelItemConfig(path, DataObjectConfig(Config(BaseType.from_py_type(type)), Props.from_value(props)))
-        tag = TagConfig(config, False, [], None)
-        self.tags[path] = tag
+        tag = Tag(DataItemConfig(path, type, props_from_json5(props)), {})
+        self.tag_config[path] = tag
         logger.info(f"Adding tag with path '{path}' on node '{self.key}'")
         return tag
     
@@ -212,7 +232,7 @@ class NodeConfig:
             raise ValueError(f"No subnode {name}") 
         return self.subnodes[name]
 
-    def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> TagConfig:
+    def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
         '''
         Adds a new tag to the current node
 
@@ -226,38 +246,6 @@ class NodeConfig:
         '''
         return self._add_readable_tag(path, type, props)
     
-    def add_write_responses(self, path: str, responses: list[tuple[int, dict[str, Any]]]):
-        '''
-        Adds the list of write responses to a current tag at the passed path
-
-        Arguments:
-            path (str): The path of the tag
-            responses (list[tuple[int. dict[str, Any]]]): The list of responses
-        Returns:
-            None
-        '''
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        tag = self.tags[path]
-        for code, props in responses:
-            tag.add_write_response(code, Props.from_value(props))
-    
-    def add_write_response(self, path: str, code: int, props: dict[str, Any] = {}):
-        '''
-        Adds a write handler to a tag at the passed path and defines the write response with the passed code and properties
-
-        Arguments:
-            path (str): The path of the tag
-            code (int): The code of the response
-            props (dict[str, Any]): The properties of the response
-
-        Returns:
-            None
-        '''
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        self.tags[path].add_write_response(code, Props.from_value(props))
-    
     def add_tag_write_handler(self, path: str, handler: TagWriteHandler):
         '''
         Adds a TagWriteHandler to a current tag at the passed path
@@ -269,9 +257,7 @@ class NodeConfig:
         Returns:
             None
         '''
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        self.tags[path].add_write_handler(handler)
+        self.tag_config.add_write_handler(path, handler)
     
     def add_method_handler(self, path: str, handler: MethodHandler):
         '''
@@ -287,53 +273,6 @@ class NodeConfig:
         if path not in self.methods:
             raise MethodLookupError(path, self.ks.name)
         self.methods[path].handler = handler
-    
-    def add_props(self, path: str, props: dict[str, Any]):
-        '''
-        Adds the passed properties to a current tag at the passed path
-
-        Arguments:
-            path (str): The path to the tag
-            props (dict[str, Any]): The properties being added to the tag
-
-        Returns:
-            None
-        '''
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        self.tags[path].add_props(props)
-
-    def delete_tag(self, path: str):
-        '''
-        Deletes the tag at the passed path
-
-        Arguments:
-            path (str): The path to the tag
-
-        Returns:
-            None
-        '''
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        logger.info(f"Deleting tag with path '{path}' on node '{self.key}'")
-        del self.tags[path]
-    
-    def add_method(self, path: str, handler, props: dict[str, Any] = {}):
-        '''
-        Adds a new method at the passed path with the passed handler and the passed properties
-
-        Arguments:
-            path (str): The path to the method
-            handler (any): The handler being added to the method
-            props (dict[str, Any]): The properties being added to the method
-
-        Returns:
-            Method: The new method
-        '''
-        method = MethodConfig(path, handler, Props.from_value(props), ParamsConfig.empty(), [])
-        self.methods[path] = method
-        logger.info(f"Adding method with path '{path}' on node '{self.key}'")
-        return method
     
     def delete_method(self, path: str):
         '''
@@ -360,11 +299,12 @@ class NodeConfig:
         Returns:
             None
         '''
-        for path in self.tags:
-            tag = self.tags[path]
-            if tag.is_writable():
-                assert tag.write_handler is not None, f"Tag {path} declared as writable but no write handler was provided"
-                assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
+        for path in self.tag_config:
+            tag = self.tag_config[path]
+            # TODO: fix, what to verify here vs. at config loading time?
+            # if tag.writable:
+            #     assert tag.handler is not None, f"Tag {path} declared as writable but no write handler was provided"
+            #     assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
     
     def _verify_methods(self):
         '''
@@ -392,11 +332,11 @@ class NodeConfig:
             Meta
         '''
         self._verify_tags()
-        tags: list[proto.TagConfig] = [t.to_proto() for t in self.tags.values()]
+        tags = self.tag_config.to_proto()
         methods: list[proto.MethodConfig] = [m.to_proto() for m in self.methods.values()]
         subnodes: list[proto.SubnodeConfig] = [s.to_proto() for s in self.subnodes.values()]
         ms: list[proto.DataModelConfig] = [m.to_proto() for m in self.models.values()]
-        meta = Meta(tracking=False, key=self.key, tags=tags, methods=methods, subnodes=subnodes, models=ms)
+        meta = Meta(key=self.key, tags=tags, methods=methods, subnodes=subnodes, models=ms)
         return meta
 
     def _connect(self, connections: list[str]):
@@ -410,7 +350,7 @@ class NodeConfig:
             NodeSession: The created session with the passed connections
         '''
         logger.info(f"Node {self.key} attempting to connect to network")
-        models = self.get_models_and_condense_to_paths()
+        models = self.get_models()
         self.models = {m.full_path: m for m in models}
         return NodeSession(self, Comm(connections))
 
@@ -421,10 +361,9 @@ class NodeSession:
         self.ks = config.ks
         self.connections: dict[str, RemoteConnection] = dict() # user_key -> RemoteConnection
         self.id = str(uuid.uuid4())
-        self.tags: dict[str, TagConfig] = self.config.tags
-        self.tag_write_responses: dict[str, dict[int, TagWriteResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.tags.items()}
+        self.tag_config: TagConfig = self.config.tag_config
         self.methods: dict[str, MethodConfig] = self.config.methods
-        self.method_responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.method_responses: dict[str, dict[int, ResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         self.subnodes: dict[str, SubnodeConfig] = self.config.subnodes
         self.models: dict[str, DataModelConfig] = self.config.models
 
@@ -433,10 +372,7 @@ class NodeSession:
 
         # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = self.config.build_meta()
-
-        # order here is important, we build the meta with the models having just their path in the tags, methods, subnodes, but embedded in the models
-        # however, for simplicity of coding afterward, we embed the models
-        self.fetch_models()
+        # TODO: put models in singleton?
         logger.debug(f"Built meta: {self.meta}")
 
         self._startup()
@@ -634,25 +570,23 @@ class NodeSession:
         self.update_state(True)
         self.node_liveliness = self._comm.liveliness_token(self.ks)
         logger.info(f"Registering tags and methods on node {self.config.key}")
-        for path in self.config.tags:
+        for path in self.config.tag_config.all_writable_tags():
             # hook up tag write handlers
-            tag = self.config.tags[path]
+            tag = self.config.tag_config.get_tag(path)
             if not tag.is_writable():
                 continue
-            assert tag.write_handler is not None
-            self._comm.tag_queryable(self.ks, tag) 
+            self._comm.tag_queryable_v2(self.ks, tag, path) 
         for path in self.config.methods:
             # hook up method handlers
             method = self.config.methods[path]
             self._comm.method_queryable(self.ks, method) 
         
         def add_subnode_callbacks(config: SubnodeConfig):
-            for path in config.tags:
-                tag = config.tags[path]
+            for path in config.tag_config.all_writable_tags():
+                tag = config.tag_config[path]
                 if not tag.is_writable():
                     continue
-                assert tag.write_handler is not None
-                self._comm.tag_queryable(config.ks, tag) 
+                self._comm.tag_queryable_v2(config.ks, tag, path) 
             for path in config.methods:
                 method = config.methods[path]
                 self._comm.method_queryable(config.ks, method) 
@@ -662,24 +596,6 @@ class NodeSession:
         
         for s in self.config.subnodes.values():
             add_subnode_callbacks(s)
-    
-    def fetch_models(self):
-        # fetch all things for now
-        for path in self.tags:
-            c = self.get_tag_config(path)
-            self.tags[path].config.config = c
-
-        for path in self.methods:
-            for key in self.methods[path].params.params:
-                # TODO: why do I write lines of code like this
-                config = self.methods[path].params.params[key]
-                c = self.get_data_object_config(config)
-                self.methods[path].params.params[key] = c
-            for response in self.methods[path].responses:
-                for body in response.body.body:
-                    config = response.body.body[body]
-                    c = self.get_data_object_config(config)
-                    response.body.body[body] = c
 
     def tag_binds(self, paths: list[str]) -> list[TagBind]:
         '''
@@ -716,12 +632,12 @@ class NodeSession:
         Returns:
             TagBind: The new TagBind
         '''
-        if path not in self.tags:
+        if path not in self.tag_config:
             raise TagLookupError(path, self.ks.name)
-        bind = TagBind(self.ks, self._comm, self.tags[path], value, self.update_tag)
+        bind = TagBind(self.ks, self._comm, self.tag_config[path], value, self._update_tag)
         return bind
     
-    def update_tag(self, path: str, value: TagValue):
+    def update_tag(self, path: str, value: TagBaseValue):
         '''
         Updates the tag at the passed path with the passed value
 
@@ -732,60 +648,30 @@ class NodeSession:
         Returns:
             None
         '''
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        tag = self.tags[path]
+
+        tag = self.config.tag_config.get_tag(path)
+        self._update_tag(path, value, tag)
+
+    def _update_tag(self, path: str, value: TagBaseValue, tag: Tag):
+        '''
+        Updates the tag at the passed path with the passed value
+
+        Arguments:
+            path (str): The path of the tag
+            value (Any): the value being passed to the Tag
+
+        Returns:
+            None
+        '''
+        config = tag.get_config(path)
         logger.debug(f"Putting tag value {value} on path {path}")
+        d = BaseData.from_value(value, config.get_base_type()).to_proto() # type: ignore
+        self._comm.update_tag_basic(self.ks.tag_data_path(path), d)
 
-        do = DataObject.from_value(value, tag.data_object_config)
-        flat_value = do.to_flat_value()
-        print(flat_value)
-        do1 = DataObject.from_flat_value(flat_value, tag.data_object_config)
-        # self._comm.update_tag(self.ks, tag.path, DataObject.from_value(value, tag.data_object_config).to_proto())
-        self._comm.update_tag_split(self.ks, tag.path, do.to_flat_proto(), tag.data_object_config)
-    
-    def get_tag_config(self, path: str) -> DataObjectConfig:
-        """
-        we should just be able to do tag.config.config.
-        However, we do not embed the models in tags or methods, only in the models part of meta,
-        so if it is a model path, we must look it up
-        """
-        tag = self.tags[path]
-        if tag.is_base_type():
-            return tag.data_object_config
-        self.unpack_models(tag.data_object_config)
-        return tag.data_object_config
-    
-    def unpack_models(self, d: DataObjectConfig):
-        if not d.is_model_path():
-            return
-        p = d.get_model_path()
-        assert p is not None
-        d.set_model_config(self.models[p.full_path])
-        for item in d.get_model_items(): # type: ignore
-            self.unpack_models(item.config)
-        return
-
-    def get_data_object_config(self, config: DataObjectConfig) -> DataObjectConfig:
-        if config.is_base_type():
-            return config
-        else:
-            c = config.get_model_config()
-            if c:
-                return config
-            p = config.get_model_path()
-            assert p is not None
-            return DataObjectConfig.from_model_config(self.models[p.full_path], config.props)
-            
-    def get_model_from_meta(self, config: DataModelObjectConfig) -> DataModelConfig:
-        c = config.get_embedded()
-        if not c:
-            p = config.get_path()
-            assert p is not None
-            if self.models.get(p.full_path) is None:
-                raise LookupError(f"No model with path {p} in meta")
-            return self.models[p.full_path]
-        return c
+    def get_model_from_meta(self, config: DataModelRef) -> DataModelConfig:
+        if self.models.get(config.full_path) is None:
+            raise LookupError(f"No model with path {config.full_path} in meta")
+        return self.models[config.full_path]
     
     def update_state(self, online: bool):
         '''

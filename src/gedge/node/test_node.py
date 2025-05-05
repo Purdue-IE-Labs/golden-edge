@@ -3,9 +3,7 @@ from __future__ import annotations
 from gedge.comm.mock_comm import MockCallback, MockComm, MockSample
 from gedge.node.gtypes import TagBaseValue, ZenohCallback
 from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponseConfig
 from gedge.node.node import NodeConfig, NodeSession
-from gedge.py_proto.props import Props
 from gedge.node.query import MethodQuery
 
 from typing import TYPE_CHECKING, Any, Iterator

@@ -22,4 +22,4 @@ with gedge.connect(config) as session:
     print("connected")
     print(session.ks.user_key)
     print(session.methods)
-    print(session.tags)
+    print(session.tag_config)

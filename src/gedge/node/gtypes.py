@@ -7,11 +7,6 @@ from gedge.node.tag_write_query import TagWriteQuery
 from gedge.py_proto.base_type import BaseType
 # from gedge.py_proto.data_model import DataObject
 
-# specifies that we expect the user to pass a type itself (or a DataType instance)
-# example: int
-# example: DataType.INT
-Type = type | BaseType
-
 # a node defines this on its own config for its writable tags
 TagBaseValue = int | float | bool | str | list[int] | list[float] | list[bool] | list[str]
 # dict is the representation of a DataModel

@@ -9,23 +9,23 @@ if TYPE_CHECKING:
     from gedge.node.gtypes import TagValue
 
 from gedge.node import codes
-from gedge.node.method_response import MethodResponseType
+from gedge.node.method_response import ResponseType
 
 @dataclass
 class MethodReply:
     key_expr: str
     code: int
     body: dict[str, TagValue]
-    type: MethodResponseType
+    type: ResponseType
     # method_config: Method
     # response_config: MethodResponse
     props: dict[str, TagValue]
 
     def is_ok(self):
-        return codes.is_ok(self.code) or self.type == MethodResponseType.OK
+        return codes.is_ok(self.code) or self.type == ResponseType.OK
     
     def is_err(self):
-        return codes.is_err(self.code) or self.type == MethodResponseType.ERR
+        return codes.is_err(self.code) or self.type == ResponseType.ERR
 
     def is_error(self):
         warnings.warn("is_error is deprecated, use is_err", category=DeprecationWarning)

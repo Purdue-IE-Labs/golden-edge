@@ -8,60 +8,84 @@ from typing import Any, Self, TYPE_CHECKING
 import json5
 
 from gedge.py_proto.base_type import BaseType
-from gedge.py_proto.data_model_object_config import DataModelObjectConfig, load_from_file
-from gedge.py_proto.data_model_type import DataModelType, to_file_path
+from gedge.py_proto.data_model_ref import DataModelRef
+from gedge.py_proto.load_models import load_from_file, to_file_path
 from gedge import proto
 from gedge.py_proto.singleton import Singleton
+from gedge.py_proto.type import Type
 
 if TYPE_CHECKING:
-    from gedge.py_proto.data_object_config import DataObjectConfig
-    from gedge.comm.comm import Comm
+    from gedge.py_proto.props import Prop
 
 logger = logging.getLogger(__name__)
 
 @dataclass
-class DataModelItemConfig:
+class DataItemConfig:
     path: str
-    config: DataObjectConfig
+    type: Type
+    props: list[Prop]
 
-    def to_proto(self) -> proto.DataModelItemConfig:
-        return proto.DataModelItemConfig(path=self.path, config=self.config.to_proto())
+    def to_proto(self) -> proto.DataItemConfig:
+        props = [p.to_proto() for p in self.props]
+        return proto.DataItemConfig(path=self.path, type=self.type.to_proto(), props=props)
     
     @classmethod
-    def from_proto(cls, proto: proto.DataModelItemConfig) -> Self:
-        from gedge.py_proto.data_object_config import DataObjectConfig
+    def from_proto(cls, proto: proto.DataItemConfig) -> Self:
+        from gedge.py_proto.props import Prop
         path = proto.path
-        config = DataObjectConfig.from_proto(proto.config)
-        return cls(path, config)
+        type = Type.from_proto(proto.type)
+        props = [Prop.from_proto(p) for p in proto.props]
+        return cls(path, type, props)
     
     def to_json5(self) -> dict:
         j = {}
         j["path"] = self.path
-        j.update(self.config.to_json5())
+        j.update(self.type.to_json5())
+        for p in self.props:
+            j.update(p.to_json5())
         return j
     
     @classmethod
     def from_json5(cls, j: Any) -> Self:
-        from gedge.py_proto.data_object_config import DataObjectConfig
+        from gedge.py_proto.props import Prop
         if not isinstance(j, dict):
             raise ValueError(f"Tag must be of type dictionary, found {j}")
 
         if "path" not in j:
             raise LookupError(f"Every tag must have a path! Tag provided with no keyword 'path': {j}")
         path = j["path"]
-        config = DataObjectConfig.from_json5(j)
-        return cls(path, config)
+        type = Type.from_json5(j)
+        props = [Prop.from_json5(key, p) for key, p in j.get("props", {}).items()]
+        return cls(path, type, props)
+    
+    def is_base_type(self) -> bool:
+        return self.type.is_base_type()
+    
+    def get_base_type(self) -> BaseType | None:
+        return self.type.get_base_type()
+    
+    def is_model_ref(self) -> bool:
+        return self.type.is_model_ref()
+    
+    def get_model_ref(self) -> DataModelRef | None:
+        return self.type.get_model_ref()
+    
+    def load_model(self) -> DataModelConfig | None:
+        return self.type.load_model()
+
+# def to_dict_value(l: list[DataItemConfig]) -> dict[str, TagValue]:
+#     return {i.path: i.to_value() for i in l}
 
 @dataclass
 class DataModelConfig:
     path: str
-    parent: DataModelObjectConfig | None
+    parent: DataModelRef | None
     version: int
-    items: list[DataModelItemConfig]
+    items: list[DataItemConfig]
 
     @property
     def full_path(self):
-        return DataModelType(self.path, self.version).full_path
+        return DataModelRef(self.path, self.version).full_path
 
     def to_proto(self) -> proto.DataModelConfig:
         items = [i.to_proto() for i in self.items]
@@ -72,10 +96,10 @@ class DataModelConfig:
 
     @classmethod
     def from_proto(cls, proto: proto.DataModelConfig) -> Self:
-        items = [DataModelItemConfig.from_proto(i) for i in proto.items]
+        items = [DataItemConfig.from_proto(i) for i in proto.items]
         parent = None
         if proto.HasField("parent"):
-            parent = DataModelObjectConfig.from_proto(proto.parent)
+            parent = DataModelRef.from_proto(proto.parent)
         return cls(proto.path, parent, proto.version, items)
     
     def to_json5(self) -> dict[str, Any]:
@@ -92,19 +116,18 @@ class DataModelConfig:
     
     def to_file(self, model_dir: str) -> bool:
         for tag in self.items:
-            config = tag.config
-            if config.is_base_type() or config.is_model_path():
+            config = tag.type
+            if config.is_base_type():
                 continue
-            model = config.get_model_config()
-            if not (model and model.to_file(model_dir) and config.to_model_path()):
+            model = config.load_model()
+            if not (model and model.to_file(model_dir)):
                 return False
-        if self.parent is not None and self.parent.is_embedded():
+        if self.parent is not None:
             p = self.parent
-            model = p.get_embedded()
+            model = p.load_model()
             if not (model and model.to_file(model_dir)):
                 logger.debug("could not write parent to file")
                 return False
-            p.to_model_path()
         j = self.to_json5()
         root_dir = pathlib.Path(model_dir)
         root_dir.mkdir(parents=True, exist_ok=True)
@@ -132,16 +155,13 @@ class DataModelConfig:
         path = j["path"]
         parent = None
         if j.get("parent"):
-            parent = DataModelObjectConfig.from_json5(j["parent"])
+            parent = DataModelRef.from_json5(j["parent"])
         version = j["version"]
         tags = []
         for tag in j.get("tags", []):
-            tags.append(DataModelItemConfig.from_json5(tag))
+            tags.append(DataItemConfig.from_json5(tag))
         
         return cls(path, parent, version, tags)
-    
-    def get_config_items(self) -> list[DataObjectConfig]:
-        return [i.config for i in self.items]
     
     def add_parent_tags(self):
         if not self.parent:

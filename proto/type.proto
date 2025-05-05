@@ -17,7 +17,7 @@ enum BaseType {
 // The type specifies a path where 
 // that model can be found to be retrieved
 // if no version provided, we grab the latest
-message DataModelType {
+message DataModelRef {
     string path = 1;
     optional uint32 version = 2;
 }
@@ -25,7 +25,7 @@ message DataModelType {
 message Type {
     oneof type {
         BaseType base_type = 1;
-        DataModelType data_model_type = 2;
+        DataModelRef data_model_ref = 2;
     }
 }
 

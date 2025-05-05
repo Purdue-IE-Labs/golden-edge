@@ -5,7 +5,7 @@ import time
 from gedge.node.gtypes import TagBaseValue, TagValue
 from gedge.node.method import MethodConfig
 from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponseConfig
+from gedge.node.method_response import ResponseConfig, get_response_config
 from gedge.node import codes
 from gedge import proto
 from gedge.node.error import MethodLookupError, SessionError, TagLookupError
@@ -16,11 +16,12 @@ from gedge.comm.keys import *
 from typing import Any, Iterator, Callable, TYPE_CHECKING
 
 from gedge.node.tag_write_reply import TagWriteReply
-from gedge.py_proto.data_model import DataObject
+from gedge.py_proto.base_data import BaseData
+from gedge.py_proto.conversions import dict_proto_to_value, dict_value_to_proto, list_from_proto, props_to_json5
+from gedge.py_proto.data_model import DataItem
 from gedge.py_proto.data_model_config import DataModelConfig
-from gedge.py_proto.data_model_type import DataModelType
-from gedge.py_proto.data_object_config import DataObjectConfig
-from gedge.py_proto.tag_config import TagConfig
+from gedge.py_proto.data_model_ref import DataModelRef
+from gedge.py_proto.tag_config import Tag, TagConfig, get_config_from_path
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
     from gedge.node.subnode import RemoteSubConnection
@@ -42,12 +43,11 @@ class RemoteConnection:
         would need to react to that (i.e. be properties)
         '''
         self.meta = self._comm.pull_meta_message(ks)
-        tags: list[TagConfig] = [TagConfig.from_proto(t) for t in self.meta.tags]
-        self.tags = {t.path: t for t in tags}
+        self.tag_config = TagConfig.from_proto(self.meta.tags)
         methods: list[MethodConfig] = [MethodConfig.from_proto(m) for m in self.meta.methods]
         self.methods = {m.path: m for m in methods}
-        self.responses: dict[str, dict[int, MethodResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
-        self.models: dict[str, DataModelConfig] = {DataModelType(m.path, m.version).full_path: DataModelConfig.from_proto(m) for m in self.meta.models}
+        self.responses: dict[str, dict[int, ResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.models: dict[str, DataModelConfig] = {DataModelRef(m.path, m.version).full_path: DataModelConfig.from_proto(m) for m in self.meta.models}
 
         from gedge.node.subnode import SubnodeConfig
         subnodes: list[SubnodeConfig] = [SubnodeConfig.from_proto(s, self.ks) for s in self.meta.subnodes]
@@ -79,10 +79,10 @@ class RemoteConnection:
         Returns:
             None
         '''
-        if path not in self.tags:
+        if path not in self.tag_config:
             raise TagLookupError(path, self.ks.name)
 
-        self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tags)
+        self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tag_config.tags)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
         '''
@@ -153,10 +153,10 @@ class RemoteConnection:
         Returns:
             TagBind: The new TagBind
         '''
-        if path not in self.tags:
+        if path not in self.tag_config:
             raise TagLookupError(path, self.ks.name)
-        tag = self.tags[path]
-        bind = TagBind(self.ks, self._comm, tag, value, self.write_tag)
+        tag = self.tag_config[path]
+        bind = TagBind(self.ks, self._comm, tag, value, self._write_tag)
         return bind
     
     def subnode(self, name: str) -> RemoteSubConnection:
@@ -193,7 +193,7 @@ class RemoteConnection:
         r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r
 
-    def _write_tag(self, path: str, value: TagValue) -> TagWriteReply:
+    def _write_tag(self, path: str, value: TagBaseValue, tag: Tag) -> TagWriteReply:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
@@ -205,27 +205,20 @@ class RemoteConnection:
             TagWriteReply: The reply from the tag write
         '''
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        tag = self.tags[path]
-        config = self.get_data_object_config(tag.data_object_config)
-        response = self._comm.write_tag(self.ks, tag.path, DataObject.from_value(value, config).to_proto())
-        code, error = response.code, response.error
+        config = get_config_from_path(self.tag_config.tags, path)
+        base_type = config.get_base_type()
+        if not base_type:
+            raise ValueError
+        response = self._comm.write_tag(self.ks, path, BaseData.from_value(value, base_type).to_proto())
+        code = response.code
 
-        '''
-        Bit of a design decision here. The issue is that golden-edge reserved codes do not have 
-        any props, so we would get an error here. So, if the error field is not empty, we 
-        can assume that something went wrong and the user should only be looking at 
-        'code' and 'error' rather than props, because they are sorta in 'undefined behavior'.
-        For well-defined errors (i.e. 401: project already running), the user should 
-        define these in the meta and have the requisite props.
-        '''
-        props = {}    
-        if not error:
-            r = [r for r in self.tags[path].responses if r.code == code] 
-            props = r[0].props.to_value()
+        responses, _ = self.tag_config.all_writable_tags()[path]
+        config = get_response_config(code, responses)
 
-        reply = TagWriteReply(self.ks.tag_write_path(path), code, error, value, props)
+        body: dict[str, TagValue] = dict_proto_to_value(dict(response.body), config.body)
+        props = props_to_json5(config.props)
+
+        reply = TagWriteReply(self.ks.tag_write_path(path), code, body, value, props)
         return reply
 
     def write_tag(self, path: str, value: Any) -> TagWriteReply:
@@ -245,7 +238,8 @@ class RemoteConnection:
         Returns:
             TagWriteReply: The reply from the tag write
         '''
-        return self._write_tag(path, value)
+        tag = self.tag_config.get_tag(path)
+        return self._write_tag(path, value, tag)
 
     async def write_tag_async(self, path: str, value: Any) -> TagWriteReply:
         '''
@@ -266,7 +260,8 @@ class RemoteConnection:
         Returns:
             TagWriteReply: The reply from the tag write
         '''
-        return self._write_tag(path, value)
+        tag = self.tag_config.get_tag(path)
+        return self._write_tag(path, value, tag)
     
     def call_method(self, _path: str, _on_reply: MethodReplyCallback, **kwargs) -> None:
         '''
@@ -294,11 +289,8 @@ class RemoteConnection:
             raise MethodLookupError(_path, self.ks.name)
         
         method = self.methods[_path]
-        params: dict[str, proto.DataObject] = {}
-        for key, value in kwargs.items():
-            config = method.params[key]
-            params[key] = DataObject.py_to_proto(value, self.get_data_object_config(config))
 
+        params: dict[str, proto.DataItem] = dict_value_to_proto(kwargs.items(), method.params) # type: ignore
         logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
         self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
     
@@ -337,11 +329,7 @@ class RemoteConnection:
             if param not in kwargs:
                 raise LookupError(f"Parameter {param} defined in config but not included in method call for method {method.path}")
         
-        params: dict[str, proto.DataObject] = {}
-        for key, value in kwargs.items():
-            config = method.params[key]
-            params[key] = DataObject.py_to_proto(value, self.get_data_object_config(config))
-        
+        params: dict[str, proto.DataItem] = dict_value_to_proto(kwargs.items(), method.params) # type: ignore
         replies: Queue[MethodReply] = Queue()
         def _on_reply(reply: MethodReply) -> None:
             replies.put(reply)
@@ -369,30 +357,3 @@ class RemoteConnection:
             if codes.is_final_method_response(res):
                 logger.debug("Ending call_method_iter iterator")
                 return
-
-    def get_data_object_config(self, config: DataObjectConfig) -> DataObjectConfig:
-        """
-        What's happening here is that tags, methods, etc. are not embedded with the models in the meta.
-        For example, a tag in meta may look like this (simplified).
-            tag {
-                DataModelType type {
-                    string path
-                    int version
-                }
-                ...
-            }
-        
-        However, if we are going to serialize or deserialize this tag, we need to have the whole model, 
-        not just the DataModelType representation. Instead, we need the DataModelConfig representation.
-        Thus, if we look in the DataObjectConfig and find a path, we fetch the model from the definition 
-        of the model that is packaged into the meta message via meta.models.
-        """
-        if config.is_base_type():
-            return config
-        else:
-            c = config.get_model_config()
-            if c:
-                return config
-            p = config.get_model_path()
-            assert p is not None
-            return DataObjectConfig.from_model_config(self.models[p.full_path], config.props)

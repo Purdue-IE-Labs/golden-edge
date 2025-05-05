@@ -1,6 +1,8 @@
 from __future__ import annotations
 from sys import version
 
+import zenoh
+
 NODE = "NODE"
 META = "META"
 TAGS = "TAGS"
@@ -80,17 +82,19 @@ def internal_to_user_key(key_expr: str):
     return key_join(prefix, name)
 
 def overlap(key1: str, key2: str):
-    # incredibly simple algorithm to handle * semantics like zenoh does
-    # TODO: handle ** and ? in the future
-    key1_split = key1.split('/')
-    key2_split = key2.split('/')
-    if len(key1_split) != len(key2_split):
-        return False
-    
-    for key1_component, key2_component in zip(key1_split, key2_split):
-        if key1_component != "*" and key2_component != "*" and key1_component != key2_component:
-            return False
-    return True
+    k1 = zenoh.KeyExpr(key1)
+    return k1.intersects(zenoh.KeyExpr(key2))
+
+def tag_path_from_key(key_expr: str):
+    components = key_expr.split("/")
+    try:
+        i = components.index(DATA)
+    except:
+        try: 
+            i = components.index(WRITE)
+        except:
+            raise ValueError(f"No tag path found in {key_expr}")
+    return key_join(*components[(i + 1):])
 
 # this defines a key prefix and a name
 class NodeKeySpace:

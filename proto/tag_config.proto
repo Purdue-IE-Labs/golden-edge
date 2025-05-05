@@ -1,15 +1,14 @@
 syntax = "proto3";
 
 import "data_model_config.proto";
+import "response_config.proto";
 
 message TagConfig {
-    DataModelItemConfig config = 1;
-
-    bool writable = 4;
-    repeated TagWriteResponseConfig responses = 5;
+    repeated DataItemConfig data_config = 1;
+    repeated TagWriteConfig write_config = 2;
 }
 
-message TagWriteResponseConfig {
-    int32 code = 1;
-    Props props = 2;
+message TagWriteConfig {
+    string path = 1;
+    repeated ResponseConfig responses = 2;
 }

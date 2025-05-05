@@ -23,17 +23,18 @@ _sym_db = _symbol_database.Default()
 
 
 from . import data_model_config_pb2 as data__model__config__pb2
+from . import response_config_pb2 as response__config__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10tag_config.proto\x1a\x17\x64\x61ta_model_config.proto\"o\n\tTagConfig\x12$\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x14.DataModelItemConfig\x12\x10\n\x08writable\x18\x04 \x01(\x08\x12*\n\tresponses\x18\x05 \x03(\x0b\x32\x17.TagWriteResponseConfig\"=\n\x16TagWriteResponseConfig\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\x15\n\x05props\x18\x02 \x01(\x0b\x32\x06.Propsb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10tag_config.proto\x1a\x17\x64\x61ta_model_config.proto\x1a\x15response_config.proto\"X\n\tTagConfig\x12$\n\x0b\x64\x61ta_config\x18\x01 \x03(\x0b\x32\x0f.DataItemConfig\x12%\n\x0cwrite_config\x18\x02 \x03(\x0b\x32\x0f.TagWriteConfig\"B\n\x0eTagWriteConfig\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\"\n\tresponses\x18\x02 \x03(\x0b\x32\x0f.ResponseConfigb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'tag_config_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_TAGCONFIG']._serialized_start=45
+  _globals['_TAGCONFIG']._serialized_start=68
   _globals['_TAGCONFIG']._serialized_end=156
-  _globals['_TAGWRITERESPONSECONFIG']._serialized_start=158
-  _globals['_TAGWRITERESPONSECONFIG']._serialized_end=219
+  _globals['_TAGWRITECONFIG']._serialized_start=158
+  _globals['_TAGWRITECONFIG']._serialized_end=224
 # @@protoc_insertion_point(module_scope)

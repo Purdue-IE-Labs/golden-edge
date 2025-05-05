@@ -10,10 +10,10 @@ DESCRIPTOR: _descriptor.FileDescriptor
 class DataModel(_message.Message):
     __slots__ = ("data",)
     DATA_FIELD_NUMBER: _ClassVar[int]
-    data: _containers.RepeatedCompositeFieldContainer[DataObject]
-    def __init__(self, data: _Optional[_Iterable[_Union[DataObject, _Mapping]]] = ...) -> None: ...
+    data: _containers.RepeatedCompositeFieldContainer[DataItem]
+    def __init__(self, data: _Optional[_Iterable[_Union[DataItem, _Mapping]]] = ...) -> None: ...
 
-class DataObject(_message.Message):
+class DataItem(_message.Message):
     __slots__ = ("base_data", "model_data")
     BASE_DATA_FIELD_NUMBER: _ClassVar[int]
     MODEL_DATA_FIELD_NUMBER: _ClassVar[int]

@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-import "data_model_config.proto";
-
-message ParamsConfig {
-    map<string, DataObjectConfig> params = 1;
-}
