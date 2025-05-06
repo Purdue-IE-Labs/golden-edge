@@ -87,6 +87,35 @@
             props: {
                 desc: "testing method calls"
             },
+        }, 
+        {
+            path: "test/method/returns",
+            params: [
+                {
+                    path: "model",
+                    model_path: "qux/VERSION/1",
+                    props: {
+                        desc: "a parameter to a method that is a data model (woah)"
+                    }
+                },
+                {
+                    path: "speed",
+                    base_type: "int"
+                }
+            ],
+            responses: [
+                {
+                    code: 200,
+                    type: "ok",
+                },
+                {
+                    code: 202,
+                    type: "info"
+                }
+            ],
+            props: {
+                desc: "testing method calls"
+            },
         }    
     ]
 }

@@ -46,7 +46,7 @@ class ResponseConfig:
             raise LookupError(f"Method response must include 'type', got {j}")
         code = int(j["code"])
 
-        props = props_from_json5(j["props"])
+        props = props_from_json5(j.get("props", {}))
         body = [DataItemConfig.from_json5(b) for b in j.get("body", [])]
         type = ResponseType.from_json5(j)
         return cls(code, type, body, props)
@@ -60,21 +60,15 @@ class ResponseConfig:
     def is_info(self) -> bool:
         return self.type == ResponseType.INFO
     
-    def body_proto_to_value(self, body: dict[str, proto.DataItem]) -> dict[str, TagValue]:
-        new_body: dict[str, TagValue] = {}
-        for key, value in body.items():
-            body_config = [c for c in self.body if c.path == key][0]
-            # new_body[key] = DataItem.from_proto(value, body_config).to_value()
-            new_body[key] = DataItem.proto_to_py(value, body_config)
-        return new_body
+    def body_proto_to_value(self, proto: dict[str, proto.DataItem]) -> dict[str, TagValue]:
+        config = {i.path: i for i in self.body}
+        body: dict[str, TagValue] = {k: DataItem.proto_to_py(v, config[k]) for k, v in proto.items()}
+        return body
     
-    def body_value_to_proto(self, body: dict[str, TagValue]) -> dict[str, proto.DataItem]:
-        new_body: dict[str, proto.DataItem] = {}
-        for key, value in body.items():
-            body_config = [c for c in self.body if c.path == key][0]
-            # new_body[key] = DataItem.from_value(value, body_config).to_proto()
-            new_body[key] = DataItem.py_to_proto(value, body_config)
-        return new_body
+    def body_value_to_proto(self, value: dict[str, TagValue]) -> dict[str, proto.DataItem]:
+        config = {i.path: i for i in self.body}
+        body: dict[str, proto.DataItem] = {k: DataItem.py_to_proto(v, config[k]) for k, v in value.items()}
+        return body
     
 def get_response_config(code: int, responses: list[ResponseConfig]) -> ResponseConfig:
     res = {r.code: r for r in responses}
