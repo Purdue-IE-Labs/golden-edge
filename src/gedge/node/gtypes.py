@@ -1,9 +1,8 @@
 from typing import Callable, Any
 import zenoh
 from gedge import proto
-from gedge.node.query import MethodQuery
+from gedge.node.query import MethodQuery, TagWriteQuery
 from gedge.node.reply import Response
-from gedge.node.tag_write_query import TagWriteQuery
 # from gedge.py_proto.data_model import DataObject
 
 # a node defines this on its own config for its writable tags

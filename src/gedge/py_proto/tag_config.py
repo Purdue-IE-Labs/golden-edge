@@ -74,6 +74,9 @@ class Tag:
         w = writable
         if w is None:
             w = j.get("writable", False)
+        
+        if w and config.is_model_ref():
+            raise ValueError(f"model {config.path} cannot be writable, only tags of it")
 
         responses = []
         if w: 
@@ -210,8 +213,12 @@ class TagConfig:
             else:
                 path = config["path"]
             t = [t for t in self.tags.values() if path.startswith(t.path)][0]
-            if t.is_valid_path(path):
-                t.add_writable_config_json5(config)
+            if not t.is_valid_path(path):
+                raise LookupError(f"invalid writable path {path}")
+            c = t.get_config(path)
+            if c.is_model_ref():
+                raise ValueError(f"model {path} cannot be writable, only tags of it")
+            t.add_writable_config_json5(config)
     
     def all_writable_tags(self) -> dict[str, tuple[list[ResponseConfig], TagWriteHandler | None]]:
         d = {}

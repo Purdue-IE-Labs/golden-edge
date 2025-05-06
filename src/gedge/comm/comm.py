@@ -8,7 +8,7 @@ import zenoh
 import json
 from gedge.comm.sequence_number import SequenceNumber
 from gedge.node import codes
-from gedge.node.error import MethodEnd, NodeLookupError, TagLookupError
+from gedge.node.error import NodeLookupError, QueryEnd, TagLookupError
 from gedge import proto
 from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace, internal_to_user_key, key_join, method_response_from_call, tag_path_from_key
@@ -19,11 +19,10 @@ from gedge.node.reply import Response
 from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.conversions import props_to_json5
 from gedge.py_proto.data_model_config import DataItemConfig, DataModelConfig
-from gedge.node.query import MethodQuery
+from gedge.node.query import MethodQuery, TagWriteQuery
 from gedge.py_proto.data_model_ref import DataModelRef
 from gedge.py_proto.tag_config import Tag, TagConfig 
 from gedge.py_proto.data_model import DataItem
-from gedge.node.tag_write_query import TagWriteQuery
 if TYPE_CHECKING:
     from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, ZenohCallback, ZenohQueryCallback
     from gedge.node.method import MethodConfig
@@ -239,38 +238,35 @@ class Comm:
         return _reply
 
     def _on_tag_write(self, tag: Tag, path: str) -> ZenohQueryCallback:
-        # TODO: hook up logic that we did with methods where we automatically return OK or ERR
+        from gedge.node.method_response import ResponseType
         def _on_write(query: zenoh.Query) -> None:
             reply = self._tag_write_reply(query, tag)
-            try:
-                if not query.payload:
-                    raise ValueError(f"Empty write request")
-                proto_data = self.deserialize(proto.BaseData(), query.payload.to_bytes())
+            if not query.payload:
+                reply(codes.CALLBACK_ERR, {"reason": "Empty write request"})
+                return
+            proto_data = self.deserialize(proto.BaseData(), query.payload.to_bytes())
+
+            try: 
                 config = tag.get_config(path)
                 data: BaseData = BaseData.from_proto(proto_data, config.get_base_type()) # type: ignore
                 logger.info(f"Node {query.key_expr} received tag write at path '{tag.path}' with value '{data}'")
+            except:
+                reply(codes.CALLBACK_ERR, {"reason": f"invalid path {path}"})
+                return
 
-                t = TagWriteQuery(str(query.key_expr), reply, tag.write_config[path][0], [], data.to_py())
-                responses, handler = tag.write_config[path]
+            t = TagWriteQuery(str(query.key_expr), reply, tag.write_config[path][0], [], data.to_py())
+            try:
+                _, handler = tag.write_config[path]
                 assert handler is not None
                 handler(t)
-                
-                try:
-                    code = t.code
-                    body = t.body
-                except:
-                    raise ValueError(f"Tag write handler must call 'reply(...)' at some point")
-                
-                write_responses: dict[int, ResponseConfig] = {r.code:r for r in responses}
-                if code not in write_responses:
-                    raise LookupError(f"Tag write handler for tag {tag.path} given incorrect code {code} not found in callback config")
-
-                response = [code, body]
+            except QueryEnd as e:
+                pass
             except Exception as e:
-                logger.warning(f"Sending tag write response on path {tag.path}: error={repr(e)}")
-                response = [code, body]
+                t._reply(codes.CALLBACK_ERR, {"reason": str(e)}, ResponseType.ERR)
             finally:
-                reply(*response)
+                if not t._responses_sent or t._responses_sent[-1].type == ResponseType.INFO:
+                    t._reply(codes.CALLBACK_ERR, { "reason": "tag write handler did not finish function with OK or ERR message" }, ResponseType.ERR)
+            # reply(code, body)
         return _on_write
     
     def _method_reply(self, key_expr: str, method: MethodConfig) -> Callable[[int, dict[str, TagValue]], None]:
@@ -295,22 +291,23 @@ class Comm:
         
         key_expr = method_response_from_call(key_expr)
         reply_func = self._method_reply(key_expr, method)
-        q = MethodQuery(key_expr, params, reply_func, method.responses)
+        q = MethodQuery(key_expr, reply_func, method.responses, [], params)
         try:
             name = NodeKeySpace.user_key_from_key(key_expr)
             logger.info(f"Node {name} method call at path '{method.path}' with params {params}")
             logger.debug(f"Received from {key_expr}")
             assert method.handler is not None, "No method handler provided"
             method.handler(q)
-        except MethodEnd as e:
+        except QueryEnd as e:
             pass
         except Exception as e:
+            print("ENCOUNTERED EXCEPTION")
             body = {
                 "reason": str(e)
             }
-            q._reply(codes.CALLBACK_ERR, body, ResponseType.ERR)
+            q._reply(codes.CALLBACK_ERR, body, ResponseType.ERR) 
         finally:
-            if not q._types_sent or q._types_sent[-1] == ResponseType.INFO:
+            if not q._responses_sent or q._responses_sent[-1].type == ResponseType.INFO:
                 q._reply(codes.CALLBACK_ERR, { "reason": "method handler did not finish function with OK or ERR message" }, ResponseType.ERR)
 
     def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> None:

@@ -26,7 +26,7 @@ class NodeLookupError(Exception):
         message = f"Node not found at key {key}"
         super().__init__(message)
 
-class MethodEnd(Exception):
+class QueryEnd(Exception):
     def __init__(self, code: int, body: dict[str, TagValue] = {}) -> None:
         self.code = code
         self.body = body

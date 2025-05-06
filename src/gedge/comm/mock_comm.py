@@ -14,7 +14,7 @@ from gedge.node import codes
 from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagBaseValue, TagValue, ZenohQueryCallback
 from gedge.node.method import MethodConfig
 from gedge.py_proto.data_model import DataItem
-from gedge.node.tag_write_query import TagWriteQuery
+from gedge.node.query import TagWriteQuery
 import threading
 
 from gedge.py_proto.tag_config import Tag, TagConfig, ResponseConfig

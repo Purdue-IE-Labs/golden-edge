@@ -4,7 +4,22 @@ from typing import Any
 import gedge
 
 def tag_write(query: gedge.TagWriteQuery):
-    query.reply_ok(2000)
+    query.reply_ok()
+
+def base_tag_write(query: gedge.TagWriteQuery):
+    value: int = query.value # type: ignore
+    
+    if value == 10:
+        return
+    if value == 20:
+        query.reply_ok()
+    if value == 30:
+        query.reply_err()
+    if value == 40:
+        # invalid use of API
+        query.reply_err(200)
+
+    query.reply_ok(200)
 
 def handler(query: gedge.MethodQuery):
     print(query.params)
@@ -28,7 +43,7 @@ def handler(query: gedge.MethodQuery):
     if rand_int == 555:
         # TEST SENDING BACK THE WRONG CODE
         # 400 is an ERR code but we pass reply ok
-        query.reply_ok(400, body={"res1": {}})
+        query.reply_ok(400, body={"res1": 10})
 
     response_model = {
         "foo/bar/baz": 10.4,
@@ -63,6 +78,8 @@ config = gedge.NodeConfig.from_json5(str(here))
 config.add_tag_write_handler("tag/1/tag", tag_write)
 config.add_method_handler("call/method", handler)
 config.add_method_handler("test/method/returns", handler2)
+config.add_tag_write_handler("base_tag", base_tag_write)
+config.add_tag_write_handler("tag/1/tag/2/baz", tag_write)
 
 with gedge.connect(config, "192.168.4.60") as session:
     print(session.tag_config)

@@ -1,5 +1,4 @@
-from gedge.node.query import MethodQuery
-from gedge.node.tag_write_query import TagWriteQuery
+from gedge.node.query import MethodQuery, TagWriteQuery
 from gedge.py_proto.singleton import Singleton
 from .comm.mock_comm import MockComm
 from .node.node import NodeConfig, NodeSession

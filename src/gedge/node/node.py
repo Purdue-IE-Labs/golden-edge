@@ -4,7 +4,6 @@ import uuid
 from gedge.node.gtypes import TagValue
 from gedge.node.method import MethodConfig
 from gedge.node.method_response import ResponseConfig
-from gedge.node.tag_write_query import TagWriteQuery
 from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.conversions import props_from_json5
@@ -352,6 +351,9 @@ class NodeConfig:
         logger.info(f"Node {self.key} attempting to connect to network")
         models = self.get_models()
         self.models = {m.full_path: m for m in models}
+
+        # TODO: ensure they provided a handler for all tag writes and methods
+
         return NodeSession(self, Comm(connections))
 
 class NodeSession:

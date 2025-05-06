@@ -237,6 +237,9 @@ class RemoteConnection:
         Returns:
             TagWriteReply: The reply from the tag write
         '''
+        if path not in self.tag_config.all_writable_tags():
+            raise LookupError(f"tag {path} not writable")
+
         tag = self.tag_config.get_tag(path)
         return self._write_tag(path, value, tag)
 
@@ -259,6 +262,9 @@ class RemoteConnection:
         Returns:
             TagWriteReply: The reply from the tag write
         '''
+        if path not in self.tag_config.all_writable_tags():
+            raise LookupError(f"tag {path} not writable")
+
         tag = self.tag_config.get_tag(path)
         return self._write_tag(path, value, tag)
     
