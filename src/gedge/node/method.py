@@ -56,19 +56,10 @@ class MethodConfig:
     def params_proto_to_py(self, params: dict[str, proto.DataItem]) -> dict[str, TagValue]:
         params_config = self.params
         config: dict[str, DataItemConfig] = {i.path: i for i in params_config}
-        value = {k: DataItem.from_proto(v, config[k]).to_value() for k, v in params.items()}
-        print(f"PARAMS config {config}")
-        print(f"PARAMS {value}")
-        # new_params: dict[str, Any] = {}
-        # for key, value in params.items():
-        #     type = config[key].type
-        #     t = type.get_base_type()
-        #     if not t:
-        #         return {}
-        #     new_params[key] = BaseData.proto_to_py(value.base_data, t)
+        value = {k: DataItem.proto_to_py(v, config[k]) for k, v in params.items()}
         return value
     
     def params_py_to_proto(self, params: dict[str, TagValue]) -> dict[str, proto.DataItem]:
         c: dict[str, DataItemConfig] = {i.path: i for i in self.params}
-        proto = {k: DataItem.from_value(v, c[k]).to_proto() for k, v in params.items()}
+        proto = {k: DataItem.py_to_proto(v, c[k]) for k, v in params.items()}
         return proto

@@ -64,14 +64,16 @@ class ResponseConfig:
         new_body: dict[str, TagValue] = {}
         for key, value in body.items():
             body_config = [c for c in self.body if c.path == key][0]
-            new_body[key] = DataItem.from_proto(value, body_config).to_value()
+            # new_body[key] = DataItem.from_proto(value, body_config).to_value()
+            new_body[key] = DataItem.proto_to_py(value, body_config)
         return new_body
     
     def body_value_to_proto(self, body: dict[str, TagValue]) -> dict[str, proto.DataItem]:
         new_body: dict[str, proto.DataItem] = {}
         for key, value in body.items():
             body_config = [c for c in self.body if c.path == key][0]
-            new_body[key] = DataItem.from_value(value, body_config).to_proto()
+            # new_body[key] = DataItem.from_value(value, body_config).to_proto()
+            new_body[key] = DataItem.py_to_proto(value, body_config)
         return new_body
     
 def get_response_config(code: int, responses: list[ResponseConfig]) -> ResponseConfig:

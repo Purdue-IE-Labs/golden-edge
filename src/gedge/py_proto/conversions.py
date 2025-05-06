@@ -6,6 +6,7 @@ from gedge import proto
 from gedge.py_proto.data_model import DataItem
 from gedge.py_proto.data_model_config import DataItemConfig
 from gedge.py_proto.props import Prop
+from gedge.py_proto.type import Type
 
 if TYPE_CHECKING:
     from gedge.node.gtypes import TagValue
@@ -36,10 +37,10 @@ def props_to_json5(props: list[Prop]) -> dict[str, Any]:
 
 def dict_proto_to_value(proto: dict[str, proto.DataItem], config: list[DataItemConfig]) -> dict[str, TagValue]:
     c: dict[str, DataItemConfig] = {i.path: i for i in config}
-    value_dict: dict[str, TagValue] = {k: DataItem.from_proto(v, c[k]).to_value() for k, v in proto.items()}
+    value_dict: dict[str, TagValue] = {k: DataItem.proto_to_py(v, c[k]) for k, v in proto.items()}
     return value_dict
 
 def dict_value_to_proto(value: dict[str, TagValue], config: list[DataItemConfig]) -> dict[str, proto.DataItem]:
     c: dict[str, DataItemConfig] = {i.path: i for i in config}
-    proto = {k: DataItem.from_value(v, c[k]).to_proto() for k, v in value.items()}
+    proto = {k: DataItem.py_to_proto(v, c[k]) for k, v in value.items()}
     return proto

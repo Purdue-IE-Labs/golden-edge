@@ -290,9 +290,8 @@ class Comm:
 
     def _handle_method_query(self, method: MethodConfig, key_expr: str, value: proto.MethodCall):
         from gedge.node.method_response import ResponseType
-        print(f"PARAMS received: {value.params}")
-        params: dict[str, TagValue] = method.params_proto_to_py(dict(value.params))
-        print(f"PARAMS received: {params}")
+        p = dict(value.params)
+        params: dict[str, TagValue] = method.params_proto_to_py(p)
         
         key_expr = method_response_from_call(key_expr)
         reply_func = self._method_reply(key_expr, method)
