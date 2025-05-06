@@ -1,0 +1,62 @@
+{
+    key: "test/tag/groups",
+    tags: [
+        {
+            path: "tag/1",
+            model_path: "qux",
+            props: {
+                desc: "testing a data object",
+            },
+
+            // this should throw an error because a model is not writable, only base type
+            // writable: true,
+            // responses: [
+            //     {
+            //         code: 200,
+            //         type: "ok"
+            //     }
+            // ]
+        }, 
+        {
+            path: "tag/2",
+            model_path: "bar",
+            props: {
+                desc: "bar"
+            },
+        },
+        {
+            path: "base_tag",
+            base_type: "int",
+            writable: true,
+            responses: [
+                {
+                    code: 200,
+                    type: "ok"
+                }
+            ]
+        }
+    ],
+    writable_config: [
+        {
+            path: "tag/1/tag",
+            responses: [
+                {
+                    code: 2000,
+                    type: "ok",
+                    props: {
+                        desc: "Project started successfully"
+                    }
+                }
+            ]
+        },
+        {
+            path: "tag/1/tag/2/baz"
+        }
+    ],
+    group_tags: [
+        {
+            group_path: "test_group",
+            tag_paths: ["tag/1/tag", "base_tag"]
+        }
+    ]
+}

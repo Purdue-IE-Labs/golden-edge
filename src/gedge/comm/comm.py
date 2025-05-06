@@ -11,7 +11,7 @@ from gedge.node import codes
 from gedge.node.error import NodeLookupError, QueryEnd, TagLookupError
 from gedge import proto
 from gedge.comm import keys
-from gedge.comm.keys import NodeKeySpace, internal_to_user_key, key_join, method_response_from_call, tag_path_from_key
+from gedge.comm.keys import NodeKeySpace, group_path_from_key, internal_to_user_key, key_join, method_response_from_call, tag_path_from_key
 
 from typing import Any, TYPE_CHECKING, Callable
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from gedge.node.method import MethodConfig
     from gedge.node.method_response import ResponseConfig, ResponseType
 
-ProtoMessage = proto.Meta | proto.DataItem | proto.Response | proto.State | proto.MethodCall | proto.DataModelConfig | proto.BaseData
+ProtoMessage = proto.Meta | proto.DataItem | proto.Response | proto.State | proto.MethodCall | proto.DataModelConfig | proto.BaseData | proto.TagGroup
 
 import logging
 logger = logging.getLogger(__name__)
@@ -182,6 +182,32 @@ class Comm:
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
+    
+    '''
+    TODO: eventually, support nesting in API
+    Example:
+    update_group({"tag/tag": 10})
+    vs
+    update_group({
+        "tag": {
+            "tag": 10
+        }
+    })
+    '''
+    def _on_group_data(self, on_group_data: TagDataCallback, tag_config: TagConfig) -> ZenohCallback:
+        def _on_group_data(sample: zenoh.Sample):
+            data: proto.TagGroup = self.deserialize(proto.TagGroup(), sample.payload.to_bytes())
+            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
+            group_path: str = group_path_from_key(str(sample.key_expr))
+            configs = tag_config.get_group_member_configs(group_path)
+            print(configs)
+
+            new_data: dict[str, TagValue] = {}
+            # value here must be of type BaseData
+            for key, value in data.data.items():
+                new_data[key] = BaseData.from_proto(value, configs[key].get_base_type()).to_py() # type: ignore
+            on_group_data(str(sample.key_expr), new_data)
+        return _on_group_data
 
     def _on_state(self, on_state: StateCallback) -> ZenohCallback:
         def _on_state(sample: zenoh.Sample):
@@ -449,6 +475,11 @@ class Comm:
         '''
         key_expr = ks.tag_data_path(path)
         zenoh_handler = self._on_tag_data(handler, tag_config)
+        self._subscriber(key_expr, zenoh_handler)
+    
+    def group_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
+        key_expr = ks.group_data_path(path)
+        zenoh_handler = self._on_group_data(handler, tag_config)
         self._subscriber(key_expr, zenoh_handler)
 
     def tag_queryable(self, ks: NodeKeySpace, tag: Tag, path: str | None = None) -> zenoh.Queryable:
@@ -769,3 +800,6 @@ class Comm:
     
     def _fetch(self, ref: DataModelRef) -> DataModelConfig | None:
         return self.pull_model(ref.path, ref.version)
+    
+    def send_group(self, key_expr: str, proto: proto.TagGroup):
+        self._send_proto(key_expr, proto)

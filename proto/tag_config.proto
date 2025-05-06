@@ -2,10 +2,12 @@ syntax = "proto3";
 
 import "data_model_config.proto";
 import "response_config.proto";
+import "tag_group_config.proto";
 
 message TagConfig {
     repeated DataItemConfig data_config = 1;
     repeated TagWriteConfig write_config = 2;
+    repeated TagGroupConfig group_config = 3;
 }
 
 message TagWriteConfig {

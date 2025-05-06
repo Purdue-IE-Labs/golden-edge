@@ -79,7 +79,7 @@ class NodeConfig:
         if "key" not in obj:
             raise LookupError(f"Keyword 'key' not found for node configuration")
         config = NodeConfig(obj["key"])
-        config.tag_config = TagConfig.from_json5(obj.get("tags", []), obj.get("writable_config", []))
+        config.tag_config = TagConfig.from_json5(obj.get("tags", []), obj.get("writable_config", []), obj.get("group_tags", []))
 
         for method_json in obj.get("methods", []):
             method = MethodConfig.from_json5(method_json)
@@ -203,7 +203,7 @@ class NodeConfig:
         Returns:
             Tag: The added tag
         '''
-        tag = Tag(DataItemConfig(path, type, props_from_json5(props)), {})
+        tag = Tag(DataItemConfig(path, type, props_from_json5(props)), {}, {})
         self.tag_config[path] = tag
         logger.info(f"Adding tag with path '{path}' on node '{self.key}'")
         return tag
@@ -669,6 +669,33 @@ class NodeSession:
         logger.debug(f"Putting tag value {value} on path {path}")
         d = BaseData.from_value(value, config.get_base_type()).to_proto() # type: ignore
         self._comm.update_tag(self.ks, path, d)
+    
+    def update_group(self, group: dict[str, Any]):
+        groups = self.tag_config.get_groups(list(group.keys()))
+        print(groups)
+        # for path in group:
+        #     t = self.tag_config.get_tag(path)
+        #     if t.group is None:
+        #         raise ValueError(f"tag {path} not part of any group")
+        #     config = t.get_config(path)
+        #     if config.is_model_ref():
+        #         raise ValueError(f"model {config.path} cannot be part of group")
+        #     g.add(t.group)
+        if len(groups) > 1:
+            raise ValueError(f"tags are from multiple groups: {groups}")
+        elif len(groups) == 0:
+            raise ValueError(f"no group")
+        
+        group_path: str = groups.pop()
+        new_group: dict[str, proto.BaseData] = {}
+        for path, value in group.items():
+            config = self.tag_config.get_config(path)
+            t = config.get_base_type()
+            assert t is not None
+            new_group[path] = BaseData.from_value(value, config.get_base_type()).to_proto() # type: ignore
+        di = proto.TagGroup(data=new_group)
+        key_expr = self.ks.group_data_path(group_path)
+        self._comm.send_group(key_expr, di)
 
     def get_model_from_meta(self, config: DataModelRef) -> DataModelConfig:
         if self.models.get(config.full_path) is None:

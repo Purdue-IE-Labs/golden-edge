@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+import "base_data.proto";
+
+message TagGroup {
+    map<string, BaseData> data = 1;
+}

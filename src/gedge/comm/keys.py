@@ -14,6 +14,7 @@ RESPONSE = "RESPONSE"
 SUBNODES = "SUBNODES"
 MODELS = "MODELS"
 VERSION = "VERSION"
+GROUPS = "GROUPS"
 
 def key_join(*components: str):
     return "/".join(components)
@@ -95,6 +96,18 @@ def tag_path_from_key(key_expr: str):
         except:
             raise ValueError(f"No tag path found in {key_expr}")
     return key_join(*components[(i + 1):])
+
+def group_path_from_key(key_expr: str):
+    components = key_expr.split("/")
+    try:
+        j = components.index(DATA)
+    except:
+        try: 
+            j = components.index(WRITE)
+        except:
+            raise ValueError(f"No tag path found in {key_expr}")
+    i = components.index(GROUPS)
+    return key_join(*components[(i+1):j])
 
 # this defines a key prefix and a name
 class NodeKeySpace:
@@ -209,6 +222,7 @@ class NodeKeySpace:
         self.state_key_prefix = state_key_prefix(prefix, name)
         self.tag_data_key_prefix = tag_data_key_prefix(prefix, name)
         self.tag_write_key_prefix = tag_write_key_prefix(prefix, name)
+        self.group_key_prefix = key_join(self.node_key_prefix, TAGS, GROUPS)
         self.liveliness_key_prefix = liveliness_key_prefix(prefix, name)
         self.method_key_prefix = method_key_prefix(prefix, name)
         self.subnodes_key_prefix = subnodes_key_prefix(prefix, name)
@@ -218,6 +232,12 @@ class NodeKeySpace:
     
     def tag_write_path(self, path: str):
         return key_join(self.tag_write_key_prefix, path)
+    
+    def group_data_path(self, path: str):
+        return key_join(self.group_key_prefix, path, DATA)
+
+    def group_write_path(self, path: str):
+        return key_join(self.group_key_prefix, path, WRITE)
     
     def method_path(self, path: str):
         return key_join(self.method_key_prefix, path)

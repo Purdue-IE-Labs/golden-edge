@@ -78,10 +78,16 @@ class RemoteConnection:
         Returns:
             None
         '''
-        if path not in self.tag_config:
+        if not self.tag_config.is_valid_path(path):
             raise TagLookupError(path, self.ks.name)
 
         self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tag_config)
+    
+    def add_tag_group_callback(self, group_path: str, on_group_data: TagDataCallback) -> None:
+        if not self.tag_config.is_valid_group_path(group_path):
+            raise LookupError(group_path)
+        
+        self._comm.group_data_subscriber(self.ks, group_path, on_group_data, self.tag_config)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
         '''

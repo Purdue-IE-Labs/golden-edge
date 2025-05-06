@@ -42,7 +42,7 @@ class SubnodeConfig(NodeConfig):
         tags = dict()
         methods = dict()
         subnodes = dict()
-        tag_config = TagConfig.from_json5(json.get("tags", []), json.get("writable_config", []))
+        tag_config = TagConfig.from_json5(json.get("tags", []), json.get("writable_config", []), json.get("group_tags", []))
         tags = tag_config
         for method_json in json.get("methods", []):
             method = MethodConfig.from_json5(method_json)
