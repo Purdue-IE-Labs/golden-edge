@@ -8,6 +8,7 @@ def tag_write(query: gedge.TagWriteQuery):
     query.reply_ok(2000)
 
 def handler(query: gedge.MethodQuery):
+    print(query.params)
     model: dict[str, Any] = query.params["model"]
     speed: int = query.params["speed"]
 
@@ -16,8 +17,13 @@ def handler(query: gedge.MethodQuery):
     if speed < 0 or speed > 100:
         query.reply_err(400, body={"res1": speed})
 
+    # response_model = {
+    #     "tag10": 10.4
+    # }
     response_model = {
-        "tag10": 10.4
+        "foo/bar/baz": 10.4,
+        "baz": True,
+        "qux": 10
     }
     query.reply_ok(200, body={"res1": response_model})
 

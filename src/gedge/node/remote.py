@@ -324,10 +324,10 @@ class RemoteConnection:
 
         method = self.methods[_path]
         for param in method.params:
-            if param not in kwargs:
+            if param.path not in kwargs:
                 raise LookupError(f"Parameter {param} defined in config but not included in method call for method {method.path}")
         
-        params: dict[str, proto.DataItem] = dict_value_to_proto(kwargs.items(), method.params) # type: ignore
+        params: dict[str, proto.DataItem] = dict_value_to_proto(kwargs, method.params)
         replies: Queue[Response] = Queue()
         def _on_reply(reply: Response) -> None:
             replies.put(reply)
