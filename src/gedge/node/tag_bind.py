@@ -5,6 +5,8 @@ from typing import Any, Callable
 from datetime import datetime
 import zenoh
 
+from gedge.node.reply import Response
+from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.data_model import DataItem
 from gedge.py_proto.tag_config import Tag
 
@@ -17,7 +19,7 @@ class TagBind:
         self._value = value
         self.last_received: datetime = datetime.now()
         self.is_valid: bool = True
-        self.tag = tag
+        self._tag = tag
         self._comm = comm
         self._subscriber = comm.session.declare_subscriber(ks.tag_data_path(self.path), self._on_value)
 
@@ -27,12 +29,16 @@ class TagBind:
 
     @value.setter
     def value(self, value):
-        self._on_set(self.path, value, self.tag)
+        response = self._on_set(self.path, value, self._tag)
+        if response is not None:
+            response: Response
+            if response.is_err():
+                raise ValueError(f"could not update tag using tag bind with value {value}")
         self._value = value
 
     def _on_value(self, sample: zenoh.Sample):
-        tag_data = self._comm.deserialize(proto.DataItem(), sample.payload.to_bytes())
-        value = DataItem.from_proto(tag_data, self.tag.config)
+        tag_data = self._comm.deserialize(proto.BaseData(), sample.payload.to_bytes())
+        value = BaseData.proto_to_py(tag_data, self._tag.get_config(self.path).get_base_type()) # type: ignore
         self.last_received = datetime.now()
         self.value = value
 

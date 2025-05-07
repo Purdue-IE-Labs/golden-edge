@@ -37,6 +37,8 @@ def load_from_file(path: str) -> DataModelConfig:
 
 def find_latest_version(dir: str) -> int:
     max_version = -1
+    if not os.path.exists(dir):
+        raise LookupError(f"No model found at path {dir}")
     for f in os.listdir(dir):
         m = re.match(r'v(\d+).json5', f)
         if m:

@@ -305,6 +305,9 @@ class TagConfig:
         return self.tags.values()
     
     def add_write_handler(self, path: str, handler: TagWriteHandler):
+        print(path)
+        if not self.is_valid_path(path):
+            raise LookupError(f"path {path} does not exist")
         if path not in self.all_writable_tags():
             raise LookupError(f"path {path} not writable")
         t = self.get_tag(path)

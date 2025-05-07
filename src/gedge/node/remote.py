@@ -162,9 +162,9 @@ class RemoteConnection:
         Returns:
             TagBind: The new TagBind
         '''
-        if path not in self.tag_config:
-            raise TagLookupError(path, self.ks.name)
-        tag = self.tag_config[path]
+        tag = self.tag_config.get_tag(path)
+        if tag.is_model_ref():
+            raise ValueError(f"cannot bind to a model tag {path}")
         bind = TagBind(self.ks, self._comm, tag, value, self._write_tag)
         return bind
     

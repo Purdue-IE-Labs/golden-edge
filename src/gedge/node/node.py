@@ -607,9 +607,10 @@ class NodeSession:
         Returns:
             TagBind: The new TagBind
         '''
-        if path not in self.tag_config:
-            raise TagLookupError(path, self.ks.name)
-        bind = TagBind(self.ks, self._comm, self.tag_config[path], value, self._update_tag)
+        tag = self.tag_config.get_tag(path)
+        if tag.is_model_ref():
+            raise ValueError(f"cannot bind to a model tag {path}")
+        bind = TagBind(self.ks, self._comm, tag, value, self._update_tag)
         return bind
     
     def update_tag(self, path: str, value: TagBaseValue):
