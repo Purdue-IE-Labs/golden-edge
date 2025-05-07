@@ -2,7 +2,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from gedge.node import codes
 from gedge.py_proto.data_model import DataItem
 from gedge.py_proto.data_model_config import DataItemConfig
 from gedge.py_proto.props import Prop
@@ -43,7 +42,7 @@ class ResponseConfig:
         if "code" not in j:
             raise LookupError(f"Method response must include 'code', got {j}")
         if "type" not in j:
-            raise LookupError(f"Method response must include 'type', got {j}")
+            raise LookupError(f"Method response must include 'type' (which is one of ['ok', 'err', 'info']), got {j}")
         code = int(j["code"])
 
         props = props_from_json5(j.get("props", {}))
@@ -71,6 +70,7 @@ class ResponseConfig:
         return body
     
 def get_response_config(code: int, responses: list[ResponseConfig]) -> ResponseConfig:
+    from gedge.node import codes
     res = {r.code: r for r in responses}
     if code not in res:
         return codes.config_from_predefined_code(code)
@@ -102,7 +102,7 @@ class ResponseType(Enum):
             return cls(ResponseType.OK)
         elif t in {"err", "error"}:
             return cls(ResponseType.ERR)
-        elif t in {"info"}:
+        elif t == "info":
             return cls(ResponseType.INFO)
         else:
             raise ValueError(f"invalid method response type {t}, must be one of ['ok', 'err', 'info']")

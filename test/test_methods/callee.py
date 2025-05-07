@@ -1,28 +1,28 @@
 import gedge
 import pathlib
-import time
-
-EXCEPTION = 'EXCEPTION'
+from constants import *
 
 def handler(query: gedge.MethodQuery):
-    name = query.params["name"]
-    speed = query.params["speed"]
+    name = query.params[NAME_PARAM]
+    speed = query.params[SPEED_PARAM]
 
-    if speed == 456:
+    if speed == HANDLER_RETURNS_OK_TWICE:
         # try to return ok twice
         query.reply_ok()
         query.reply_ok()
-    if speed == 345:
+    if speed == HANDLER_NEVER_RETURNS_SPEED:
         # simulate a control flow that never returns anything
         return 
     if name == EXCEPTION:
-        raise ValueError("exception thrown in method handler")
+        raise ValueError(EXCEPTION)
+
+    query.reply_info(202)
 
     if len(name) > 30:
         query.reply_err(401)
     if speed < 0 or speed > 100:
-        query.reply_err(400, body={"res1": speed})
-    query.reply_ok(200, body={"res1": speed})
+        query.reply_err(400, body={BODY_KEY: speed})
+    query.reply_ok(200, body={BODY_KEY: speed})
 
 here = pathlib.Path(__file__).parent
 config = gedge.NodeConfig.from_json5(str(here / "callee.json5"))

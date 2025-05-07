@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 def load(path: DataModelRef) -> DataModelConfig:
     directory = Singleton().get_model_dir()
     if not directory:
-        raise LookupError(f"Trying to find model {path.path} but no --model-dir passed in")
+        raise LookupError(f"Trying to find model {path.path} but no model directory passed in. For the cli, use --model-dir. For Python, use gedge.use_models(...)")
     if path.version is None:
         dir = pathlib.Path(directory) / path.path
         path.version = find_latest_version(str(dir))

@@ -40,7 +40,8 @@ class Query:
 
     def reply_ok(self, code: int = codes.OK, body: dict[str, Any] = {}):
         """
-        Reply OK to a gedge query. Only call this once in a handler.
+        Reply OK to a gedge query. Only call this once in a handler. 
+        Your handler will stop running after this is called.
 
         Parameters:
             code (int): code to return to caller (defaults to OK)
@@ -54,6 +55,7 @@ class Query:
     def reply_err(self, code: int = codes.ERR, body: dict[str, Any] = {}):
         """
         Reply ERR to a gedge query. Only call this once in a handler.
+        Your handler will stop running after this is called.
 
         Parameters:
             code (int): code to return to caller (defaults to ERR)

@@ -26,6 +26,7 @@ class Tag:
     # if this tag is a base type, we access the response configs by self.write_config[self.path].responses
     # TODO: eventually support wildcards here? 
     # TODO: not TagWriteHandler | None but we provide a default one that just raises an exception?
+    # TODO: change this tuple to be a TagWriteConfig, and put handler in that class
     write_config: dict[str, tuple[list[ResponseConfig], TagWriteHandler | None]]
 
     # TODO: move this to tag config?
@@ -211,9 +212,9 @@ class TagConfig:
         if not isinstance(tags, list):
             raise ValueError(f"invalid tags, tags must be a list, got {tags}")
         if not isinstance(writable_tags, list):
-            raise ValueError(f"writable tags")
+            raise ValueError(f"invalid writable config, writable_config must be a list, got {writable_tags}")
         if not isinstance(group_tags, list):
-            raise ValueError("group tags")
+            raise ValueError(f"invalid group config, group_config must be a list, got {group_tags}")
         ts: list[Tag] = [Tag.from_json5(t) for t in tags]
         self = cls({t.path: t for t in ts})
         self.add_writable_config_json5(writable_tags)

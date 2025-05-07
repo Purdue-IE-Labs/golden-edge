@@ -79,7 +79,7 @@ class NodeConfig:
         if "key" not in obj:
             raise LookupError(f"Keyword 'key' not found for node configuration")
         config = NodeConfig(obj["key"])
-        config.tag_config = TagConfig.from_json5(obj.get("tags", []), obj.get("writable_config", []), obj.get("group_tags", []))
+        config.tag_config = TagConfig.from_json5(obj.get("tags", []), obj.get("writable_config", []), obj.get("group_config", []))
 
         for method_json in obj.get("methods", []):
             method = MethodConfig.from_json5(method_json)
@@ -91,33 +91,6 @@ class NodeConfig:
             config.subnodes[subnode.name] = subnode
         
         return config
-
-    # def get_models_and_condense_to_paths(self) -> list[DataModelConfig]:
-    #     models = []
-    #     for tag in self.tags.values():
-    #         if tag.is_base_type():
-    #             continue
-    #         m = tag.data_object_config.get_model_and_to_path()
-    #         if m:
-    #             m.add_parent_tags()
-    #             models.append(m)
-    #     for method in self.methods.values():
-    #         for p in method.params.params:
-    #             c = method.params.params[p]
-    #             m = c.get_model_and_to_path()
-    #             if m:
-    #                 m.add_parent_tags()
-    #                 models.append(m)
-    #         for r in method.responses:
-    #             for b in r.body.body:
-    #                 c = r.body.body[b]
-    #                 m = c.get_model_and_to_path()
-    #                 if m:
-    #                     m.add_parent_tags()
-    #                     models.append(m)
-    #     for subnode in self.subnodes.values():
-    #         models += subnode.get_models_and_condense_to_paths()
-    #     return models
 
     def get_models(self) -> list[DataModelConfig]:
         models = []
