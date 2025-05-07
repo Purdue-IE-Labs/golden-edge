@@ -59,4 +59,6 @@ class DataModelRef:
         return cls(keys.key_join(*components))
     
     def load_model(self) -> DataModelConfig:
-        return load(self)
+        m = load(self)
+        m.add_parent_tags()
+        return m

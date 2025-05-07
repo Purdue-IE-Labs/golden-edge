@@ -81,7 +81,7 @@ class Tag:
             w = j.get("writable", False)
         
         if w and config.is_model_ref():
-            raise ValueError(f"model {config.path} cannot be writable, only tags of it")
+            raise ValueError(f"model {config.get_model_ref().path} cannot be writable, only tags with base types are writable") # type: ignore
 
         responses = []
         if w: 
@@ -155,11 +155,6 @@ class Tag:
             raise LookupError(f"invalid path to add a writable tag, {path}")
         responses, _ = self.write_config[path]
         self.write_config[path] = (responses, handler)
-
-# def get_config_from_path(tags: dict[str, Tag], path: str) -> DataItemConfig:
-#     best_match = max(list(tags.keys()), key = lambda p : len(os.path.commonprefix([p, path])))
-#     tag = tags[best_match]
-#     return tag.get_config(path)
 
 @dataclass
 class TagConfig:
@@ -317,7 +312,11 @@ class TagConfig:
     def get_tag(self, path: str) -> Tag:
         if path in self.tags:
             return self.tags[path]
-        return [t for t in self.tags.values() if t.is_valid_path(path)][0]
+        t = [t for t in self.tags.values() if t.is_valid_path(path)]
+        if len(t) != 1:
+            raise LookupError(f"No tag found at path {path}")
+
+        return t[0]
 
     def get_config(self, path: str) -> DataItemConfig:
         return self.get_tag(path).get_config(path)

@@ -17,8 +17,15 @@
             //     version: 1
             // },
             model_path: "bar",
-            writable: true,
-            responses: [100],
+
+            // this would throw an error because bar is a model
+            // writable: true,
+            // responses: [
+            //     {
+            //         code: 100,
+            //         type: "ok"
+            //     }
+            // ],
             props: {
                 desc: "bar"
             }
@@ -27,29 +34,32 @@
     methods: [
         {
             path: "call/method",
-            params: {
-                model: {
+            params: [
+                {
+                    path: "model",
                     model_path: "qux/VERSION/1",
                     props: {
                         desc: "a parameter to a method that is a data model (woah)"
                     }
                 },
-                speed: {
+                {
+                    path: "speed",
                     base_type: "int"
                 },
-            },
+            ],
             responses: [
                 {
                     code: 200,
                     type: "ok",
-                    body: {
-                        res1: {
+                    body: [
+                        {
+                            path: "res1",
                             model_path: "bar",
                             props: {
                                 desc: "a body item of a method response that is a data model (woah)"
                             }
                         }
-                    },
+                    ],
                     props: {
                         desc: "successfully executed method"
                     }
@@ -57,11 +67,12 @@
                 {
                     code: 400,
                     type: "err",
-                    body: {
-                        res1: {
+                    body: [
+                        {
+                            path: "res1",
                             base_type: "int"
-                        },
-                    },
+                        }
+                    ],
                     props: {
                         desc: "speed must be in range [0, 100]"
                     }

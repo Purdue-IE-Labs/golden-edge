@@ -8,16 +8,16 @@ def handler(query: gedge.MethodQuery):
     name = query.params["name"]
     speed = query.params["speed"]
     if len(name) > 30:
-        query.reply(401)
+        query.reply_err(401)
         return
     if speed < 0 or speed > 100:
-        query.reply(400, body={"res1": speed})
+        query.reply_err(400, body={"res1": speed})
         return
     if name == EXCEPTION:
         raise ValueError("exception thrown in method handler")
-    query.reply(200, body={"res1": speed})
+    query.reply_ok(200, body={"res1": speed})
     time.sleep(10)
-    query.reply(200, body={"res1": speed})
+    query.reply_ok(200, body={"res1": speed})
 
 here = pathlib.Path(__file__).parent
 config = gedge.NodeConfig.from_json5(str(here / "callee.json5"))
@@ -46,15 +46,9 @@ for response in responses2:
 print("\n\nTHIRD METHOD CALL")
 responses3 = node.call_method_iter("call/method", name="hello world", speed=40)
 for response in responses3:
-    if response.error:
-        print(response.code, response.error)
-    else:
-        print(response.code, response.props, response.body, response)
+    print(response.code, response.props, response.body)
 
 print("\n\nFOURTH METHOD CALL")
 responses4 = node.call_method_iter("call/method", name=EXCEPTION, speed=40)
 for response in responses4:
-    if response.error:
-        print(response.code, response.error)
-    else:
-        print(response.code, response.props, response.body)
+    print(response.code, response.props, response.body)

@@ -34,7 +34,7 @@ class Type:
     @classmethod
     def from_json5(cls, j: Any):
         if not (("base_type" in j) ^ ("model_path" in j)):
-            raise ValueError("couldn't find a type")
+            raise ValueError(f"tag must have one of ['base_type', 'model_path'], did you use key 'type'?")
         if "base_type" in j:
             return cls.from_base_type(j["base_type"])
         return cls.from_model_ref(j["model_path"])

@@ -49,7 +49,7 @@ class DataItemConfig:
     def from_json5(cls, j: Any) -> Self:
         from gedge.py_proto.props import Prop
         if not isinstance(j, dict):
-            raise ValueError(f"Tag must be of type dictionary, found {j}")
+            raise ValueError(f"Data Item Config must be of type dictionary, found {j}")
 
         if "path" not in j:
             raise LookupError(f"Every tag must have a path! Tag provided with no keyword 'path': {j}")

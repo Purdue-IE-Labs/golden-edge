@@ -19,6 +19,7 @@ test = [
     "requests",
     "python-dotenv",
     "pyserial",
+    "pytest",
 ]
 
 [project.urls]
