@@ -2,9 +2,14 @@ import pathlib
 import time
 from typing import Any
 import gedge
+from gedge.node.query import GroupWriteQuery
 
 def tag_write(query: gedge.TagWriteQuery):
     query.reply_ok()
+
+# def tag_write(query: GroupWriteQuery):
+#     query.value
+#     query.reply_ok()
 
 def base_tag_write(query: gedge.TagWriteQuery):
     value: int = query.value # type: ignore
@@ -29,6 +34,7 @@ config = gedge.NodeConfig.from_json5(str(here))
 config.add_tag_write_handler("tag/1/tag", tag_write)
 config.add_tag_write_handler("base_tag", base_tag_write)
 config.add_tag_write_handler("tag/1/tag/2/baz", tag_write)
+config.add_group_write_handler
 
 with gedge.connect(config, "192.168.4.60") as session:
     print(session.tag_config.all_writable_tags())

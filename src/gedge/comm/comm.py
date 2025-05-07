@@ -19,7 +19,8 @@ from gedge.py_proto.conversions import props_to_json5
 from gedge.py_proto.data_model_config import DataItemConfig, DataModelConfig
 from gedge.node.query import MethodQuery, TagWriteQuery
 from gedge.py_proto.data_model_ref import DataModelRef
-from gedge.py_proto.tag_config import Tag, TagConfig 
+from gedge.py_proto.tag_config import Tag, TagConfig
+from gedge.py_proto.tag_group_config import TagGroupConfig
 if TYPE_CHECKING:
     from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, ZenohCallback, ZenohQueryCallback
     from gedge.node.method import MethodConfig
@@ -265,7 +266,7 @@ class Comm:
     def _tag_write_reply(self, query: zenoh.Query, tag: Tag) -> Callable[[int, dict[str, TagValue]], None]:
         def _reply(code: int, body: dict[str, TagValue]):
             path = tag_path_from_key(str(query.key_expr))
-            responses, _ = tag.write_config[path]
+            responses = tag.write_config[path].responses
             response_config = codes.config_from_code(code, responses)
             new_body: dict[str, proto.DataItem] = response_config.body_value_to_proto(body)
             write_response = proto.Response(code=code, body=new_body)
@@ -290,9 +291,52 @@ class Comm:
                 reply(codes.CALLBACK_ERR, {"reason": f"invalid path {path}"})
                 return
 
-            t = TagWriteQuery(str(query.key_expr), reply, tag.write_config[path][0], [], data.to_py())
+            t = TagWriteQuery(str(query.key_expr), reply, tag.write_config[path].responses, [], data.to_py())
             try:
-                _, handler = tag.write_config[path]
+                handler = tag.write_config[path].handler
+                assert handler is not None
+                handler(t)
+            except QueryEnd as e:
+                pass
+            except Exception as e:
+                t._reply(codes.CALLBACK_ERR, {"reason": str(e)}, ResponseType.ERR)
+            finally:
+                if not t._responses_sent or t._responses_sent[-1].type == ResponseType.INFO:
+                    t._reply(codes.CALLBACK_ERR, { "reason": "tag write handler did not finish function with OK or ERR message" }, ResponseType.ERR)
+            # reply(code, body)
+        return _on_write
+
+    # TODO: refacotr to combine with _tag_write_reply
+    def _group_write_reply(self, query: zenoh.Query, group: TagGroupConfig) -> Callable[[int, dict[str, TagValue]], None]:
+        def _reply(code: int, body: dict[str, TagValue]):
+            responses = group.responses
+            response_config = codes.config_from_code(code, responses)
+            new_body: dict[str, proto.DataItem] = response_config.body_value_to_proto(body)
+            write_response = proto.Response(code=code, body=new_body)
+            b = self.serialize(write_response)
+            query.reply(key_expr=str(query.key_expr), payload=b)
+        return _reply
+
+    def _on_group_write(self, group: TagGroupConfig) -> ZenohQueryCallback:
+        from gedge.node.method_response import ResponseType
+        def _on_write(query: zenoh.Query) -> None:
+            reply = self._group_write_reply(query, group)
+            if not query.payload:
+                reply(codes.CALLBACK_ERR, {"reason": "Empty write request"})
+                return
+            proto_data = self.deserialize(proto.TagGroup(), query.payload.to_bytes())
+
+            try: 
+                config = tag.get_config(path)
+                data: BaseData = BaseData.from_proto(proto_data, config.get_base_type()) # type: ignore
+                logger.info(f"Node {query.key_expr} received tag write at path '{tag.path}' with value '{data}'")
+            except:
+                reply(codes.CALLBACK_ERR, {"reason": f"invalid path {path}"})
+                return
+
+            t = TagWriteQuery(str(query.key_expr), reply, tag.write_config[path].responses, [], data.to_py())
+            try:
+                handler = tag.write_config[path].handler
                 assert handler is not None
                 handler(t)
             except QueryEnd as e:
@@ -492,7 +536,7 @@ class Comm:
         print(f"FOUND GROUP: {group}")
         if group is None:
             return
-        key_expr = ks.group_data_path(group)
+        key_expr = ks.group_data_path(group.path)
         zenoh_handler = self._on_group_data_feed_to_tag_data_subscriber(handler, tag_config, path)
         self._subscriber(key_expr, zenoh_handler)
     
@@ -519,6 +563,11 @@ class Comm:
 
         key_expr = ks.tag_write_path(path)
         zenoh_handler = self._on_tag_write(tag, path)
+        logger.debug(f"tag queryable on {key_expr}")
+        return self._queryable(key_expr, zenoh_handler)
+
+    def group_queryable(self, key_expr: str, tag_config: TagConfig) -> zenoh.Queryable:
+        zenoh_handler = self._on_group_write(tag, path)
         logger.debug(f"tag queryable on {key_expr}")
         return self._queryable(key_expr, zenoh_handler)
     

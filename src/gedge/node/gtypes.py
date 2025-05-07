@@ -1,7 +1,7 @@
 from typing import Callable, Any
 import zenoh
 from gedge import proto
-from gedge.node.query import MethodQuery, TagWriteQuery
+from gedge.node.query import GroupWriteQuery, MethodQuery, TagWriteQuery
 from gedge.node.reply import Response
 # from gedge.py_proto.data_model import DataObject
 
@@ -11,6 +11,7 @@ TagBaseValue = int | float | bool | str | list[int] | list[float] | list[bool] |
 TagValue = TagBaseValue | dict[str, Any]
 
 TagWriteHandler = Callable[[TagWriteQuery], None]
+GroupWriteHandler = Callable[[GroupWriteQuery], None]
 MethodHandler = Callable[[MethodQuery], None]
 MethodReplyCallback = Callable[[Response], None]
 

@@ -2,7 +2,6 @@ syntax = "proto3";
 
 import "data_model_config.proto";
 import "response_config.proto";
-import "tag_group_config.proto";
 
 message TagConfig {
     repeated DataItemConfig data_config = 1;
@@ -13,4 +12,11 @@ message TagConfig {
 message TagWriteConfig {
     string path = 1;
     repeated ResponseConfig responses = 2;
+}
+
+message TagGroupConfig {
+    string path = 1;
+    repeated string items = 2;
+    bool writable = 3;
+    repeated ResponseConfig responses = 4;
 }

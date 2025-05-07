@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from gedge.node.gtypes import TagValue
+from gedge.node.gtypes import GroupWriteHandler, TagValue
 from gedge.node.method import MethodConfig
 from gedge.node.method_response import ResponseConfig
 from gedge.py_proto.base_data import BaseData
@@ -38,7 +38,7 @@ class NodeConfig:
     def __init__(self, key: str):
         self._user_key = key
         self.ks = NodeKeySpace.from_user_key(key)
-        self.tag_config = TagConfig({})
+        self.tag_config = TagConfig({}, {})
         self.methods: dict[str, MethodConfig] = dict()
         self.subnodes: dict[str, SubnodeConfig] = dict()
         self.models: dict[str, DataModelConfig] = dict()
@@ -257,6 +257,9 @@ class NodeConfig:
             None
         '''
         self.tag_config.add_write_handler(path, handler)
+    
+    def add_group_write_handler(self, group_path: str, handler: GroupWriteHandler):
+        self.tag_config.add_group_write_handler(group_path, handler)
     
     def add_method_handler(self, path: str, handler: MethodHandler):
         '''
@@ -582,6 +585,10 @@ class NodeSession:
             # hook up method handlers
             method = self.config.methods[path]
             self._comm.method_queryable(self.ks, method) 
+        for group in self.config.tag_config.groups.values():
+            if not group.writable:
+                continue
+            self._comm.group_queryable()
         
         def add_subnode_callbacks(config: SubnodeConfig):
             for path in config.tag_config.all_writable_tags():

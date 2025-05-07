@@ -8,7 +8,9 @@ from gedge import proto
 from typing import Any, Self, TYPE_CHECKING
 
 from gedge.comm.keys import key_join
+from gedge.node.gtypes import GroupWriteHandler
 from gedge.node.method_response import ResponseConfig
+from gedge.py_proto import tag_group_config
 from gedge.py_proto.conversions import list_from_json5, list_from_proto
 from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.tag_group_config import TagGroupConfig
@@ -26,8 +28,8 @@ class Tag:
     # if this tag is a base type, we access the response configs by self.write_config[self.path].responses
     # TODO: eventually support wildcards here? 
     # TODO: not TagWriteHandler | None but we provide a default one that just raises an exception?
-    write_config: dict[str, tuple[list[ResponseConfig], TagWriteHandler | None]]
-    group_config: dict[str, str] # maps a path on this tag to a group. If the tag is a base_type, tag.group[tag.path] is the group name
+    write_config: dict[str, TagWriteConfig]
+    group_config: dict[str, TagGroupConfig] # maps a path on this tag to a group. If the tag is a base_type, tag.group[tag.path] is the group name
 
     @property
     def path(self) -> str:
@@ -84,7 +86,7 @@ class Tag:
         responses = []
         if w: 
             responses = list_from_json5(ResponseConfig, j.get("responses", []))
-            return cls(config, {config.path: (responses, None)}, {})
+            return cls(config, {config.path: TagWriteConfig(config.path, responses, None)}, {})
         return cls(config, {}, {})
     
     def is_valid_path(self, path: str) -> bool:
@@ -119,14 +121,14 @@ class Tag:
     def add_writable_config_json5(self, j: Any):
         # assumption that this is a valid path
         if isinstance(j, str):
-            self.write_config[j] = ([], None)
+            self.write_config[j] = TagWriteConfig(j, [], None)
             return
         path = j["path"]
         responses = list_from_json5(ResponseConfig, j.get("responses", []))
-        self.write_config[path] = (responses, None)
+        self.write_config[path] = TagWriteConfig(path, responses, None)
     
-    def add_group(self, path: str, group_path: str):
-        self.group_config[path] = group_path
+    def add_group(self, path: str, group_config: TagGroupConfig):
+        self.group_config[path] = group_config
     
     def is_base_type(self):
         return self.config.is_base_type()
@@ -149,8 +151,8 @@ class Tag:
     def add_write_handler(self, path: str, handler: TagWriteHandler):
         if path not in self.write_config:
             raise LookupError(f"invalid path to add a writable tag, {path}")
-        responses, _ = self.write_config[path]
-        self.write_config[path] = (responses, handler)
+        conf = self.write_config[path]
+        conf.handler = handler
 
 # def get_config_from_path(tags: dict[str, Tag], path: str) -> DataItemConfig:
 #     best_match = max(list(tags.keys()), key = lambda p : len(os.path.commonprefix([p, path])))
@@ -160,6 +162,7 @@ class Tag:
 @dataclass
 class TagConfig:
     tags: dict[str, Tag]
+    groups: dict[str, TagGroupConfig] # mapping name of group to TagGroupConfig
 
     @property
     def paths(self) -> list[str]:
@@ -171,12 +174,10 @@ class TagConfig:
         group_config = []
         for tag in self.tags.values():
             data_config.append(tag.config.to_proto())
-            for path, responses in tag.write_config.items():
-                write_config.append(TagWriteConfig(path, responses[0]).to_proto())
-        groups = self.all_groups()
-        for group_path, list_paths in groups.items():
-            print(group_path, list_paths)
-            group_config.append(TagGroupConfig(group_path, list_paths).to_proto())
+            for path, tag_write_config in tag.write_config.items():
+                write_config.append(tag_write_config.to_proto())
+        for group_path, tag_group_config in self.groups.items():
+            group_config.append(tag_group_config.to_proto())
         return proto.TagConfig(data_config=data_config, write_config=write_config, group_config=group_config)
 
     @classmethod
@@ -185,25 +186,19 @@ class TagConfig:
         data_config = list(tag_config.data_config)
         write_config = list(tag_config.write_config)
         group_config = list(tag_config.group_config)
-        d_map = {d.path:d for d in data_config}
-        w_map = {w.path:w for w in write_config}
-        g_map = {g.path:g for g in group_config} # group path : list(paths)
 
         tags: list[Tag] = []
-        for path, config in d_map.items():
+        for config in data_config:
             t = Tag(DataItemConfig.from_proto(config), {}, {})
-            included = {w.path: w for w in w_map.values() if w.path.startswith(path)}
+            included = {w.path: w for w in write_config if w.path.startswith(config.path)}
             for path, conf in included.items():
-                t.write_config[path] = (list_from_proto(ResponseConfig, conf.responses), None)
+                t.write_config[path] = TagWriteConfig(path, list_from_proto(ResponseConfig, conf.responses), None)
             tags.append(t)
         
-        tc = cls({t.path: t for t in tags})
-        for group_conf in g_map.values():
+        tc = cls({t.path: t for t in tags}, {})
+        for group_conf in group_config:
             g_path = group_conf.path
-            paths = list(group_conf.items)
-            for path in paths:
-                t = tc.get_tag(path)
-                t.group_config[path] = g_path
+            tc.groups[g_path] = TagGroupConfig.from_proto(group_conf)
         print(tc.all_groups())
         return tc
     
@@ -216,7 +211,7 @@ class TagConfig:
         if not isinstance(group_tags, list):
             raise ValueError("group tags")
         ts: list[Tag] = [Tag.from_json5(t) for t in tags]
-        self = cls({t.path: t for t in ts})
+        self = cls({t.path: t for t in ts}, {})
         self.add_writable_config_json5(writable_tags)
         self.add_group_config_json5(group_tags)
         return self
@@ -234,7 +229,7 @@ class TagConfig:
                 if c.is_model_ref():
                     # TODO: expand this to include all its tags
                     raise ValueError(f"model {path} cannot be writable, only tags of it")
-                t.add_group(path, group.path)
+                t.add_group(path, group)
     
     def add_writable_config_json5(self, j: list):
         for config in j:
@@ -284,7 +279,7 @@ class TagConfig:
                 res.add(t.group_config[path])
         return list(res)
     
-    def get_group(self, path: str) -> str | None:
+    def get_group(self, path: str) -> TagGroupConfig | None:
         t = self.get_tag(path)
         if path in t.group_config:
             return t.group_config[path]
@@ -311,6 +306,11 @@ class TagConfig:
             raise LookupError(f"path {path} not writable")
         t = self.get_tag(path)
         t.add_write_handler(path, handler)
+    
+    def add_group_write_handler(self, group_path: str, handler: GroupWriteHandler):
+        if group_path not in self.groups:
+            raise LookupError
+        self.groups[group_path].handler = handler
     
     def get_tag(self, path: str) -> Tag:
         if path in self.tags:

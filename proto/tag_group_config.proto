@@ -1,6 +1,0 @@
-syntax = "proto3";
-
-message TagGroupConfig {
-    string path = 1;
-    repeated string items = 2;
-}
