@@ -18,4 +18,5 @@ with gedge.connect(config, "192.168.4.60") as session:
     remote.add_tag_group_callback("test_group", on_group_data)
     remote.add_tag_data_callback("tag/1/tag", on_tag_data)
     while True:
-        time.sleep(1)
+        time.sleep(4)
+        print()

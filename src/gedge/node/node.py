@@ -651,7 +651,11 @@ class NodeSession:
             None
         '''
 
-        tag = self.config.tag_config.get_tag(path)
+        tag = self.tag_config.get_tag(path)
+        group = self.tag_config.get_group(path)
+        if group:
+            self.update_group({path: value})
+            return
         self._update_tag(path, value, tag)
 
     def _update_tag(self, path: str, value: TagBaseValue, tag: Tag):
@@ -672,15 +676,6 @@ class NodeSession:
     
     def update_group(self, group: dict[str, Any]):
         groups = self.tag_config.get_groups(list(group.keys()))
-        print(groups)
-        # for path in group:
-        #     t = self.tag_config.get_tag(path)
-        #     if t.group is None:
-        #         raise ValueError(f"tag {path} not part of any group")
-        #     config = t.get_config(path)
-        #     if config.is_model_ref():
-        #         raise ValueError(f"model {config.path} cannot be part of group")
-        #     g.add(t.group)
         if len(groups) > 1:
             raise ValueError(f"tags are from multiple groups: {groups}")
         elif len(groups) == 0:

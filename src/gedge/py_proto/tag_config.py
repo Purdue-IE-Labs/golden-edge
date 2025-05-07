@@ -27,6 +27,8 @@ class Tag:
     # TODO: eventually support wildcards here? 
     # TODO: not TagWriteHandler | None but we provide a default one that just raises an exception?
     write_config: dict[str, tuple[list[ResponseConfig], TagWriteHandler | None]]
+
+    # TODO: move this to tag config?
     group_config: dict[str, str] # maps a path on this tag to a group. If the tag is a base_type, tag.group[tag.path] is the group name
 
     @property
@@ -175,7 +177,6 @@ class TagConfig:
                 write_config.append(TagWriteConfig(path, responses[0]).to_proto())
         groups = self.all_groups()
         for group_path, list_paths in groups.items():
-            print(group_path, list_paths)
             group_config.append(TagGroupConfig(group_path, list_paths).to_proto())
         return proto.TagConfig(data_config=data_config, write_config=write_config, group_config=group_config)
 
@@ -204,7 +205,6 @@ class TagConfig:
             for path in paths:
                 t = tc.get_tag(path)
                 t.group_config[path] = g_path
-        print(tc.all_groups())
         return tc
     
     @classmethod
@@ -270,7 +270,6 @@ class TagConfig:
     
     def get_group_member_configs(self, group_path: str) -> dict[str, DataItemConfig]:
         paths = self.get_group_members(group_path)
-        print(group_path, paths)
         configs = {}
         for path in paths:
             configs[path] = self.get_config(path)
@@ -297,7 +296,6 @@ class TagConfig:
         return False
     
     def is_valid_group_path(self, path: str) -> bool:
-        print(self.all_groups())
         return path in self.all_groups().keys()
 
     def add_tag(self, tag: Tag):

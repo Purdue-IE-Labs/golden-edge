@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass 
-from gedge.comm.keys import NodeKeySpace, group_path_from_key
+from gedge.comm.keys import NodeKeySpace 
 from gedge.node.codes import ERR, OK
 from gedge.node.error import QueryEnd
 from gedge.node.method_response import ResponseConfig, ResponseType
@@ -89,13 +89,6 @@ class TagWriteQuery(Query):
 
     def _log_message(self, message_type: str, code: int):
         return f"Replying {message_type} to tag write query at path {NodeKeySpace.tag_path_from_key(self.key_expr)} with code {code}"
-
-@dataclass
-class GroupWriteQuery(Query):
-    value: dict[str, Any]
-
-    def _log_message(self, message_type: str, code: int):
-        return f"Replying {message_type} to group write query at path {group_path_from_key(self.key_expr)} with code {code}"
 
 @dataclass
 class MethodQuery(Query):

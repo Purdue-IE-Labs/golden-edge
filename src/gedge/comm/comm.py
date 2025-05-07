@@ -184,7 +184,6 @@ class Comm:
             data: proto.TagGroup = self.deserialize(proto.TagGroup(), sample.payload.to_bytes())
             group_path: str = group_path_from_key(str(sample.key_expr))
             configs = tag_config.get_group_member_configs(group_path)
-            print(configs)
             base_type = configs[path].get_base_type()
             if not base_type:
                 raise ValueError
@@ -210,7 +209,7 @@ class Comm:
             logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
             group_path: str = group_path_from_key(str(sample.key_expr))
             configs = tag_config.get_group_member_configs(group_path)
-            print(configs)
+            # print(configs)
 
             new_data: dict[str, TagValue] = {}
             # value here must be of type BaseData
@@ -337,7 +336,7 @@ class Comm:
         except QueryEnd as e:
             pass
         except Exception as e:
-            print("ENCOUNTERED EXCEPTION")
+            # print("ENCOUNTERED EXCEPTION")
             body = {
                 "reason": str(e)
             }
@@ -483,21 +482,27 @@ class Comm:
         Returns:
             None
         '''
-        key_expr = ks.tag_data_path(path)
-        zenoh_handler = self._on_tag_data(handler, tag_config)
-        self._subscriber(key_expr, zenoh_handler)
+
+        group = tag_config.get_group(path)
+        if group:
+            key_expr = ks.group_data_path(group)
+            zenoh_handler = self._on_group_data_feed_to_tag_data_subscriber(handler, tag_config, path)
+            self._subscriber(key_expr, zenoh_handler)
+        else:
+            key_expr = ks.tag_data_path(path)
+            zenoh_handler = self._on_tag_data(handler, tag_config)
+            self._subscriber(key_expr, zenoh_handler)
 
         # This also subscribes to the group data and then feeds that into the same handler for tag data
-        group = tag_config.get_group(path)
-        print(f"FOUND GROUP: {group}")
-        if group is None:
-            return
-        key_expr = ks.group_data_path(group)
-        zenoh_handler = self._on_group_data_feed_to_tag_data_subscriber(handler, tag_config, path)
-        self._subscriber(key_expr, zenoh_handler)
+        # group = tag_config.get_group(path)
+        # if group is None:
+        #     return
+        # key_expr = ks.group_data_path(group)
+        # zenoh_handler = self._on_group_data_feed_to_tag_data_subscriber(handler, tag_config, path)
+        # self._subscriber(key_expr, zenoh_handler)
     
-    def group_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
-        key_expr = ks.group_data_path(path)
+    def group_data_subscriber(self, ks: NodeKeySpace, group_path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
+        key_expr = ks.group_data_path(group_path)
         zenoh_handler = self._on_group_data(handler, tag_config)
         self._subscriber(key_expr, zenoh_handler)
 

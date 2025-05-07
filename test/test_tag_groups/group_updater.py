@@ -34,9 +34,10 @@ with gedge.connect(config, "192.168.4.60") as session:
     print(session.tag_config.all_writable_tags())
     print(session.tag_config.all_groups())
     while True:
-        time.sleep(1)
+        time.sleep(5)
         session.update_group({
             "tag/1/tag": 12,
             "base_tag": 123
         })
+        time.sleep(5)
         session.update_tag("tag/1/tag", 1123123)

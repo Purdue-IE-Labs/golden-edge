@@ -80,7 +80,11 @@ class RemoteConnection:
         '''
         if not self.tag_config.is_valid_path(path):
             raise TagLookupError(path, self.ks.name)
-
+        
+        # group = self.tag_config.get_group(path)
+        # if group:
+        #     self.add_tag_group_callback(group, on_tag_data)
+        #     return
         self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tag_config)
     
     def add_tag_group_callback(self, group_path: str, on_group_data: TagDataCallback) -> None:
@@ -273,43 +277,6 @@ class RemoteConnection:
 
         tag = self.tag_config.get_tag(path)
         return self._write_tag(path, value, tag)
-    
-    def write_group(self, group: dict[str, Any]):
-        groups = self.tag_config.get_groups(list(group.keys()))
-        print(groups)
-        # for path in group:
-        #     t = self.tag_config.get_tag(path)
-        #     if t.group is None:
-        #         raise ValueError(f"tag {path} not part of any group")
-        #     config = t.get_config(path)
-        #     if config.is_model_ref():
-        #         raise ValueError(f"model {config.path} cannot be part of group")
-        #     g.add(t.group)
-        if len(groups) > 1:
-            raise ValueError(f"tags are from multiple groups: {groups}")
-        elif len(groups) == 0:
-            raise ValueError(f"no group")
-        
-        group_path: str = groups.pop()
-        new_group: dict[str, proto.BaseData] = {}
-        for path, value in group.items():
-            config = self.tag_config.get_config(path)
-            t = config.get_base_type()
-            assert t is not None
-            new_group[path] = BaseData.from_value(value, config.get_base_type()).to_proto() # type: ignore
-        key_expr = self.ks.group_write_path(group_path)
-        logger.info(f"Remote node '{self.key}' received group write request at path '{path}' with value '{value}'")
-        response = self._comm.write_group(key_expr, new_group)
-        code = response.code
-
-        responses, _ = self.tag_config.all_writable_tags()[path]
-        config = get_response_config(code, responses)
-
-        body: dict[str, TagValue] = dict_proto_to_value(dict(response.body), config.body)
-        props = props_to_json5(config.props)
-
-        reply = Response(self.ks.tag_write_path(path), code, config.type, body, props)
-        return reply
     
     def call_method(self, _path: str, _on_reply: MethodReplyCallback, **kwargs) -> None:
         '''
