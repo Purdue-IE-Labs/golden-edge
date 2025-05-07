@@ -128,6 +128,8 @@ class Tag:
         self.write_config[path] = (responses, None)
     
     def add_group(self, path: str, group_path: str):
+        if path in self.group_config:
+            raise ValueError(f"tag {path} cannot be added to {group_path}, already a part of {self.group_config[path]}")
         self.group_config[path] = group_path
     
     def is_base_type(self):
@@ -204,6 +206,8 @@ class TagConfig:
             paths = list(group_conf.items)
             for path in paths:
                 t = tc.get_tag(path)
+                if path in t.group_config:
+                    raise ValueError(f"tag {path} cannot be added to {g_path}, already a part of {t.group_config[path]}")
                 t.group_config[path] = g_path
         return tc
     
