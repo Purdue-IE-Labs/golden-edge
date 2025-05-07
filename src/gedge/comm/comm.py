@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import base64
-from logging import config
-from urllib import response
 import uuid
 import zenoh
 import json
@@ -22,11 +20,9 @@ from gedge.py_proto.data_model_config import DataItemConfig, DataModelConfig
 from gedge.node.query import MethodQuery, TagWriteQuery
 from gedge.py_proto.data_model_ref import DataModelRef
 from gedge.py_proto.tag_config import Tag, TagConfig 
-from gedge.py_proto.data_model import DataItem
 if TYPE_CHECKING:
     from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, ZenohCallback, ZenohQueryCallback
     from gedge.node.method import MethodConfig
-    from gedge.node.method_response import ResponseConfig, ResponseType
 
 ProtoMessage = proto.Meta | proto.DataItem | proto.Response | proto.State | proto.MethodCall | proto.DataModelConfig | proto.BaseData | proto.TagGroup
 
@@ -182,6 +178,20 @@ class Comm:
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
+    
+    def _on_group_data_feed_to_tag_data_subscriber(self, on_tag_data: TagDataCallback, tag_config: TagConfig, path: str) -> ZenohCallback:
+        def _func(sample: zenoh.Sample):
+            data: proto.TagGroup = self.deserialize(proto.TagGroup(), sample.payload.to_bytes())
+            group_path: str = group_path_from_key(str(sample.key_expr))
+            configs = tag_config.get_group_member_configs(group_path)
+            print(configs)
+            base_type = configs[path].get_base_type()
+            if not base_type:
+                raise ValueError
+            value = BaseData.proto_to_py(data.data[path], base_type)
+            logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
+            on_tag_data(str(sample.key_expr), value)
+        return _func
     
     '''
     TODO: eventually, support nesting in API
@@ -476,6 +486,15 @@ class Comm:
         key_expr = ks.tag_data_path(path)
         zenoh_handler = self._on_tag_data(handler, tag_config)
         self._subscriber(key_expr, zenoh_handler)
+
+        # This also subscribes to the group data and then feeds that into the same handler for tag data
+        group = tag_config.get_group(path)
+        print(f"FOUND GROUP: {group}")
+        if group is None:
+            return
+        key_expr = ks.group_data_path(group)
+        zenoh_handler = self._on_group_data_feed_to_tag_data_subscriber(handler, tag_config, path)
+        self._subscriber(key_expr, zenoh_handler)
     
     def group_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
         key_expr = ks.group_data_path(path)
@@ -517,6 +536,11 @@ class Comm:
         '''
         b = self.serialize(value)
         logger.debug(f"querying tag at path {key_expr}")
+        return self._query_sync(key_expr, payload=b)
+    
+    def _query_group(self, key_expr: str, value: proto.TagGroup) -> zenoh.Reply:
+        b = self.serialize(value)
+        logger.debug(f"querying group at path {key_expr}")
         return self._query_sync(key_expr, payload=b)
     
     def method_queryable(self, ks: NodeKeySpace, method: MethodConfig) -> None:
@@ -594,6 +618,13 @@ class Comm:
             d: proto.Response = self.deserialize(proto.Response(), reply.result.payload.to_bytes())
             return d
         raise Exception(f"Failure in receiving tag write reply for tag at path {path}")
+    
+    def write_group(self, key_expr: str, value: dict[str, proto.BaseData]) -> proto.Response:
+        reply = self._query_group(key_expr, proto.TagGroup(data=value))
+        if reply.ok:
+            d: proto.Response = self.deserialize(proto.Response(), reply.result.payload.to_bytes())
+            return d
+        raise Exception(f"Failure in receiving tag write reply for group at path {group_path_from_key(key_expr)}")
 
     def send_state(self, ks: NodeKeySpace, state: proto.State):
         '''

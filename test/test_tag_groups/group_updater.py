@@ -39,4 +39,4 @@ with gedge.connect(config, "192.168.4.60") as session:
             "tag/1/tag": 12,
             "base_tag": 123
         })
-        # session.update_tag("tag/1/tag/2/foo/bar/baz", 10.23)
+        session.update_tag("tag/1/tag", 1123123)

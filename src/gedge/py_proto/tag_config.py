@@ -284,6 +284,11 @@ class TagConfig:
                 res.add(t.group_config[path])
         return list(res)
     
+    def get_group(self, path: str) -> str | None:
+        t = self.get_tag(path)
+        if path in t.group_config:
+            return t.group_config[path]
+        return None
     
     def is_valid_path(self, path: str) -> bool:
         for t in self.tags.values():
