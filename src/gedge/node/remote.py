@@ -278,6 +278,7 @@ class RemoteConnection:
         tag = self.tag_config.get_tag(path)
         return self._write_tag(path, value, tag)
     
+    # TODO: this should have a timeout
     def call_method(self, _path: str, _on_reply: MethodReplyCallback, **kwargs) -> None:
         '''
         Registers the passed MethodReplyCallback and then calls the method at the passed path and all replies get routed to the passed Callback
@@ -304,7 +305,7 @@ class RemoteConnection:
             raise MethodLookupError(_path, self.ks.name)
         
         method = self.methods[_path]
-        params = method.params_py_to_proto(kwargs.items()) # type: ignore
+        params = method.params_py_to_proto(kwargs) 
         logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
         self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
     

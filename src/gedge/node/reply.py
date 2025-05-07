@@ -20,7 +20,7 @@ class Response:
     props: dict[str, TagValue]
 
     def is_ok(self):
-        return codes.is_ok(self.code) or self.type == ResponseType.OK
+        return self.type == ResponseType.OK
     
     def is_err(self):
-        return codes.is_err(self.code) or self.type == ResponseType.ERR
+        return self.type == ResponseType.ERR

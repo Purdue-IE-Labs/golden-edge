@@ -111,6 +111,8 @@
             // can specify a list of tag-looking items with a path, type, and optional properties
             params: [
                 {
+                    // despite this being a path, it is not expected that this be long. It is 
+                    // just a parameter name. Call it 'name', 'key', 'speed', 'temp', etc. etc.
                     path: "name",
                     base_type: "string",
                     props: {

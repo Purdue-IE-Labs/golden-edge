@@ -710,3 +710,10 @@ class NodeSession:
             raise ValueError(f"No subnode {name}") 
         session = SubnodeSession(self.config.subnodes[name], self._comm)
         return session
+
+    def sleep(self):
+        '''
+        Silly function for anyone that is scared to write these two lines of code
+        '''
+        while True:
+            pass
