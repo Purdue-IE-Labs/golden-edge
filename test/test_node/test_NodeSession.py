@@ -41,14 +41,28 @@ class TestSanity:
 
             assert len(session.connections) == 0
 
-    @pytest.mark.skip
+    # @pytest.mark.skip
     def test_is_online(self):
+        # pytest.fail("Mock Comm liveliness query hasn't been implemented yet")
         config = NodeConfig("my/node")
 
         with gedge.mock_connect(config) as session:
             session.connect_to_remote(config.key)
             
             assert session.is_online(config.key) == True
+
+    def test_is_offline(self):
+        # pytest.fail("Mock Comm liveliness query hasn't been implemented yet")
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            session.connect_to_remote(config.key)
+            
+            assert session.is_online(config.key) == True
+
+            session.disconnect_from_remote(config.key)
+
+            assert session.is_online(config.key) == False
 
     def test_node_on_network(self):
         config = NodeConfig("my/node")
@@ -61,9 +75,11 @@ class TestSanity:
             assert isinstance(meta, Meta)
             assert meta.key == config.key
 
-    # If we want to implement this we need to be able to use a Zenoh like way of retrieving nodes with wildcarding
-    @pytest.mark.skip
+    # If we want to implement this we need to be able to use a Zenoh 
+    # like way of retrieving nodes with wildcarding
+    # @pytest.mark.skip
     def test_nodes_on_network(self):
+        # pytest.fail("Mock Comm.pull_meta_messages isn't implemented")
         config = NodeConfig("my/node")
 
         with gedge.mock_connect(config) as session:
@@ -77,7 +93,7 @@ class TestSanity:
             assert metas[0].key == config.key
 
     # Same issue as nodes_on_network
-    @pytest.mark.skip
+    # @pytest.mark.skip
     def test_print_nodes_on_network(self, capsys):
         config = NodeConfig("my/node")
 
@@ -110,11 +126,50 @@ class TestSanity:
 
             assert len(session.connections) == 1
 
-            print(session.connections)
-
             session.disconnect_from_remote(config.key)
 
             assert len(session.connections) == 0
+
+    @pytest.mark.skip
+    def test_verify_node_collision(self):
+        pytest.fail("Mock Comm.pull_meta_messages isn't implemented")
+
+    @pytest.mark.skip
+    def test_startup(self):
+        pytest.fail("Dependent on _verify_node_collision")
+
+    def test_tag_binds(self):
+        config = NodeConfig("my/node")
+        tag = config.add_tag("tag/path", int)
+        otherTag = config.add_tag("tag/2nd/path", float)
+        
+        with gedge.mock_connect(config) as session:
+            tagPathList = []
+            tagList = []
+            
+            for key, tag_item in config.tags.items():
+                tagPathList.append(tag_item.path)
+                tagList.append(tag_item)
+            
+            tagBinds = session.tag_binds(tagPathList)
+
+            for index in range(0, len(config.tags)):
+                assert tagBinds[index].path == tagList[index].path
+
+
+    def test_tag_bind(self):
+        config = NodeConfig("my/node")
+        tag = config.add_tag("tag/path", int)
+        
+        with gedge.mock_connect(config) as session:
+            tagBind = session.tag_bind(tag.path)
+
+            newTagBind = session.tag_bind(tagBind.path, 10)
+
+            assert tagBind.value != newTagBind.value
+            assert tagBind.path == newTagBind.path
+
+    
 
 
             

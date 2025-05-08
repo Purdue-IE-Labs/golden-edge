@@ -567,7 +567,9 @@ class NodeSession:
             raise ValueError(f"Node {key} not connected to {self.ks.user_key}")
         connection = self.connections[key]
         connection.close()
-        del self.connections[key]
+
+        # del self.connections[key]
+        # The created on_remote_close() for the RemoteSession already deletes the connection
     
     def _verify_node_collision(self):
         '''

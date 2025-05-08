@@ -5,6 +5,7 @@ import base64
 from collections import defaultdict
 from dataclasses import dataclass
 import zenoh
+from zenoh import KeyExpr, Encoding, CongestionControl, Priority
 import json
 import base64
 from gedge.comm.comm import Comm
@@ -14,8 +15,9 @@ from gedge.node.error import NodeLookupError
 from gedge import proto
 from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace, method_response_from_call
+from gedge.proto import Meta
 
-from typing import Any, TYPE_CHECKING, Callable
+from typing import Any, TYPE_CHECKING, Callable, List, Optional, Union
 
 from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagValue, ZenohQueryCallback
 from gedge.node.method import Method
@@ -49,6 +51,42 @@ It would be maybe nice to subclass from zenoh.Subscriber, but it is marked as
 final so we cannot do that. Need to find another workaround
 '''
 
+class MockHandler:
+    def __init__(self, payload: Any):
+        self._payload = payload
+
+    def recv(self) -> "MockReply":
+        """
+        Block until mock liveliness reply is available.
+        """
+        return MockReply(payload=self._payload, ok=(self._payload is not None))
+
+class MockLiveliness:
+    def __init__(self, tokens: dict[str, Any]):
+        # tokens maps key_expr strings to stored mock payloads
+        self._tokens = tokens
+
+    def get(
+        self,
+        selector: Union[KeyExpr, str],
+        *,
+        handler: Any = None,
+        target: Any = None,
+        consolidation: Any = None,
+        timeout: Optional[float] = None,
+        congestion_control: Optional[CongestionControl] = None,
+        priority: Optional[Priority] = None,
+        express: Optional[bool] = None,
+        payload: Any = None,
+        encoding: Any = None,
+        attachment: Any = None
+    ) -> "MockHandler":
+        # Canonicalize selector
+        key = selector if isinstance(selector, KeyExpr) else KeyExpr(selector)
+        # Retrieve the mock payload (e.g., set up by connect_to_remote)
+        mock_payload = self._tokens.get(str(key))
+        return MockReply(mock_payload, None)
+
 # Mock for zenoh.Reply, with 'ok' attribute
 class MockReply:
     def __init__(self, ok: bool, result: MockResult):
@@ -63,28 +101,80 @@ class MockResult:
         # Simulate converting payload to bytes
         return self.payload
 
+class MockSubscriber:
+    def __init__(self, key_expr: KeyExpr, handler: Callable):
+        self.key_expr: KeyExpr = key_expr
+        self.handler: Callable = handler
+
 class MockSession:
     def __init__(self):
-        self.storage = {}  # A simple dictionary to mimic key-value storage
+        self._storage = {}  # A simple dictionary to mimic key-value storage
+        self._liveliness_tokens: dict[str, bool] = {}
+        self._subscribers: dict[str, List[Callable]] = {}
 
-    def put(self, key_expr: str, value: str):
+    def put(self, 
+            key_expr: Union[KeyExpr, str], 
+            payload: Any, 
+            *,
+            encoding: Optional[Union[Encoding, str]] = None,
+            congestion_control: Optional[CongestionControl] = None,
+            priority: Optional[Priority] = None,
+            express: Optional[bool] = None,
+            attachment: Optional[Any] = None) -> None:
+        
+        
         # Mimic storing data in key-value format
-        self.storage[key_expr] = value
-        print(f"Putting: {key_expr} -> {value}")
+        
+        keyExpr = key_expr if isinstance(key_expr, KeyExpr) else KeyExpr(key_expr)
 
-    def get(self, key_expr: str) -> str:
+        self._storage[str(keyExpr)] = payload
+
+        for sub_key, handlers in self._subscribers.items():
+            if KeyExpr(sub_key).includes(keyExpr):
+                for h in handlers:
+                    h(  # emulate zenoh.Sample with minimal attributes
+                        type('Sample', (), {
+                            'key_expr': keyExpr,
+                            'payload': payload,
+                            'kind': None,
+                            'timestamp': None
+                        })()
+                    )
+
+        print(f"\nPutting: {keyExpr} -> {payload}")
+
+    def get(self, key_expr: Union[KeyExpr, str]) -> List[Any]:
         # Mimic retrieving data from storage
-        print(f"Getting: {key_expr}")
-        '''
-        replies = []
-        for key, value in self.storage:
-            # TODO: Support key expansion (wildcarding)
-            if (key.__contains__(key_expr))
-                replies.append(value)
+        print(f"\nGetting: {key_expr}")
+        lookupExpr = KeyExpr(key_expr)
 
+        replies: List[Any] = []
+        for key, value in self._storage.items():
+            compareExpr = KeyExpr(key)
+
+            if lookupExpr.includes(compareExpr):
+                replies.append(value)
+        
         return replies
-        '''
-        return self.storage.get(key_expr, None)
+    
+    def liveliness(self) -> MockLiveliness:
+        """
+        Return a mock Liveliness interface for liveliness queries.
+        """
+        return MockLiveliness(self._liveliness_tokens)
+    
+    def declare_subscriber(self, key_expr: Union[KeyExpr, str], handler: Callable[[Any], Any] = None) -> MockSubscriber:
+        """
+        Emulate Zenoh Session.declare_subscriber(key_expr, handler)
+        """
+        ke = key_expr if isinstance(key_expr, KeyExpr) else KeyExpr(key_expr)
+        key_str = str(ke)
+
+        # Register the handler
+        self._subscribers.setdefault(key_str, []).append(handler)
+
+        # Return a subscriber handle
+        return MockSubscriber(ke, handler)
 
     def close(self):
         # Mimic closing the session
@@ -114,20 +204,42 @@ class MockComm(Comm):
         logger.info(f"Closing mock connection")
 
     def close_remote(self, ks: NodeKeySpace):
-        '''
-        Closes the node to mock connection by undeclaring the current subscriptions
+        logger.info(f"Mock Closing remote connection to {ks.user_key}")
+        # del self.session.storage[ks.user_key]
 
+    def add_remote_connection(self, ks: NodeKeySpace, meta: Meta):
+        self.session.put(ks.user_key, "Test/Node")
+
+    def remove_remote_connection(self, ks: NodeKeySpace):
+        del self.session._storage[ks.user_key]
+        del self.metas[ks.user_key]
+
+    def _query_liveliness(self, ks: NodeKeySpace) -> MockReply:
+        '''
+        Acquires the liveliness state as a reply of the passed node in the Zenoh session
+        
         Arguments:
-            ks (NodeKeySpace): The key space of the node losing the connection
+            ks (NodeKeySpace): The key space of the node being checked
 
         Returns:
-            None
+            zenoh.Reply: The liveliness response from the Zenoh session
         '''
-
-        logger.info(f"Closing remote connection to {ks.user_key}")
-        subscriptions = [s for s in self.subscribers if ks.contains(str(s.key_expr))]
-        for s in subscriptions:
-            s.undeclare()
+        return self.session.liveliness().get(ks.user_key)
+    
+    def is_online(self, ks: NodeKeySpace) -> bool:
+        '''
+        if (self.session.get(ks._user_key) != []):
+            return True
+        
+        return False
+        '''
+        try:
+            reply = self._query_liveliness(ks)
+            if not reply.ok:
+                return False
+            return True
+        except:
+            return False
 
     def _send_proto(self, key_expr: str, value: ProtoMessage):
         for key in self.subscribers:
@@ -219,13 +331,24 @@ class MockComm(Comm):
     
     def pull_meta_message(self, ks: NodeKeySpace) -> proto.Meta:
         return self.metas[ks.user_key]
+    
+    def pull_meta_messages(self, only_online: bool = False):
+        metas: List[Meta] = []
+        for key in self.metas:
+            metas.append(self.metas.get(key))
+
+        return metas
+    
+    def update_liveliness(self, ks: NodeKeySpace, liveliness: bool):
+        self.session._liveliness_tokens.update({ks.user_key: liveliness})
 
     def send_meta(self, ks: NodeKeySpace, meta: proto.Meta):
         self.metas[ks.user_key] = meta
     
     def send_state(self, ks: NodeKeySpace, state: proto.State):
         # maybe MockComm will implement state at some point
-        pass
+        key_expr = ks.state_key_prefix
+        self._send_proto(key_expr, state)
     
     def liveliness_token(self, ks: NodeKeySpace) -> None:
         # MockComm doesn't worry about this for now, but we need to override Comm

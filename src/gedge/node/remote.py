@@ -10,6 +10,7 @@ from gedge.node import codes
 from gedge import proto
 from gedge.node.error import MethodLookupError, SessionError, TagLookupError
 from gedge.comm.comm import Comm
+from gedge.comm.mock_comm import MockComm
 from gedge.node.tag import Tag
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
@@ -26,7 +27,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class RemoteConnection:
-    def __init__(self, ks: NodeKeySpace, comm: Comm, node_id: str, on_close: Callable[[str], None] | None = None):
+    def __init__(self, ks: NodeKeySpace, comm: Comm | MockComm, node_id: str, on_close: Callable[[str], None] | None = None):
         self._comm = comm 
         self.key = ks.user_key
         self.ks = ks
