@@ -32,7 +32,7 @@ from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.tag_write_reply import TagWriteReply
 import threading
 if TYPE_CHECKING:
-    from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
+    from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback, TagWriteHandler
 
 ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData | proto.ResponseData
 
@@ -86,6 +86,9 @@ class MockLiveliness:
         # Retrieve the mock payload (e.g., set up by connect_to_remote)
         mock_payload = self._tokens.get(str(key))
         return MockReply(mock_payload, None)
+    
+    def declare_subscriber(self, key_expr: str, handler: Callable):
+        return MockSubscriber(key_expr, handler)
 
 # Mock for zenoh.Reply, with 'ok' attribute
 class MockReply:
@@ -111,6 +114,7 @@ class MockSession:
         self._storage = {}  # A simple dictionary to mimic key-value storage
         self._liveliness_tokens: dict[str, bool] = {}
         self._subscribers: dict[str, List[Callable]] = {}
+        self.tag_write_handlers: dict[str, TagWriteHandler] = {}
 
     def put(self, 
             key_expr: Union[KeyExpr, str], 
@@ -143,10 +147,16 @@ class MockSession:
 
         logger.info(f"Putting: {keyExpr} -> {payload}")
 
-    def get(self, key_expr: Union[KeyExpr, str]) -> List[Any]:
+    def get(self, key_expr: Union[KeyExpr, str], payload=None) -> List[Any]:
         # Mimic retrieving data from storage
         logger.info(f"Getting: {key_expr}")
         lookupExpr = KeyExpr(key_expr)
+
+        if (payload != None):
+            print("Do stuff with the handler provided?")
+            print(key_expr)
+            write_handler: TagWriteHandler = self.tag_write_handlers.get(key_expr)
+            return write_handler(TagWriteQuery=payload)
 
         replies: List[Any] = []
         for key, value in self._storage.items():
@@ -190,6 +200,7 @@ class MockComm(Comm):
         self.subscribers: dict[str, list[MockCallback]] = defaultdict(list)
         self.active_methods: dict[str, MethodReplyCallback] = dict()
         self.metas: dict[str, proto.Meta] = dict()
+        self.subscriptions: list[Any] = []
         
         self.session = MockSession()
 
@@ -226,6 +237,23 @@ class MockComm(Comm):
             zenoh.Reply: The liveliness response from the Zenoh session
         '''
         return self.session.liveliness().get(ks.user_key)
+    
+    def _query_sync(self, key_expr: str, payload: bytes) -> zenoh.Reply:
+        '''
+        Sends the passed payload to the node corresponding to the passed key expression and returns the reply from Zenoh
+
+        Arguments:
+            key_expr (str): The key expression of the node the payload is being passed to
+            payload (bytes): The payload being sent to the passed node
+
+        Returns:
+            zenoh.Reply
+        '''
+        try:
+            reply = self.session.get(key_expr, payload=payload)
+        except Exception:
+            raise LookupError(f"No queryable defined at {key_expr}")
+        return reply
     
     def is_online(self, ks: NodeKeySpace) -> bool:
         '''

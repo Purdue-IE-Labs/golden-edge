@@ -5,6 +5,7 @@ from gedge import proto
 from gedge.comm.mock_comm import MockCallback, MockComm, MockSample
 from gedge.comm.keys import NodeKeySpace
 from gedge.node import codes
+from gedge.node.remote import RemoteConnection
 from gedge.node.body import BodyData
 from gedge.node.error import MethodLookupError
 from gedge.node.gtypes import TagValue, ZenohCallback
@@ -48,7 +49,15 @@ class TestNodeSession(NodeSession):
     def connect_to_remote(self, key: str, on_state: StateCallback | None = None, on_meta: MetaCallback | None = None, on_liveliness_change: LivelinessCallback | None = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
         if (self._comm.is_online(self.config.ks)):
             self._comm.update_liveliness(NodeKeySpace.from_user_key(key), True)
-            super().connect_to_remote(key, on_state, on_meta, on_liveliness_change, tag_data_callbacks)
+            
+            self._comm.metas[key] = self.config.build_meta()
+
+            for key, tag in self.config.tags.items():
+                if (tag.write_handler != None):
+                    print(key)
+                    self._comm.session.tag_write_handlers[key] = tag.write_handler
+
+            return super().connect_to_remote(key, on_state, on_meta, on_liveliness_change, tag_data_callbacks)
         else:
             logger.warning("Error: Session has been closed")
 

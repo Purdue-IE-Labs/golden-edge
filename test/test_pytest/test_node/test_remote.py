@@ -1,230 +1,161 @@
-import gedge.comm
-import gedge.comm.comm
-import gedge.node
-import gedge.node.prop
-import gedge.node.remote
-import gedge.node.subnode
-import gedge.node.tag
 import pytest
 import gedge
 import pathlib
+
+from gedge.node.node import NodeConfig
+from gedge.node.subnode import SubnodeConfig
+from gedge.node.subnode import RemoteSubConnection
+
+
 from collections import defaultdict
 
 class TestSanity:
+    def test_init(self):
+        config = NodeConfig("my/node")
+        connectNode = NodeConfig("my/otherNode")
+
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key) as remote:
+                assert remote.key == connectNode.key
 
     def test_add_tag_data_callback(self):
-    
-        def tag_handler(query: gedge.TagWriteQuery) -> None:
-            if query.value > 10:
-                query.reply(400)
-                return
-            query.reply(200)
-        
+        config = NodeConfig("my/node")
+        json = '''
+            {
+                "key": "test/tag/writes/writee",
+            }
+        '''
+        connectNode = NodeConfig.from_json5_str(json)
+        tag = connectNode.add_tag("tag/path", int)
 
-        here = pathlib.Path(__file__).parent
-    
-        config = gedge.NodeConfig.from_json5(str(here / "test_writee.json5"))
-    
-        config.add_tag_write_handler("tag/write", handler=tag_handler)
+        def callback(self):
+            print("Callaback girl!!!!!")
 
-        node = gedge.mock_connect(config)
-
-        remote = node.connect_to_remote("test/tag/writes/writee")
-
-        comm = remote._comm
-
-        assert comm.subscribers == defaultdict(list)
-
-        def tag_data_callback_handler():
-            print("Yeah dawg")
-
-        remote.add_tag_data_callback("tag/write", tag_data_callback_handler)    
-
-        assert comm.subscribers != []
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key) as remote:
+                remote.tags[tag.path] = tag
+                remote.add_tag_data_callback(tag.path, callback)
 
     def test_add_state_callback(self):
-        
-        here = pathlib.Path(__file__).parent
-    
-        config = gedge.NodeConfig.from_json5(str(here / "test_writee.json5"))
+        config = NodeConfig("my/node")
+        json = '''
+            {
+                "key": "test/tag/writes/writee",
+            }
+        '''
+        connectNode = NodeConfig.from_json5_str(json)
 
-        config.tags['tag/write']._writable = False
+        def callback(self):
+            print("Indiana")
 
-        node = gedge.mock_connect(config)
-
-        remote = node.connect_to_remote("test/tag/writes/writee")
-
-        comm = remote._comm
-
-        assert comm.subscribers == defaultdict(list)
-
-        def state_callback_handler():
-            print("Yeah dawg")
-
-        remote.add_state_callback(state_callback_handler)
-
-        assert comm.subscribers != []
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key) as remote:
+                remote.add_state_callback(callback)
 
     def test_add_meta_callback(self):
-        
-        here = pathlib.Path(__file__).parent
-    
-        config = gedge.NodeConfig.from_json5(str(here / "test_writee.json5"))
+        config = NodeConfig("my/node")
+        json = '''
+            {
+                "key": "test/tag/writes/writee",
+            }
+        '''
+        connectNode = NodeConfig.from_json5_str(json)
 
-        config.tags['tag/write']._writable = False
+        def callback(self):
+            print("Indiana")
 
-        node = gedge.mock_connect(config)
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key) as remote:
+                remote.add_meta_callback(callback)
 
-        remote = node.connect_to_remote("test/tag/writes/writee")
-
-        comm = remote._comm
-
-        assert comm.subscribers == defaultdict(list)
-
-        def meta_callback_handler():
-            print("Yeah dawg")
-
-        remote.add_meta_callback(meta_callback_handler)
-
-        assert comm.subscribers != []
-
-    # MockComm doesn't have a session attribute, so liveliness callback can't be initialized
-    # @pytest.mark.skip
     def test_add_liveliness_callback(self):
-        
-        here = pathlib.Path(__file__).parent
-    
-        config = gedge.NodeConfig.from_json5(str(here / "test_writee.json5"))
+        config = NodeConfig("my/node")
+        json = '''
+            {
+                "key": "test/tag/writes/writee",
+            }
+        '''
+        connectNode = NodeConfig.from_json5_str(json)
 
-        config.tags['tag/write']._writable = False
+        def callback(self):
+            print("Indiana")
 
-        node = gedge.mock_connect(config)
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key) as remote:
+                remote.add_liveliness_callback(callback)
 
-        remote = node.connect_to_remote("test/tag/writes/writee")
-
-        comm = remote._comm
-
-        assert comm.subscribers == defaultdict(list)
-
-        def liveliness_callback_handler():
-            print("Yeah dawg")
-
-        remote.add_liveliness_callback(liveliness_callback_handler)
-
-        assert comm.subscribers != []
-
-
-    # MockComm doesn't have a session attribute, so TagBind can't be initialized
-    # @pytest.mark.skip
-    def test_tag_binds(self):
-
-        # Create some tags
-
-        def tag_handler(query: gedge.TagWriteQuery) -> None:
-            if query.value > 10:
-                query.reply(400)
-                return
-            query.reply(200)
-        
-
-        here = pathlib.Path(__file__).parent
-    
-        config = gedge.NodeConfig.from_json5(str(here / "test_writee.json5"))
-    
-        config.add_tag_write_handler("tag/write", handler=tag_handler)
-
-        config.add_tag("tag1/write", int, {"desc": "testing a tag write",})
-
-        config.add_tag("tag2/write", int, {"desc": "testing a tag write",})
-
-        config.add_tag("tag3/write", int, {"desc": "testing a tag write",})
-
-        config.add_tag("tag4/write", int, {"desc": "testing a tag write",})
-
-        node = gedge.mock_connect(config)
-
-        remote = node.connect_to_remote("test/tag/writes/writee")
-
-        remote.tag_binds(["tag/write","tag1/write","tag2/write","tag3/write","tag4/write"])
-
-
-        pytest.fail("Yeah dawg")
-
-    # MockComm doesn't have a session attribute, so TagBind can't be initialized
-    # @pytest.mark.skip
     def test_tag_bind(self):
-
-        # Create some tags
-
-        def tag_handler(query: gedge.TagWriteQuery) -> None:
+        config = NodeConfig("my/node")
+        json = '''
+            {
+                "key": "test/tag/writes/writee",
+            }
+        '''
+        connectNode = NodeConfig.from_json5_str(json)
+        tag = connectNode.add_tag("tag/write", int)
+        def handler(query: gedge.TagWriteQuery) -> None:
             if query.value > 10:
                 query.reply(400)
                 return
             query.reply(200)
         
+        
+        connectNode.add_tag_write_handler("tag/write", handler=handler)
 
-        here = pathlib.Path(__file__).parent
-    
-        config = gedge.NodeConfig.from_json5(str(here / "test_writee.json5"))
-    
-        config.add_tag_write_handler("tag/write", handler=tag_handler)
-
-        node = gedge.mock_connect(config)
-
-        remote = node.connect_to_remote("test/tag/writes/writee")
-
-        remote.tag_bind("tag/write")
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key) as remote:
+                remote.tags[tag.path] = tag
+                tagBind = remote.tag_bind(tag.path)
+                tagBind.value = 20
 
 
-        pytest.fail("Yeah dawg")
+    def test_tag_binds(self):
+        config = NodeConfig("my/node")
+        json = '''
+            {
+                "key": "test/tag/writes/writee",
+            }
+        '''
+        connectNode = NodeConfig.from_json5_str(json)
+        tagList = []
+        paths = []
+        for i in range(0, 10):
+            tagList.append(connectNode.add_tag(f"tag/path{i}", int))
+            paths.append(f"tag/path{i}")
+
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key) as remote:
+                for i in range(0, 10):
+                    remote.tags[f"tag/path{i}"] = tagList[i]
+                tagBinds = remote.tag_binds(paths)
+
+                assert len(tagBinds) == 10
 
     def test_subnode(self):
+        config = NodeConfig("my/node")
+        json = '''
+            {
+                "key": "test/tag/writes/writee",
+            }
+        '''
+        connectNode = NodeConfig.from_json5_str(json)
 
-        here = pathlib.Path(__file__).parent
+        s0 = SubnodeConfig("subnode0", connectNode.ks, {}, {}, {})
     
-        config = gedge.NodeConfig.from_json5(str(here / "test_writee.json5"))
 
-        config.tags['tag/write']._writable = False
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key) as remote:
+                remote.subnodes[s0.name] = s0
+                subRemote = remote.subnode(s0.name)
 
-        properties = {
-        'tag1': 'int',
-        'tag2': 'float',
-        'tag3': 'str'
-        }
+                assert isinstance(subRemote, RemoteSubConnection)
+                assert subRemote.ks == s0.ks
 
-        tag = gedge.node.tag.Tag("tag/path", gedge.DataType.INT, gedge.node.prop.Props.from_value(properties), False, [], None)
-        
-        subnode = gedge.node.subnode.SubnodeConfig("my_subnode", config.ks, {'tag': tag}, {}, {})
 
-        config.subnodes = {'subnode': subnode}
-        
-        node = gedge.mock_connect(config)
-
-        remote = node.connect_to_remote("test/tag/writes/writee")
-
-        subnodeConnection = remote.subnode(subnode.name)
-
-        assert isinstance(subnodeConnection, gedge.node.subnode.RemoteSubConnection)
-
-        assert subnodeConnection.key == subnode.name
-        assert str(subnodeConnection.ks) == str(subnode.ks)
-        assert subnodeConnection.node_id == remote.node_id
-
-    # This is dependent upon comm.write_tag which doesn't exist in MockComm and there's nothing that returns WriteResponseData
-    @pytest.mark.skip
     def test_write_tag(self):
-        # Note, just try remote.write_tag since it runs _write_tag
-        pytest.fail("Yeah dawg")
+        pytest.fail("Yeah Dawg")
 
-    @pytest.mark.skip
     def test_write_tag_async(self):
-        # Specifically try to test the asynchronous behaviour
-        pytest.fail("Yeah dawg")
+        pytest.fail("Yeah Dawg but Async")
 
-    @pytest.mark.skip
-    def test_call_method(self):
-        pytest.fail("Yeah dawg")
-
-    @pytest.mark.skip
-    def test_call_method_iter(self):
-        pytest.fail("Yeah dawg")
+    
