@@ -1,4 +1,5 @@
 from gedge.comm.comm import Comm
+from gedge.comm.mock_comm import MockComm
 from gedge.comm.keys import NodeKeySpace
 from gedge.node.tag import Tag
 from gedge import proto
@@ -9,7 +10,7 @@ import zenoh
 from gedge.node.tag_data import TagData
 
 class TagBind:
-    def __init__(self, ks: NodeKeySpace, comm: Comm, tag: Tag, value: Any | None, on_set: Callable[[str, Any], Any]):
+    def __init__(self, ks: NodeKeySpace, comm: Comm | MockComm, tag: Tag, value: Any | None, on_set: Callable[[str, Any], Any]):
         self.path = tag.path
         self._on_set = on_set # what function should we run before we set the value? (i.e. a write_tag or update_tag, for example)
         if value:
@@ -31,10 +32,14 @@ class TagBind:
         self._value = value
 
     def _on_value(self, sample: zenoh.Sample):
-        tag_data = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes())
+        if (isinstance(self._comm, MockComm)):
+            fake_bytes = b"\x08\x01"  # <-- example serialized protobuf bytes
+            tag_data = self._comm.deserialize(proto.TagData(), fake_bytes)
+        else:
+            tag_data = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes())
         value = TagData.from_proto(tag_data, self.tag.type).to_py()
         self.last_received = datetime.now()
-        self.value = value
+        self._value = value
 
     def close(self):
         self.is_valid = False

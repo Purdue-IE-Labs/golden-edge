@@ -52,7 +52,8 @@ class TestNodeSession(NodeSession):
         self._comm.update_liveliness(self.config.ks, False)
         super().disconnect_from_remote(key)
 
-    def _startup(self):
+    
+    # def _startup(self):
         '''
         The startup sequence of the NodeSession: Basic verification, hooks up TagWrite and Method handlers, and adds subnode callbacks
 
@@ -64,6 +65,7 @@ class TestNodeSession(NodeSession):
         '''
         # logger.debug(f"Verifying node collisions...")
         # self._verify_node_collision()
+        '''
         logger.info("Publishing node's meta")
         self._comm.send_meta(self.ks, self.meta)
         self.update_state(True)
@@ -80,7 +82,7 @@ class TestNodeSession(NodeSession):
             # hook up method handlers
             method = self.config.methods[path]
             self._comm.method_queryable(self.ks, method) 
-        
+        '''
         '''
         def add_subnode_callbacks(config: SubnodeConfig):
             for path in config.tags:
@@ -99,6 +101,7 @@ class TestNodeSession(NodeSession):
         for s in self.config.subnodes.values():
             add_subnode_callbacks(s)
         '''
+    
 
     
     # This call is exactly the same as remote, just on the session itself and not remote

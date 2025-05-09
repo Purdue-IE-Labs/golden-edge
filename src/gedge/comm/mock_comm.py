@@ -141,11 +141,11 @@ class MockSession:
                         })()
                     )
 
-        print(f"\nPutting: {keyExpr} -> {payload}")
+        logger.info(f"Putting: {keyExpr} -> {payload}")
 
     def get(self, key_expr: Union[KeyExpr, str]) -> List[Any]:
         # Mimic retrieving data from storage
-        print(f"\nGetting: {key_expr}")
+        logger.info(f"Getting: {key_expr}")
         lookupExpr = KeyExpr(key_expr)
 
         replies: List[Any] = []
@@ -178,7 +178,7 @@ class MockSession:
 
     def close(self):
         # Mimic closing the session
-        print("Closing session.")
+        logger.info("Closing session.")
 
 
 # TODO: handle Zenoh queries
@@ -242,6 +242,22 @@ class MockComm(Comm):
             return False
 
     def _send_proto(self, key_expr: str, value: ProtoMessage):
+        '''
+        Sends the passed ProtoMessage to the passed node
+
+        Arguments:
+            key_expr (str): The key expression of a node
+            value (ProtoMessage): The value being passed to the node
+
+        Returns:
+            None
+        '''
+        logger.debug(f"putting proto on key_expr '{key_expr}'")
+        b = self.serialize(value)
+
+        self.session.put(key_expr, b, encoding="application/protobuf")
+        # self.sequence_number.increment()
+        
         for key in self.subscribers:
             if keys.overlap(key, key_expr):
                 for handler in self.subscribers[key]:
@@ -342,12 +358,18 @@ class MockComm(Comm):
     def update_liveliness(self, ks: NodeKeySpace, liveliness: bool):
         self.session._liveliness_tokens.update({ks.user_key: liveliness})
 
+    def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
+        key_expr = ks.tag_data_path(path)
+        self._send_proto(key_expr, value)
+
     def send_meta(self, ks: NodeKeySpace, meta: proto.Meta):
         self.metas[ks.user_key] = meta
     
     def send_state(self, ks: NodeKeySpace, state: proto.State):
         # maybe MockComm will implement state at some point
         key_expr = ks.state_key_prefix
+        if (state.online != None):
+            self.update_liveliness(ks, state.online)
         self._send_proto(key_expr, state)
     
     def liveliness_token(self, ks: NodeKeySpace) -> None:
