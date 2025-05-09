@@ -205,6 +205,7 @@ class MockComm(Comm):
 
     def close_remote(self, ks: NodeKeySpace):
         logger.info(f"Mock Closing remote connection to {ks.user_key}")
+        del self.metas[ks.user_key]
         # del self.session.storage[ks.user_key]
 
     def add_remote_connection(self, ks: NodeKeySpace, meta: Meta):
@@ -351,8 +352,11 @@ class MockComm(Comm):
     def pull_meta_messages(self, only_online: bool = False):
         metas: List[Meta] = []
         for key in self.metas:
-            metas.append(self.metas.get(key))
-
+            if (only_online == True):
+                if (self.session._liveliness_tokens[key] == True):
+                    metas.append(self.metas.get(key))
+            else:
+                metas.append(self.metas.get(key))
         return metas
     
     def update_liveliness(self, ks: NodeKeySpace, liveliness: bool):

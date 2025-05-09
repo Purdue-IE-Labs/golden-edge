@@ -424,7 +424,7 @@ class NodeSession:
         Returns:
             None
         '''
-        for key in self.connections:
+        for key in list(self.connections):
             self.disconnect_from_remote(key)
         self.update_state(False)
         self._comm.session.close()

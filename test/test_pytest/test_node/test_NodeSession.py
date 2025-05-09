@@ -1,11 +1,13 @@
 import sys
 import gedge
 import pytest
-
+import threading
+from threading import Thread
 import uuid
 
 from gedge.comm.mock_comm import MockComm
 from gedge.node.node import NodeConfig, Tag, Method, NodeSession, TagData
+from gedge.node.test_node import TestNodeSession
 from gedge.node.subnode import SubnodeConfig
 from gedge.node.data_type import DataType
 from gedge.node.prop import Props
@@ -21,7 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class TestSanity:
-    def test_init(self, capsys):
+    def test_init(self):
         config = NodeConfig("my/node")
 
         with gedge.mock_connect(config) as session:
@@ -94,8 +96,6 @@ class TestSanity:
             assert isinstance(meta, Meta)
             assert meta.key == config.key
 
-    # If we want to implement this we need to be able to use a Zenoh 
-    # like way of retrieving nodes with wildcarding
     # @pytest.mark.skip
     def test_nodes_on_network(self):
         # pytest.fail("Mock Comm.pull_meta_messages isn't implemented")
@@ -289,6 +289,36 @@ class TestSubnode:
             with pytest.raises(ValueError, match="No subnode "):
                 session.subnode(s0.name)
 
+    def test_deep_nested_resolution(self):
+        config = NodeConfig("my/node")
+
+        s0 = SubnodeConfig("subnode0", config.ks, {}, {}, {})
+        s1 = SubnodeConfig("subnode1", s0.ks, {}, {}, {})
+        s2 = SubnodeConfig("subnode2", s1.ks, {}, {}, {})
+        s3 = SubnodeConfig("subnode3", s2.ks, {}, {}, {})
+        s4 = SubnodeConfig("subnode4", s3.ks, {}, {}, {})
+
+        config.subnodes[s0.name] = s0
+        s0.subnodes[s1.name] = s1
+        s1.subnodes[s2.name] = s2
+        s2.subnodes[s3.name] = s3
+        s3.subnodes[s4.name] = s4
+
+        with gedge.mock_connect(config) as session:
+            session.subnodes = config.subnodes
+
+            subSession = session.subnode(s0.name)
+
+            subSubSession = subSession.subnode(s1.name)
+
+            subSubSubSession = subSubSession.subnode(s2.name)
+
+            subSubSubSubSession = subSubSubSession.subnode(s3.name)
+
+            subSubSubSubSubSession = subSubSubSubSession.subnode(s4.name)
+
+            assert subSubSubSubSubSession.ks == s4.ks
+
 class TestConnection:
     def test_close_connect(self):
         config = NodeConfig("my/node")
@@ -298,4 +328,133 @@ class TestConnection:
 
             session.close()
 
-            # session.connect_to_remote(config.key)
+            session.connect_to_remote(config.key)
+
+    def test_double_close(self):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+
+            session.close()
+
+            session.close()
+
+    def test_double_connect(self):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            session.connect_to_remote(config.key)
+
+            session.connect_to_remote(config.key)
+
+            assert len(session.connections) == 1
+
+    def test_empty_nodes_on_network(self):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            session.connect_to_remote(config.key)
+
+            metas = session.nodes_on_network()
+
+            session.disconnect_from_remote(config.key)
+            
+            newMetas = session.nodes_on_network()
+
+            assert metas != newMetas
+            assert newMetas == []
+
+    def test_empty_print_nodes_on_network(self, capsys):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            
+            session.connect_to_remote(config.key)
+
+            session.print_nodes_on_network()
+
+            session.disconnect_from_remote(config.key)
+            
+            session.print_nodes_on_network()
+
+            captured = capsys.readouterr()
+            assert "No Nodes on Network!" in captured.out
+
+    def test_offline_nodes_on_network(self):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            session.connect_to_remote(config.key)
+
+            metas = session.nodes_on_network(True)
+
+            commSession = session._comm.session
+
+            commSession._liveliness_tokens[config.key] = False
+            
+            newMetas = session.nodes_on_network(True)
+
+            assert metas != newMetas
+            assert newMetas == []
+    
+    def test_disconnect_does_not_exist(self):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            session.connect_to_remote(config.key)
+
+            with pytest.raises(ValueError, match="Node not/my/node not connected to my/node"):
+                session.disconnect_from_remote("not/my/node")
+
+class TestTagBinds:
+    def test_no_tag(self):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            with pytest.raises(TagLookupError, match="Tag no/path not found on node node"):
+                tagBind = session.tag_bind("no/path")
+
+    def test_empty_list(self):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            tagBinds = session.tag_binds([])
+
+            assert tagBinds == []
+
+    def test_different_types(self):
+        config = NodeConfig("my/node")
+        tag = config.add_tag("tag/path", int)
+
+        with gedge.mock_connect(config) as session:
+            tagBind = session.tag_bind(tag.path, 3.5)
+
+            assert tagBind.value == int(3.5)
+
+            print(tagBind.value)
+            print(tagBind.tag.type)
+
+class TestState:
+    def test_rapid_flip(self):
+
+        def flip(session: TestNodeSession, state: bool):
+            state = not state
+            session.update_state(state)
+            return state
+        
+        def flip_loop(session: TestNodeSession, state: bool):
+            for i in range(0, 100):
+                state = flip(session, state)
+                
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            a = Thread(target=flip_loop, args=[session, True])
+            a.start()
+            b = Thread(target=flip_loop, args=[session, False])
+            b.start()
+
+            a.join()
+            b.join()
+
+            assert session.is_online(session.ks.user_key) == False            
