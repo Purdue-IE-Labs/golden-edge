@@ -15,6 +15,8 @@ from gedge.proto import Meta
 from gedge import proto
 from gedge.node.remote import RemoteConnection
 
+from typing import Any, TYPE_CHECKING, Callable, List, Optional, Union
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -236,3 +238,64 @@ class TestSanity:
             assert isinstance(subSession, SubnodeSession)
             assert subSession.ks == subnode.ks
             assert subSession._comm is session._comm
+
+class TestSubnode:
+    def test_no_subnode(self):
+        config = NodeConfig("my/node")
+        subnode_name = "subnode0"
+
+        with gedge.mock_connect(config) as session:
+            session.connect_to_remote(config.key)
+
+            with pytest.raises(ValueError, match="No subnode subnode0"):
+                subSession = session.subnode(subnode_name)
+
+    def test_missing_intermediate(self):
+        config = NodeConfig("my/node")
+
+        # Create full nested structure
+        s0 = SubnodeConfig("subnode0", config.ks, {}, {}, {})
+        s1 = SubnodeConfig("subnode1", s0.ks, {}, {}, {})
+        s2 = SubnodeConfig("subnode2", s1.ks, {}, {}, {})
+        s3 = SubnodeConfig("subnode3", s2.ks, {}, {}, {})
+
+        # Build subnode hierarchy
+        s2.subnodes["subnode3"] = s3
+        s1.subnodes["subnode2"] = s2
+        s0.subnodes["subnode1"] = s1
+        config.subnodes["subnode0"] = s0
+
+        # Remove subnode2 to simulate missing intermediate
+        del s1.subnodes["subnode2"]
+
+        with gedge.mock_connect(config) as session:
+            session.subnodes["subnode0"] = s0
+
+        # This should fail because subnode2 is missing
+        with pytest.raises(ValueError, match="No subnode subnode2"):  # or whatever your error type is
+            session.subnode("subnode0/subnode1/subnode2/subnode3")
+
+    def test_bad_name(self):
+        config = NodeConfig("my/node")
+
+        s0 = SubnodeConfig("/subnode0", config.ks, {}, {}, {})
+
+        config.subnodes[s0.name] = s0
+
+        with gedge.mock_connect(config) as session:
+            session.subnodes[s0.name] = s0
+
+            #Do we want it to just return a value error?
+            with pytest.raises(ValueError, match="No subnode "):
+                session.subnode(s0.name)
+
+class TestConnection:
+    def test_close_connect(self):
+        config = NodeConfig("my/node")
+
+        with gedge.mock_connect(config) as session:
+            session.connect_to_remote(config.key)
+
+            session.close()
+
+            # session.connect_to_remote(config.key)
