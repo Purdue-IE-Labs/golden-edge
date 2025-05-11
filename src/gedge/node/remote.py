@@ -41,6 +41,8 @@ class RemoteConnection:
         TODO: perhaps we should subscribe to this node's meta message, in which case all the following utility variables (self.tags, self.methods, self.responses) 
         would need to react to that (i.e. be properties)
         '''
+        if not self._comm.is_online(ks):
+            raise ValueError(f"Node {ks.user_key} is not online, so it cannot be connected to!")
         self.meta = self._comm.pull_meta_message(ks)
         self.tag_config = TagConfig.from_proto(self.meta.tags)
         methods: list[MethodConfig] = [MethodConfig.from_proto(m) for m in self.meta.methods]

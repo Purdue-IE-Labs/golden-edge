@@ -449,7 +449,8 @@ class NodeSession:
 
     def connect_to_remote(self, key: str, on_state: StateCallback | None = None, on_meta: MetaCallback | None = None, on_liveliness_change: LivelinessCallback | None = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> RemoteConnection:
         '''
-        Connects the current node to a remote node corresponding to the passed key, allows for optional inclusion of StateCallback, MetaCallback, LivelinessCallback, and dictionary of TagDataCallbacks
+        Connects the current node to a remote node at 'key'
+        Raises a ValueError if the remote node 'key' is not online
 
         Example Implementation:
             def state_callback(str, state):
