@@ -16,6 +16,12 @@ if TYPE_CHECKING:
 # should this be a try/except or return None?
 # probably should just error out, if they try to load but no model, that's an exception
 def load(path: DataModelRef) -> DataModelConfig:
+
+    # acts as a bit of a cache, so we have to go to the filesystem less and less
+    config = Singleton().get_model(path.full_path)
+    if config is not None:
+        return config 
+
     directory = Singleton().get_model_dir()
     if not directory:
         raise LookupError(f"Trying to find model {path.path} but no model directory passed in. For the cli, use --model-dir. For Python, use gedge.use_models(...)")
@@ -24,7 +30,11 @@ def load(path: DataModelRef) -> DataModelConfig:
         path.version = find_latest_version(str(dir))
     p = path.to_file_path()
     path_to_json = pathlib.Path(directory) / p
-    return load_from_file(str(path_to_json))
+
+    config = load_from_file(str(path_to_json))
+    # add to cache so next time we retrieve this, it's in the Singleton
+    Singleton().add_model(config)
+    return config
 
 def load_from_file(path: str) -> DataModelConfig:
     from gedge.py_proto.data_model_config import DataModelConfig

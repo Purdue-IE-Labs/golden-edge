@@ -20,7 +20,7 @@ config = gedge.NodeConfig("gedge/examples/methods/caller")
 if len(sys.argv) > 1:
     ip_address = sys.argv[1]
 else:
-    ip_address = "192.168.4.60"
+    ip_address = "localhost"
 
 with gedge.connect(config, ip_address) as session:
     # we connect to another node by giving it the key of that node

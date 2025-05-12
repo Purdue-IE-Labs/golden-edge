@@ -60,7 +60,7 @@ config.add_method_handler("my/method/path", handler=handler)
 if len(sys.argv) > 1:
     ip_address = sys.argv[1]
 else:
-    ip_address = "192.168.4.60"
+    ip_address = "localhost"
 
 with gedge.connect(config, ip_address) as session:
     # we enter an infinite loop to essentially say that we want to 

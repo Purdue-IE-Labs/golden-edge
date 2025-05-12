@@ -9,7 +9,7 @@ import json5
 
 from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.data_model_ref import DataModelRef
-from gedge.py_proto.load_models import load_from_file, to_file_path
+from gedge.py_proto.load_models import load, to_file_path
 from gedge import proto
 from gedge.py_proto.singleton import Singleton
 from gedge.py_proto.type import Type
@@ -166,11 +166,7 @@ class DataModelConfig:
     def add_parent_tags(self):
         if not self.parent:
             return
-        model_dir = Singleton().get_model_dir()
-        if not model_dir:
-            raise LookupError(f"No model directory provided, needed to find parent of model {self.path}")
-        path = pathlib.Path(model_dir) / self.parent.to_file_path()
-        model = load_from_file(str(path))
+        model = load(self.parent)
         model.add_parent_tags()
 
         # where the inheritance happens
