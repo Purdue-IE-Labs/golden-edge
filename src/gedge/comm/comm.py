@@ -37,7 +37,9 @@ class Comm:
         config = json.dumps({
             "mode": "client",
             "connect": {
-                "endpoints": connections
+                "endpoints": connections,
+                "timeout_ms": 3 * 1000,
+                "exit_on_failure": True
             }
         })
         self.config = config
@@ -467,6 +469,11 @@ class Comm:
         zenoh_handler = self._on_state(handler)
         self._subscriber(key_expr, zenoh_handler)
     
+    def cancel_tag_data_subscription(self, ks: NodeKeySpace, path: str) -> None:
+        # TODO: handle groups
+        key_expr = ks.tag_data_path(path)
+        self.cancel_subscription(key_expr)
+    
     def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
         '''
         Declares a Tag Data subscriber with the passed handler on the passed node with the passed tags at the passed path
@@ -492,14 +499,6 @@ class Comm:
             key_expr = ks.tag_data_path(path)
             zenoh_handler = self._on_tag_data(handler, tag_config)
             self._subscriber(key_expr, zenoh_handler)
-
-        # This also subscribes to the group data and then feeds that into the same handler for tag data
-        # group = tag_config.get_group(path)
-        # if group is None:
-        #     return
-        # key_expr = ks.group_data_path(group)
-        # zenoh_handler = self._on_group_data_feed_to_tag_data_subscriber(handler, tag_config, path)
-        # self._subscriber(key_expr, zenoh_handler)
     
     def group_data_subscriber(self, ks: NodeKeySpace, group_path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
         key_expr = ks.group_data_path(group_path)

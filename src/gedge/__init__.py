@@ -11,7 +11,10 @@ import logging
 import os
 
 level = os.environ.get("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=level)
+try:
+    logging.basicConfig(level=level)
+except:
+    logging.basicConfig(level="NOTSET")
 
 ZENOH_PORT = 7447
 def connect(config: NodeConfig, *connections: str) -> NodeSession:

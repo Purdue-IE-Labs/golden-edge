@@ -352,6 +352,8 @@ class NodeSession:
 
         self._startup()
 
+        self.binds: dict[str, TagBind] = {}
+
     def __enter__(self):
         return self
     
@@ -608,11 +610,16 @@ class NodeSession:
         Returns:
             TagBind: The new TagBind
         '''
-        tag = self.tag_config.get_tag(path)
-        if tag.is_model_ref():
-            raise ValueError(f"cannot bind to a model tag {path}")
-        bind = TagBind(self.ks, self._comm, tag, value, self._update_tag)
+        if not self.tag_config.is_valid_path(path):
+            raise ValueError(f"cannot bind to invalid path {path}")
+        if not self.tag_config.is_base_type(path):
+            raise ValueError(f"cannot bind to model tag {path}")
+        bind = TagBind(self.ks, path, self._comm, self.tag_config, value, self._update_tag, self._on_tag_bind_close)
+        self.binds[path] = bind
         return bind
+    
+    def _on_tag_bind_close(self, path: str):
+        del self.binds[path]
     
     def update_tag(self, path: str, value: TagBaseValue):
         '''
@@ -632,6 +639,9 @@ class NodeSession:
             self.update_group({path: value})
             return
         self._update_tag(path, value, tag)
+
+        if path in self.binds:
+            self.binds[path]._update_value_externally(value)
 
     def _update_tag(self, path: str, value: TagBaseValue, tag: Tag):
         '''

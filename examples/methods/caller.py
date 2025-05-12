@@ -22,7 +22,7 @@ if len(sys.argv) > 1:
 else:
     ip_address = "192.168.4.60"
 
-with gedge.connect(config, "192.168.4.60") as session:
+with gedge.connect(config, ip_address) as session:
     # we connect to another node by giving it the key of that node
     # this can be found in methods.json5 at 'key'
     # the RemoteConnection instance returned allows use to call 

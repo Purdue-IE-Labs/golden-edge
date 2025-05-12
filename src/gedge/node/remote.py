@@ -54,6 +54,8 @@ class RemoteConnection:
         subnodes: list[SubnodeConfig] = [SubnodeConfig.from_proto(s, self.ks) for s in self.meta.subnodes]
         self.subnodes: dict[str, SubnodeConfig] = {s.name: s for s in subnodes}
 
+        self.binds: dict[str, TagBind] = {}
+
     def __enter__(self):
         return self
     
@@ -167,8 +169,12 @@ class RemoteConnection:
         tag = self.tag_config.get_tag(path)
         if tag.is_model_ref():
             raise ValueError(f"cannot bind to a model tag {path}")
-        bind = TagBind(self.ks, self._comm, tag, value, self._write_tag)
+        bind = TagBind(self.ks, path, self._comm, self.tag_config, value, self._write_tag, self._on_tag_bind_close)
+        self.binds[path] = bind
         return bind
+
+    def _on_tag_bind_close(self, path: str):
+        del self.binds[path]
     
     def subnode(self, name: str) -> RemoteSubConnection:
         '''

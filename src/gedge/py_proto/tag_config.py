@@ -295,6 +295,16 @@ class TagConfig:
                 return True
         return False
     
+    def is_base_type(self, path: str) -> bool:
+        config = None
+        for t in self.tags.values():
+            try:
+                config = t.get_config(path)
+                break
+            except:
+                pass
+        return config is not None and config.is_base_type()
+    
     def is_valid_group_path(self, path: str) -> bool:
         return path in self.all_groups().keys()
 
