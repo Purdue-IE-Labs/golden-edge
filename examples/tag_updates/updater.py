@@ -32,7 +32,7 @@ with gedge.connect(config, ip_address) as session:
         # to it. We can only write to base tags.
         # Thus, we access item 'baz' which is on 
         # the 'bar' model, of which 'model/tag' is a type
-        # Thus, the situation looks similar to this (could be future syntax)
+        # Thus, the situation looks similar to this (could be future syntax):
         # model/tag: {
         #   baz: True
         # }

@@ -294,7 +294,8 @@ class Comm:
             t = TagWriteQuery(str(query.key_expr), reply, tag.write_config[path][0], [], data.to_py())
             try:
                 _, handler = tag.write_config[path]
-                assert handler is not None
+                if handler is None:
+                    raise Exception(f"No handler provided for tag {path}")
                 handler(t)
             except QueryEnd as e:
                 pass
