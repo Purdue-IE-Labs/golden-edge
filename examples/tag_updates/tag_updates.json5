@@ -1,0 +1,13 @@
+{
+  key: "gedge/examples/tag_updates/updater",
+  tags: [
+    {
+      path: "base/tag",
+      base_type: "int",
+    },
+    {
+      path: "model/tag",
+      model_path: "bar/VERSION/2",
+    },
+  ],
+}

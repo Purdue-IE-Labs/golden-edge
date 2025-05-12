@@ -1,3 +1,4 @@
+import pathlib
 from gedge.node.codes import OK, ERR, CALLBACK_ERR
 from gedge.node.method_response import ResponseConfig, ResponseType
 from gedge.node.query import MethodQuery, TagWriteQuery
@@ -34,4 +35,6 @@ def mock_connect(config: NodeConfig) -> TestNodeSession:
     return session
 
 def use_models(model_dir: str):
+    if not pathlib.Path(model_dir).exists():
+        raise ValueError(f"model directory {model_dir} does not exist")
     Singleton().set_model_dir(model_dir)

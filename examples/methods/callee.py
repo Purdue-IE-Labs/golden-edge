@@ -57,12 +57,17 @@ here = pathlib.Path(__file__).parent
 config = gedge.NodeConfig.from_json5(str(here / "methods.json5"))
 config.add_method_handler("my/method/path", handler=handler)
 
-if len(sys.argv) > 1:
-    ip_address = sys.argv[1]
-else:
-    ip_address = "localhost"
+# this is the address of the zenoh instance that 
+# we want to connect to
+# if you have a zenoh-influx pair running as a container 
+# on your machine, you can just use "localhost"
+# otherwise, target the IP of the zenoh container
+def get_ip_address():
+    if len(sys.argv) > 1:
+        return sys.argv[1]
+    return "localhost"
 
-with gedge.connect(config, ip_address) as session:
+with gedge.connect(config, get_ip_address()) as session:
     # we enter an infinite loop to essentially say that we want to 
     # keep this node up but not actually do much besides that 
     # except to wait for other nodes to interact with us

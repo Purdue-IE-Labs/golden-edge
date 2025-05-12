@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 import uuid
 from gedge.node.gtypes import TagValue
 from gedge.node.method import MethodConfig
@@ -55,6 +56,10 @@ class NodeConfig:
         Returns:
             NodeConfig
         '''
+        if not pathlib.Path(path).exists():
+            raise ValueError(f"Node configuration at path {path} does not exist")
+        if pathlib.Path(path).is_dir():
+            raise ValueError(f"Node configuration at path {path} is a directory")
         with open(path, "r") as f:
             node: dict[str, Any] = json5.load(f)
         return cls._config_from_json5_obj(node)
