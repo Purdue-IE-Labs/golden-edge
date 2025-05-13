@@ -28,6 +28,9 @@ def connect(config: NodeConfig, *connections: str) -> NodeSession:
 
     return config._connect(conns)
 
-def mock_connect(config: NodeConfig) -> TestNodeSession:
-    session = TestNodeSession(config, MockComm())
+def mock_connect(config: NodeConfig, network: MockComm = None) -> TestNodeSession:
+    if network is None:
+        session = TestNodeSession(config, MockComm())
+    else:    
+        session = TestNodeSession(config, network)
     return session

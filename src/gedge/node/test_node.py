@@ -35,6 +35,16 @@ class TestNodeSession(NodeSession):
     def __init__(self, config: NodeConfig, comm: MockComm) -> None:
         super().__init__(config, comm)
         self.config = config
+
+        for key, tag in config.tags.items():
+            comm.session.put(tag.path, tag)
+            newKey = NodeKeySpace.from_user_key(config.key)
+            if tag.write_handler is not None:
+                newKey = newKey.tag_write_path(tag.path)
+            else:
+                newKey = newKey.tag_data_path(tag.path)
+
+            self._comm.session.put(newKey, tag)
     
     def __enter__(self): 
         return self
@@ -51,11 +61,6 @@ class TestNodeSession(NodeSession):
             self._comm.update_liveliness(NodeKeySpace.from_user_key(key), True)
             
             self._comm.metas[key] = self.config.build_meta()
-
-            for key, tag in self.config.tags.items():
-                if (tag.write_handler != None):
-                    print(key)
-                    self._comm.session.tag_write_handlers[key] = tag.write_handler
 
             return super().connect_to_remote(key, on_state, on_meta, on_liveliness_change, tag_data_callbacks)
         else:

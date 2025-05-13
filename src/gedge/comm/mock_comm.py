@@ -8,6 +8,7 @@ import zenoh
 from zenoh import KeyExpr, Encoding, CongestionControl, Priority
 import json
 import base64
+import gedge
 from gedge.comm.comm import Comm
 from gedge.node import codes
 from gedge.node.body import BodyData
@@ -98,6 +99,10 @@ class MockReply:
 
 class MockResult:
     def __init__(self, payload: bytes):
+        self.payload = MockPayload(payload)
+
+class MockPayload:
+    def __init__(self, payload: bytes):
         self.payload = payload
 
     def to_bytes(self):
@@ -147,17 +152,60 @@ class MockSession:
 
         logger.info(f"Putting: {keyExpr} -> {payload}")
 
-    def get(self, key_expr: Union[KeyExpr, str], payload: bytes =None) -> List[Any]:
-        # Mimic retrieving data from storage
-        logger.info(f"Getting: {key_expr}")
+    def get(self, key_expr: Union[KeyExpr, str], payload: bytes =None) -> Any:
+        logger.info(f"MockSession.get called with key: {key_expr}")
         lookupExpr = KeyExpr(key_expr)
 
-        if (payload != None):
-            print("Do stuff with the handler provided?")
-            print(key_expr)
-            write_handler: TagWriteHandler = self.tag_write_handlers.get(key_expr)
-            b = base64.b64decode(payload)
-            return write_handler(query=b)
+        if payload is not None:
+            logger.info("Payload present; invoking tag write handler")
+
+            tag: Tag = self.get(key_expr)[0]
+
+
+            if tag is None:
+                raise LookupError(f"No tag for {key_expr}")
+
+            if tag.write_handler is None:
+                raise LookupError(f"No tag write handler for {key_expr}")
+
+            # payload = b'CAk='
+            decoded_payload = base64.b64decode(payload)
+            value_passed = decoded_payload[1:]
+
+            # Simulate decoding value from payload (adjust as needed)
+            value = int.from_bytes(value_passed, byteorder="little")
+
+            # Capture reply
+            reply_data = {"code": int, "error": str}
+            def reply_callback(code: int, error: str = ""):
+                reply_data["code"] = code
+                reply_data["error"] = error
+
+            # Create the query object
+            from gedge.node.tag_write_query import TagWriteQuery
+            query = TagWriteQuery(
+                key_expr=key_expr,
+                value=value,
+                tag_config=tag,
+                _reply=reply_callback
+            )
+
+            # Call the handler
+            tag.write_handler(query)
+
+            if reply_data["code"] is None:
+                raise RuntimeError("Handler did not call query.reply(...)")
+            
+            # print(reply_data["code"])
+
+            response = proto.WriteResponseData(code=reply_data["code"], error=reply_data["error"])
+
+            serialized = response.SerializeToString()
+
+            encoded = base64.b64encode(serialized)
+
+            # Return mock reply with response code as payload
+            return (MockReply(True, MockResult(encoded)))
 
         replies: List[Any] = []
         for key, value in self._storage.items():
@@ -168,6 +216,14 @@ class MockSession:
         
         return replies
     
+    def _deserialize(self, payload: bytes) -> Any:
+        # Adjust this based on what you're actually sending
+        try:
+            return int.from_bytes(payload, byteorder="little")
+        except Exception as e:
+            logger.warning(f"Failed to decode payload: {e}")
+            return None
+
     def liveliness(self) -> MockLiveliness:
         """
         Return a mock Liveliness interface for liveliness queries.

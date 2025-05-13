@@ -5,6 +5,7 @@ import pathlib
 from gedge.node.node import NodeConfig
 from gedge.node.subnode import SubnodeConfig
 from gedge.node.subnode import RemoteSubConnection
+from gedge.node.data_type import DataType
 
 
 from collections import defaultdict
@@ -85,29 +86,28 @@ class TestSanity:
                 remote.add_liveliness_callback(callback)
 
     def test_tag_bind(self):
-        config = NodeConfig("my/node")
-        json = '''
-            {
-                "key": "test/tag/writes/writee",
-            }
-        '''
-        connectNode = NodeConfig.from_json5_str(json)
-        tag = connectNode.add_tag("tag/write", int)
+        writer = NodeConfig.from_json5_str('''{"key": "test/tag/bind/writer"}''')
+        writee = NodeConfig.from_json5_str('''{"key": "test/tag/bind/writee"}''')
+        
         def handler(query: gedge.TagWriteQuery) -> None:
             if query.value > 10:
                 query.reply(400)
                 return
             query.reply(200)
-        
-        
-        connectNode.add_tag_write_handler("tag/write", handler=handler)
 
-        with gedge.mock_connect(config) as session:
-            session._comm.session.tag_write_handlers.update({"test/tag/writes/NODE/writee/TAGS/WRITE/tag/write": handler})
-            with session.connect_to_remote(connectNode.key) as remote:
-                remote.tags[tag.path] = tag
-                tagBind = remote.tag_bind(tag.path)
-                tagBind.value = 20
+        tag = writee.add_writable_tag("tag/write", DataType.INT, handler, [
+            (200, {"desc": "tag updated with value"}), 
+            (400, {"desc": "invalid value (>10)"})])
+    
+        with gedge.mock_connect(writee) as writeeSession:            
+            with gedge.mock_connect(writer, writeeSession._comm) as writerSession:
+                with writerSession.connect_to_remote(writee.key) as remote:
+                    remote.tags[tag.path] = tag
+                    # remote.tags[tag.path].write_handler = handler
+                    tagBind = remote.tag_bind(tag.path)
+                    tagBind.value = 20
+
+                    #I don't exactly know how to tst this more
 
 
     def test_tag_binds(self):
@@ -152,11 +152,53 @@ class TestSanity:
                 assert isinstance(subRemote, RemoteSubConnection)
                 assert subRemote.ks == s0.ks
 
-
+    
     def test_write_tag(self):
-        pytest.fail("Yeah Dawg")
+        writer = NodeConfig.from_json5_str('''{"key": "test/tag/bind/writer"}''')
+        writee = NodeConfig.from_json5_str('''{"key": "test/tag/bind/writee"}''')
 
-    def test_write_tag_async(self):
-        pytest.fail("Yeah Dawg but Async")
+        def handler(query: gedge.TagWriteQuery) -> None:
+            if query.value > 10:
+                query.reply(400)
+                return
+            query.reply(200)
+
+        tag = writee.add_writable_tag("tag/write", DataType.INT, handler, [
+            (200, {"desc": "tag updated with value"}), 
+            (400, {"desc": "invalid value (>10)"})])
+
+
+        with gedge.mock_connect(writee) as writeeSession:            
+            with gedge.mock_connect(writer, writeeSession._comm) as writerSession:
+                with writerSession.connect_to_remote(writee.key) as remote:
+                    remote.tags["tag/write"] = tag
+                    reply = remote.write_tag("tag/write", value=9)
+                    assert reply.code == 200
+                    assert reply.error == ""
+    
+    @pytest.mark.asyncio
+    async def test_write_tag_async(self):
+        writer = NodeConfig.from_json5_str('''{"key": "test/tag/bind/writer"}''')
+        writee = NodeConfig.from_json5_str('''{"key": "test/tag/bind/writee"}''')
+
+        def handler(query: gedge.TagWriteQuery) -> None:
+            if query.value > 10:
+                query.reply(400)
+                return
+            query.reply(200)
+
+        tag = writee.add_writable_tag("tag/write", DataType.INT, handler, [
+            (200, {"desc": "tag updated with value"}), 
+            (400, {"desc": "invalid value (>10)"})])
+
+
+        with gedge.mock_connect(writee) as writeeSession:            
+            with gedge.mock_connect(writer, writeeSession._comm) as writerSession:
+                with writerSession.connect_to_remote(writee.key) as remote:
+                    remote.tags["tag/write"] = tag
+                    reply = await remote.write_tag_async("tag/write", value=9)
+                    assert reply.code == 200
+                    assert reply.error == ""
+    
 
     
