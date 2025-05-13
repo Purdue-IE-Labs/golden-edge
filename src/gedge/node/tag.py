@@ -6,7 +6,7 @@ from gedge import proto
 from gedge.node.prop import Props
 
 from typing import Any, Self, TYPE_CHECKING
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import TagWriteHandler
 
 @dataclass

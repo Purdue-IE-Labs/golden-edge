@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from gedge.node import codes
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import TagValue
     from gedge.node.body import BodyData
 

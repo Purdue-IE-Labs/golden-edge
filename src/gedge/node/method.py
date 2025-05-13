@@ -9,7 +9,7 @@ from gedge import proto
 from gedge.node.method_response import MethodResponse
 
 from typing import Any, Self, TYPE_CHECKING
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import TagValue, Type, MethodHandler
 
 @dataclass

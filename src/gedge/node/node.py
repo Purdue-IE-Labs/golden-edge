@@ -19,7 +19,7 @@ from gedge.node.tag_data import TagData
 import json5
 
 from typing import Self, Any, TYPE_CHECKING
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, Type, ZenohQueryCallback, TagWriteHandler, MethodHandler
     from gedge.node.subnode import SubnodeConfig
     from gedge.node.subnode import SubnodeSession

@@ -1,3 +1,6 @@
 [run]
 omit =
     */proto/*
+    */codes.py
+    */__init__.py
+    */sequence_number.py

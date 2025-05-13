@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from typing import TYPE_CHECKING, Any, Callable
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.method_response import MethodResponse
 
 @dataclass

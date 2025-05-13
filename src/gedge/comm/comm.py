@@ -24,7 +24,7 @@ from gedge.node.query import MethodQuery
 from gedge.node.tag import Tag, WriteResponse
 from gedge.node.tag_data import TagData
 from gedge.node.tag_write_query import TagWriteQuery
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
 
 ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData

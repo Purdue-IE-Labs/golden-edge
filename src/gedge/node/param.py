@@ -8,7 +8,7 @@ from gedge import proto
 from typing import Any, Self, TYPE_CHECKING
 
 from gedge.node.tag_data import TagData
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import TagValue
 
 @dataclass

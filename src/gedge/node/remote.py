@@ -19,7 +19,7 @@ import uuid
 from typing import Any, Iterator, Callable, TYPE_CHECKING
 
 from gedge.node.tag_write_reply import TagWriteReply
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
     from gedge.node.subnode import RemoteSubConnection
 

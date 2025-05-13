@@ -32,8 +32,9 @@ from gedge.node.tag_data import TagData
 from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.tag_write_reply import TagWriteReply
 import threading
-if TYPE_CHECKING:
-    from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback, TagWriteHandler
+
+from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback, TagWriteHandler
+    
 
 ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData | proto.ResponseData
 
@@ -52,15 +53,6 @@ It would be maybe nice to subclass from zenoh.Subscriber, but it is marked as
 final so we cannot do that. Need to find another workaround
 '''
 
-class MockHandler:
-    def __init__(self, payload: Any):
-        self._payload = payload
-
-    def recv(self) -> "MockReply":
-        """
-        Block until mock liveliness reply is available.
-        """
-        return MockReply(payload=self._payload, ok=(self._payload is not None))
 
 class MockLiveliness:
     def __init__(self, tokens: dict[str, Any]):
@@ -215,14 +207,6 @@ class MockSession:
                 replies.append(value)
         
         return replies
-    
-    def _deserialize(self, payload: bytes) -> Any:
-        # Adjust this based on what you're actually sending
-        try:
-            return int.from_bytes(payload, byteorder="little")
-        except Exception as e:
-            logger.warning(f"Failed to decode payload: {e}")
-            return None
 
     def liveliness(self) -> MockLiveliness:
         """
@@ -275,9 +259,6 @@ class MockComm(Comm):
         logger.info(f"Mock Closing remote connection to {ks.user_key}")
         del self.metas[ks.user_key]
         # del self.session.storage[ks.user_key]
-
-    def add_remote_connection(self, ks: NodeKeySpace, meta: Meta):
-        self.session.put(ks.user_key, "Test/Node")
 
     def remove_remote_connection(self, ks: NodeKeySpace):
         del self.session._storage[ks.user_key]

@@ -5,7 +5,7 @@ from gedge.node.data_type import DataType
 from gedge.node.tag_data import TagData
 
 from typing import Any, Self, TYPE_CHECKING
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import TagValue
 
 class Prop:

@@ -17,7 +17,7 @@ from gedge.node.query import MethodQuery
 from gedge.node.tag_data import TagData
 
 from typing import TYPE_CHECKING, Any, Iterator
-if TYPE_CHECKING:
+if TYPE_CHECKING: # pragma: no cover
     from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagValue, Type, ZenohQueryCallback, TagWriteHandler, MethodHandler
 
 '''
