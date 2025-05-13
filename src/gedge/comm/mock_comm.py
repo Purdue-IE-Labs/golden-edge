@@ -147,7 +147,7 @@ class MockSession:
 
         logger.info(f"Putting: {keyExpr} -> {payload}")
 
-    def get(self, key_expr: Union[KeyExpr, str], payload=None) -> List[Any]:
+    def get(self, key_expr: Union[KeyExpr, str], payload: bytes =None) -> List[Any]:
         # Mimic retrieving data from storage
         logger.info(f"Getting: {key_expr}")
         lookupExpr = KeyExpr(key_expr)
@@ -156,7 +156,8 @@ class MockSession:
             print("Do stuff with the handler provided?")
             print(key_expr)
             write_handler: TagWriteHandler = self.tag_write_handlers.get(key_expr)
-            return write_handler(TagWriteQuery=payload)
+            b = base64.b64decode(payload)
+            return write_handler(query=b)
 
         replies: List[Any] = []
         for key, value in self._storage.items():

@@ -103,6 +103,7 @@ class TestSanity:
         connectNode.add_tag_write_handler("tag/write", handler=handler)
 
         with gedge.mock_connect(config) as session:
+            session._comm.session.tag_write_handlers.update({"test/tag/writes/NODE/writee/TAGS/WRITE/tag/write": handler})
             with session.connect_to_remote(connectNode.key) as remote:
                 remote.tags[tag.path] = tag
                 tagBind = remote.tag_bind(tag.path)
