@@ -7,6 +7,8 @@ from gedge.node.subnode import SubnodeConfig
 from gedge.node.subnode import RemoteSubConnection
 from gedge.node.data_type import DataType
 
+import time
+
 
 from collections import defaultdict
 
@@ -199,6 +201,81 @@ class TestSanity:
                     reply = await remote.write_tag_async("tag/write", value=9)
                     assert reply.code == 200
                     assert reply.error == ""
+
+    def test_call_method(self, capsys):
+        def handler(query: gedge.MethodQuery):
+            name = query.params["name"]
+            speed = query.params["speed"]
+            if len(name) > 30:
+                query.reply(401)
+                return
+            if speed < 0 or speed > 100:
+                query.reply(400, body={"res1": speed})
+                return
+            if name == 'EXCEPTION':
+                raise ValueError("exception thrown in method handler")
+            query.reply(200, body={"res1": speed})
+            time.sleep(2)
+            query.reply(200, body={"res1": speed})
+        
+        # pytest.fail("Yeah Dawg")
+        here = pathlib.Path(__file__).parent
+        callee = gedge.NodeConfig.from_json5(str(here / "test_callee.json5"))
+        callee.add_method_handler("call/method", handler=handler)
+        
+
+        caller = NodeConfig.from_json5_str('''{"key": "test/method/calls/caller"}''')
+
+        def my_callback(reply):
+            print("Callback received:")
+
+            if reply.error:
+                print(f"Error: {reply.code}, {reply.error}")
+            else:
+                print(f"Success: {reply.code}, {reply.props}, {reply.body}")
+
+        with gedge.mock_connect(callee) as calleeSession:
+            with gedge.mock_connect(caller, calleeSession._comm) as callerSession:
+                with callerSession.connect_to_remote(callee.key) as remote:
+                    remote.methods = callee.methods
+                    remote.call_method("call/method", my_callback, name="Jonas", speed=0)
+                    time.sleep(2.1)
+                    captured = capsys.readouterr()
+                    assert "Callback received:" in captured.out
+
+    def test_call_method_iter(self):
+        def handler(query: gedge.MethodQuery):
+            name = query.params["name"]
+            speed = query.params["speed"]
+            if len(name) > 30:
+                query.reply(401)
+                return
+            if speed < 0 or speed > 100:
+                query.reply(400, body={"res1": speed})
+                return
+            if name == 'EXCEPTION':
+                raise ValueError("exception thrown in method handler")
+            query.reply(200, body={"res1": speed})
+            time.sleep(2)
+            query.reply(200, body={"res1": speed})
+        
+        # pytest.fail("Yeah Dawg")
+        here = pathlib.Path(__file__).parent
+        callee = gedge.NodeConfig.from_json5(str(here / "test_callee.json5"))
+        callee.add_method_handler("call/method", handler=handler)
+        
+
+        caller = NodeConfig.from_json5_str('''{"key": "test/method/calls/caller"}''')
+
+        with gedge.mock_connect(callee) as calleeSession:
+            with gedge.mock_connect(caller, calleeSession._comm) as callerSession:
+                with callerSession.connect_to_remote(callee.key) as remote:
+                    remote.methods = callee.methods
+                    responses = list(remote.call_method_iter("call/method", name="Jonas", speed=1))
+                    assert len(responses) == 3
+                    assert responses[0].code == 200
+                    assert responses[1].code == 200
+                    assert responses[2].code == 10
     
 
     

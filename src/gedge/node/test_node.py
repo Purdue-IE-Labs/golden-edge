@@ -37,14 +37,19 @@ class TestNodeSession(NodeSession):
         self.config = config
 
         for key, tag in config.tags.items():
-            comm.session.put(tag.path, tag)
             newKey = NodeKeySpace.from_user_key(config.key)
             if tag.write_handler is not None:
                 newKey = newKey.tag_write_path(tag.path)
             else:
                 newKey = newKey.tag_data_path(tag.path)
 
-            self._comm.session.put(newKey, tag)
+            comm.session.put(newKey, tag)
+
+        for key, method in config.methods.items():
+            newKey = NodeKeySpace.from_user_key(config.key)
+            newKey = newKey.method_path(method.path)
+
+            comm.session.put(newKey, method)
     
     def __enter__(self): 
         return self
