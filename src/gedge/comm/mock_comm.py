@@ -33,7 +33,8 @@ from gedge.node.tag_write_query import TagWriteQuery
 from gedge.node.tag_write_reply import TagWriteReply
 import threading
 
-from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback, TagWriteHandler
+if TYPE_CHECKING: # pragma: no cover
+    from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback, TagWriteHandler
     
 
 ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData | proto.ResponseData
