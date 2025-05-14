@@ -356,7 +356,7 @@ class RemoteConnection:
                     res = replies.get(block=True, timeout=(_timeout - elapsed))
                 else:
                     # if no timeout, we block forever
-                    res = replies.get(block=True)
+                    res = replies.get(block=True) # pragma: no cover
             except Empty:
                 key_expr = method_response_from_call(key_expr)
                 self._comm.cancel_subscription(key_expr)

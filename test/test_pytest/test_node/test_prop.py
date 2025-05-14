@@ -81,7 +81,8 @@ class TestProp:
             (["Hi", "Hello", "Hi again"], DataType.LIST_STRING),
             ([1.1, 2.2, 3.3, 4.4], DataType.LIST_FLOAT),
             ([True, False, True, False], DataType.LIST_BOOL),
-            (DataType,"Error")
+            (DataType,"Error"),
+            ([], DataType.LIST_INT)
         ],ids=(
             "String",
             "Int",
@@ -92,6 +93,7 @@ class TestProp:
             "List of Floats",
             "List of Bools",
             "Error",
+            "Empty List"
         ))
         def test_intuit_type(self, value, type):
             if (type == "Error"):

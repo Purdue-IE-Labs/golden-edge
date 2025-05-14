@@ -34,9 +34,29 @@ class TestParam:
             assert newParam.props.to_value() == param.props.to_value()
 
         def test_from_json5(self):
-            pytest.fail("Yeah I don't know")
+            json = {
+                "type": "int",
+                "props": {
+                    'desc': "me when param"
+                }
+            }
 
-class TestParamData:
-    class TestSanity:
-        def test_params_proto_to_py(self):
-            pytest.fail("Yeah dawg")
+            param = Param.from_json5(json)
+            assert param.type == DataType.INT
+
+    class TestEmpty:
+        def test_from_json5_wrong_type(self):
+            json = 5
+
+            with pytest.raises(ValueError, match="invalid param 5"):
+                param = Param.from_json5(json)
+
+        def test_from_json5_no_type(self):
+            json = {
+                "props": {
+                    'desc': "me when param"
+                }
+            }
+
+            with pytest.raises(ValueError, match="param {'props': {'desc': 'me when param'}} must have type"):
+                param = Param.from_json5(json)

@@ -34,6 +34,7 @@ class TestSanity:
 
         with NodeSession(config, MockComm()) as session:
             assert session.config == config
+            session.connect_to_remote
             session.close()
     
     def test_close(self, capsys):
@@ -228,7 +229,7 @@ class TestSanity:
 
             assert session.is_online(session.ks.user_key) == True
 
-    def test_subnode(self):
+    def test_subnode_no_slash(self):
         from gedge.node.subnode import SubnodeSession
         config = NodeConfig("my/node")
         subnode_name = "subnode0"
@@ -245,6 +246,156 @@ class TestSanity:
             assert isinstance(subSession, SubnodeSession)
             assert subSession.ks == subnode.ks
             assert subSession._comm is session._comm
+
+    def test_subnode_slash(self):
+        from gedge.node.subnode import SubnodeSession
+        config = NodeConfig("my/node")
+
+        subnode0 = SubnodeConfig("subnode0", config.ks, {}, {}, {})
+
+        subnode1 = SubnodeConfig("subnode1", config.ks, {}, {}, {})
+        subnode0.subnodes["subnode1"] = subnode1
+
+        config.subnodes[subnode0.name] = subnode0
+
+
+        with gedge.mock_connect(config) as session:
+            session.connect_to_remote(config.key)
+
+            subSession = session.subnode("subnode0/subnode1")
+
+            assert isinstance(subSession, SubnodeSession)
+            assert subSession.ks == subnode1.ks
+            assert subSession._comm is session._comm
+
+    def test_full_construction(self):
+        json = '''
+        {
+            "key": "test/tag/writes/writee",
+            "tags": [
+                {
+                    "path": "tag/write",
+                    "type": "int",
+                    "writable": true,
+                    "props": {
+                        "desc": "testing a tag write",
+                    },
+                    "responses": [
+                        {
+                            "code": 200, 
+                            "props": {
+                                "desc": "tag updated with value"
+                            }
+                        },
+                        {
+                            "code": 400,
+                            "props": {
+                                "desc": "invalid value (>10)"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "subnodes": [
+                {
+                    "name": "subnode0",
+                    "tags": [
+                        {   
+                            "path": "tag/write",
+                            "type": "int",
+                            "writable": true,
+                            "props": {
+                                "desc": "testing a tag write",
+                            },
+                            "responses": [
+                                {
+                                    "code": 200, 
+                                    "props": {
+                                        "desc": "tag updated with value"
+                                    }
+                                },  
+                                {
+                                    "code": 400,
+                                    "props": {
+                                        "desc": "invalid value (>10)"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "path": "tag/read",
+                            "type": "int",
+                            "props": {
+                                "desc": "testing a tag read",
+                            },
+                        },
+                    ],
+                    "methods": [
+                        {
+                            path: "call/method",
+                            type: "int",
+                            params: {
+                                name: {
+                                    type: "string",
+                                    props: {
+                                        desc: "name of the project"
+                                    }
+                                },
+                                speed: "int",
+                            },
+                            responses: [
+                                {
+                                    code: 200,
+                                    body: {
+                                        res1: {
+                                            type: "int",
+                                            props: {
+                                                desc: "a body item named res1"
+                                            }
+                                        }
+                                    },
+                                    props: {
+                                        desc: "successfully executed method"
+                                    }
+                                },
+                                {
+                                    code: 400,
+                                    body: {
+                                        res1: "int",
+                                    },
+                                    props: {
+                                        desc: "speed must be in range [0, 100]"
+                                    }
+                                },
+                                {
+                                    code: 401,
+                                    props: {
+                                        desc: "name cannot be longer than 30 characters"
+                                    }
+                                }
+                            ],
+                            props: {
+                                desc: "testing method calls"
+                            },
+                        }
+                    ]
+                }
+            ]
+        }
+        '''
+
+        def handler(self):
+            print("Yeah dawg")
+
+        node = NodeConfig.from_json5_str(json)
+        node.add_tag_write_handler("tag/write", handler)
+        node.subnodes.get("subnode0").add_tag_write_handler("tag/write", handler)
+
+        assert node.tags != {}
+        assert node.subnodes != {}
+
+        with gedge.mock_connect(node) as session:
+            assert session.tags == node.tags
 
 class TestSubnode:
     def test_no_subnode(self):
@@ -465,3 +616,18 @@ class TestState:
             b.join()
 
             assert session.is_online(session.ks.user_key) == False
+
+class TestEmpty:
+    def test_update_tag_no_path(self):
+        config = NodeConfig("my/node")
+        tag = config.add_tag("tag/path", int)
+
+        with gedge.mock_connect(config) as session:
+            commSession = session._comm.session
+
+            tag_key_expr = session.ks.tag_data_path(tag.path)
+            
+            firstTagGet = commSession.get(tag_key_expr)
+            
+            with pytest.raises(TagLookupError, match="Tag None not found on node node"):
+                session.update_tag(None, 10)
