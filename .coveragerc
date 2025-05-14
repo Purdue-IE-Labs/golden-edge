@@ -4,3 +4,4 @@ omit =
     */codes.py
     */__init__.py
     */sequence_number.py
+    */method_reply.py

@@ -25,6 +25,7 @@ class TestSanity:
         (DataType.LIST_FLOAT),
         (DataType.LIST_STRING),
         (DataType.LIST_BOOL),
+        (None)
     ], ids=(
         "int",
         "float",
@@ -44,9 +45,14 @@ class TestSanity:
         "DataType.LIST_FLOAT",
         "DataType.LIST_STRING",
         "DataType.LIST_BOOL",
+        "None"
     ))
     def test_from_type(self, type):
         # Creates a DataType instance from type
+        if type is None:
+            with pytest.raises(ValueError, match="Illegal type None for tag"):
+                instance = DataType.from_type(type)
+                return
         instance = DataType.from_type(type)
 
         # The passed type as a string
@@ -104,8 +110,13 @@ class TestSanity:
         ("list[float]", DataType.LIST_FLOAT),
         ("list[string]", DataType.LIST_STRING),
         ("list[bool]", DataType.LIST_BOOL),
+        ("dict[any]", None)
     ])
     def test_from_json5(self, type, expected_value):
+        if expected_value is None:
+            with pytest.raises(ValueError, match="Invalid type None"):
+                instance = DataType.from_json5(type)
+                return        
         instance = DataType.from_json5(type)
         assert isinstance(instance, DataType)
         assert instance == expected_value

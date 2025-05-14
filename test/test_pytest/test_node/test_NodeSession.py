@@ -28,6 +28,13 @@ class TestSanity:
 
         with gedge.mock_connect(config) as session:
             config.key = "something/to/do"
+
+    def test_context_manager(self):
+        config = NodeConfig("my/node")
+
+        with NodeSession(config, MockComm()) as session:
+            assert session.config == config
+            session.close()
     
     def test_close(self, capsys):
         config = NodeConfig("my/node")
@@ -457,4 +464,4 @@ class TestState:
             a.join()
             b.join()
 
-            assert session.is_online(session.ks.user_key) == False            
+            assert session.is_online(session.ks.user_key) == False

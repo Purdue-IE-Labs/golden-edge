@@ -1,0 +1,26 @@
+{
+    "tags": [
+        {
+            "path": "tag/write",
+            "type": "int",
+            "writable": true,
+            "props": {
+                "desc": "testing a tag write",
+            },
+            "responses": [
+                {
+                    "code": 200, 
+                    "props": {
+                        "desc": "tag updated with value"
+                    }
+                },
+                {
+                    "code": 400,
+                    "props": {
+                        "desc": "invalid value (>10)"
+                    }
+                }
+            ]
+        },
+    ],
+}

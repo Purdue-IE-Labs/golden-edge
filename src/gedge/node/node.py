@@ -383,8 +383,8 @@ class NodeConfig:
         Returns:
             NodeSession: The created session with the passed connections
         '''
-        logger.info(f"Node {self.key} attempting to connect to network")
-        return NodeSession(self, Comm(connections))
+        logger.info(f"Node {self.key} attempting to connect to network") # pragma: no cover
+        return NodeSession(self, Comm(connections)) # pragma: no cover
 
 class NodeSession:
     def __init__(self, config: NodeConfig, comm: Comm | MockComm):

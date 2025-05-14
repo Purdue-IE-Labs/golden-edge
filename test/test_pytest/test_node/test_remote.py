@@ -39,6 +39,33 @@ class TestSanity:
                 remote.tags[tag.path] = tag
                 remote.add_tag_data_callback(tag.path, callback)
 
+    def test_all_callbacks(self):
+        config = NodeConfig("my/node")
+        json = '''
+            {
+                "key": "test/tag/writes/writee",
+            }
+        '''
+        connectNode = NodeConfig.from_json5_str(json)
+        tag = connectNode.add_tag("tag/path", int)
+
+        def state_callback(self):
+            print("State Callaback girl!!!!!")
+
+        def meta_callback(self):
+            print("Meta Callaback girl!!!!!")
+
+        def liveliness_callback(self):
+            print("Liveliness Callaback girl!!!!!")
+
+        def tag_data_callback(self):
+            print("Tag Data Callaback girl!!!!!")
+
+        with gedge.mock_connect(config) as session:
+            with session.connect_to_remote(connectNode.key, state_callback, meta_callback, liveliness_callback, tag_data_callback) as remote:
+                remote.tags[tag.path] = tag
+                # remote.add_tag_data_callback(tag.path, callback)
+
     def test_add_state_callback(self):
         config = NodeConfig("my/node")
         json = '''

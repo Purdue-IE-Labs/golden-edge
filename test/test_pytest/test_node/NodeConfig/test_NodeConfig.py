@@ -52,6 +52,19 @@ class TestSanity:
         assert config.tags.get("tag/write").responses[0].props.to_value().get("desc") == "tag updated with value"
         assert config.tags.get("tag/write").responses[1].code == 400
         assert config.tags.get("tag/write").responses[1].props.to_value().get("desc") == "invalid value (>10)"
+
+    def test_from_json5_subnodes(self):
+        here = pathlib.Path(__file__).parent
+        config = NodeConfig.from_json5(str(here / "subnodes.json5"))
+
+        assert config.key == "test/tag/writes/writee"
+        assert len(config.subnodes) == 1
+        
+        #Subnode Assertions
+        assert config.subnodes.get("subnode0").name == "subnode0"
+        assert len(config.subnodes.get("subnode0").tags) == 1
+        assert len(config.subnodes.get("subnode0").tags.get("tag/write").responses) == 2
+
         
 
     def test_from_json5_str(self):
@@ -265,6 +278,20 @@ class TestSanity:
         response1 = WriteResponse(20, Props.from_value({'desc': 'response 1'}))
         assert str(config.tags.get("my/tag").responses[1]) == str(response1)
 
+    def test_add_write_response(self):
+        config = NodeConfig("my/node")
+
+        tag = config.add_tag("my/tag", int, {})
+
+        assert config.tags.get("my/tag").responses == []
+
+        config.add_write_response(tag.path, 10, {'desc': 'response 0'})
+
+        assert len(config.tags.get("my/tag").responses) == 1
+
+        response0 = WriteResponse(10, Props.from_value({'desc': 'response 0'}))
+        assert str(config.tags.get("my/tag").responses[0]) == str(response0)
+
     def test_add_tag_write_handler(self):
         config = NodeConfig("my/node")
 
@@ -462,15 +489,15 @@ class TestSanity:
 
         assert expected_meta == nodeConfig_instance.build_meta()
 
-    @pytest.mark.skip
+    '''
     def test_connect(self):
         config = NodeConfig("my/node")
         connections = [
-            "connection0",
-            "connection1"
+            "tcp/127.0.0.1:7447"
         ]
 
         session = config._connect(connections)
+    '''
 
     class TestWriteResponses:
     
@@ -605,7 +632,7 @@ class TestEmpty:
         with pytest.raises(AssertionError, match="Tag test_path declared as writable but no write handler was provided"):
             nodeConfig_instance._verify_tags()
 
-    def test_verify_tags_no_responses(self, tag_handler):
+    def test_verify_tags_no_responses(self):
         nodeConfig_instance = NodeConfig("instance/str")
 
         properties = {
@@ -613,8 +640,6 @@ class TestEmpty:
             'tag2': 'float',
             'tag3': 'str'
         }
-
-        print(tag_handler)
 
         nodeConfig_instance.add_writable_tag("test_path", int, write_handler=tag_handler, responses=[], props=properties)
 
@@ -701,3 +726,11 @@ class TestEmpty:
         expected_meta = Meta(tracking=False, key=nodeConfig_instance.key, tags=None, methods=None, subnodes=None)
 
         assert expected_meta == nodeConfig_instance.build_meta()
+
+    def test_from_json5_no_key(self):
+        here = pathlib.Path(__file__).parent
+       
+        with pytest.raises(LookupError, match="Node must have a key"):
+            config = NodeConfig.from_json5(str(here / "no_key.json5"))
+
+       

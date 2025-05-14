@@ -44,9 +44,59 @@ class TestMethod:
             assert str(newMethod.params) == str(method.params)
             assert newMethod.responses == method.responses
 
-        @pytest.mark.skip
         def test_from_json5(self):
-            pytest.fail("I don't know how do to this")
+            json = {
+                "path": "call/method",
+                "type": "int",
+                "params": {
+                    "name": {
+                        "type": "string",
+                        "props": {
+                        "desc": "name of the project"
+                        }
+                    },
+                    "speed": "int",
+                },
+                "responses": [
+                    {
+                        "code": 200,
+                        "body": {
+                            "res1": {
+                                "type": "int",
+                                "props": {
+                                    "desc": "a body item named res1"
+                                }
+                            }
+                        },
+                        "props": {
+                            "desc": "successfully executed method"
+                        }
+                    },
+                    {
+                        "code": 400,
+                        "body": {
+                            "res1": "int",
+                        },
+                        "props": {
+                            "desc": "speed must be in range [0, 100]"
+                        }
+                    },
+                    {
+                        "code": 401,
+                        "props": {
+                            "desc": "name cannot be longer than 30 characters"
+                        }
+                    }
+                ],
+                "props": {
+                    "desc": "testing method calls"
+                },
+            }
+
+            method = Method.from_json5(json)
+
+            assert method.path == "call/method"
+            assert len(method.responses) == 3
 
         def test_add_response(self):
             properties = {
@@ -97,6 +147,63 @@ class TestMethod:
             method.add_response(None, {}, {})
 
             assert str(method.responses) == str([MethodResponse(None, {}, {})])
+
+        def test_json5_wrong_type(self):
+            json = 5
+
+            with pytest.raises(ValueError, match="Invalid method 5"):
+                method = Method.from_json5(json)
+
+        def test_json5_no_path(self):
+            json = {
+                "type": "int",
+                "params": {
+                    "name": {
+                        "type": "string",
+                        "props": {
+                        "desc": "name of the project"
+                        }
+                    },
+                    "speed": "int",
+                },
+                "responses": [
+                    {
+                        "code": 200,
+                        "body": {
+                            "res1": {
+                                "type": "int",
+                                "props": {
+                                    "desc": "a body item named res1"
+                                }
+                            }
+                        },
+                        "props": {
+                            "desc": "successfully executed method"
+                        }
+                    },
+                    {
+                        "code": 400,
+                        "body": {
+                            "res1": "int",
+                        },
+                        "props": {
+                            "desc": "speed must be in range [0, 100]"
+                        }
+                    },
+                    {
+                        "code": 401,
+                        "props": {
+                            "desc": "name cannot be longer than 30 characters"
+                        }
+                    }
+                ],
+                "props": {
+                    "desc": "testing method calls"
+                },
+            }
+
+            with pytest.raises(LookupError):
+                method = Method.from_json5(json)
 
 class TestMethodResponse:
     class TestSanity:
