@@ -9,6 +9,10 @@ from gedge.node.data_type import DataType
 from gedge.node.prop import Props
 from gedge.comm.mock_comm import MockComm
 
+import logging
+
+logger = logging.getLogger(__file__)
+
 # Note: This class contains all of the subnode test functions
 
 class TestSubnodeConfig:
@@ -197,7 +201,108 @@ class TestSubnodeSession:
 
             assert len(subnodeSession.subnodes) != 0
 
-            subnodeSession.subnode()
+            subSubnodeSession = subnodeSession.subnode(subSubnode.name)
+
+            assert subSubnodeSession.config == subSubnode
+            assert subSubnodeSession.ks == subSubnode.ks
+            assert subSubnodeSession.tags == subSubnode.tags
+            assert subSubnodeSession.methods == subSubnode.methods
+            assert subSubnodeSession.subnodes == subSubnode.subnodes
+
+        def test_close(self):
+            parent = NodeConfig("my/name")
+            subnode = SubnodeConfig("subnode", parent.ks, {}, {}, {})
+
+            subnodeSession = SubnodeSession(subnode, MockComm())
+
+            subnodeSession.close()
+
+            assert subnodeSession.nodes_on_network() == []
+
+class TestRemoteSubConnection:
+    class TestSanity:
+        def test_init(self):
+            parent = NodeConfig("my/node")
+            subnode = SubnodeConfig("subnode", parent.ks, {}, {}, {})
+            parent.subnodes[subnode.name] = subnode
+            remote = RemoteSubConnection("connection", subnode.ks, subnode, MockComm(), subnode.name)
+
+            assert remote.key == "connection"
+            assert remote.ks == subnode.ks
+            assert remote.node_id == subnode.name
+
+        def test_subnode_no_slash(self):
+            parent = NodeConfig("my/node")
+            subnode = SubnodeConfig("subnode", parent.ks, {}, {}, {})
+            parent.subnodes[subnode.name] = subnode
+            subnode0 = SubnodeConfig("subnode0", parent.ks, {}, {}, {})
+            subnode.subnodes[subnode0.name] = subnode0
+            remote = RemoteSubConnection("connection", subnode.ks, subnode, MockComm(), subnode.name)
+
+            remote.subnodes[subnode0.name] = subnode0
+
+            subRemote = remote.subnode(subnode0.name)
+
+            assert subRemote.node_id == remote.node_id
+            assert subRemote.key == subnode0.name
+
+        def test_subnode_slash(self):
+            parent = NodeConfig("my/node")
+            subnode = SubnodeConfig("subnode", parent.ks, {}, {}, {})
+            parent.subnodes[subnode.name] = subnode
+            subnode0 = SubnodeConfig("subnode0", parent.ks, {}, {}, {})
+            subnode.subnodes[subnode0.name] = subnode0
+            subnode1 = SubnodeConfig("subnode1", parent.ks, {}, {}, {})
+            subnode0.subnodes[subnode1.name] = subnode1
+            remote = RemoteSubConnection("connection", subnode.ks, subnode, MockComm(), subnode.name)
+
+            remote.subnodes[subnode0.name] = subnode0
+
+            subRemote = remote.subnode("subnode0/subnode1")
+
+            assert subRemote.key == "subnode0/subnode1"
+            assert subRemote.node_id == remote.node_id
+
+        def test_close(self, caplog):
+            parent = NodeConfig("my/node")
+            subnode = SubnodeConfig("subnode", parent.ks, {}, {}, {})
+            parent.subnodes[subnode.name] = subnode
+            remote = RemoteSubConnection("connection", subnode.ks, subnode, MockComm(), subnode.name)
+
+            with caplog.at_level(logging.WARNING):
+                remote.close()
+
+            assert "Cannot close a remote subnode connection" in caplog.text
+
+    class TestEmpty:
+        def test_subnode_slash(self):
+            parent = NodeConfig("my/node")
+            subnode = SubnodeConfig("subnode", parent.ks, {}, {}, {})
+            parent.subnodes[subnode.name] = subnode
+            subnode0 = SubnodeConfig("subnode0", parent.ks, {}, {}, {})
+            subnode.subnodes[subnode0.name] = subnode0
+            
+            remote = RemoteSubConnection("connection", subnode.ks, subnode, MockComm(), subnode.name)
+
+            remote.subnodes[subnode0.name] = subnode0
+
+            with pytest.raises(ValueError, match="No subnode "):
+                subRemote = remote.subnode("subnode0/")
+
+        def test_subnode_no_slash(self):
+            parent = NodeConfig("my/node")
+            subnode = SubnodeConfig("subnode", parent.ks, {}, {}, {})
+            parent.subnodes[subnode.name] = subnode
+            subnode0 = SubnodeConfig("subnode0", parent.ks, {}, {}, {})
+            subnode.subnodes[subnode0.name] = subnode0
+            remote = RemoteSubConnection("connection", subnode.ks, subnode, MockComm(), subnode.name)
+
+            remote.subnodes[subnode0.name] = subnode0
+
+            with pytest.raises(ValueError, match="No subnode subnode1"):
+                subRemote = remote.subnode("subnode1")
+            
+            
             
 
 

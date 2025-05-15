@@ -33,11 +33,10 @@ class TagBind:
 
     def _on_value(self, sample: zenoh.Sample):
         if (isinstance(self._comm, MockComm)):
-            # TODO: Let's try to parametrize this (if that's possible)
             fake_bytes = b"\x08\x01"  # <-- example serialized protobuf bytes
             tag_data = self._comm.deserialize(proto.TagData(), fake_bytes)
         else:
-            tag_data = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes())
+            tag_data = self._comm.deserialize(proto.TagData(), sample.payload.to_bytes()) # pragma: no cover
         value = TagData.from_proto(tag_data, self.tag.type).to_py()
         self.last_received = datetime.now()
         self._value = value

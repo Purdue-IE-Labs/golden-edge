@@ -113,7 +113,7 @@ class RemoteSubConnection(RemoteConnection):
     
     def subnode(self, name: str) -> RemoteSubConnection:
         def on_close(key):
-            pass
+            pass # pragma: no cover
         if "/" in name:
             curr_node = self
             subnodes = name.split("/")

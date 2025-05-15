@@ -107,6 +107,9 @@ class MockSubscriber:
         self.key_expr: KeyExpr = key_expr
         self.handler: Callable = handler
 
+    def undeclare(self):
+        logger.info("Subscriber undeclared")
+
 class MockSession:
     def __init__(self):
         self._storage = {}  # A simple dictionary to mimic key-value storage
