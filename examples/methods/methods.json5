@@ -1,0 +1,56 @@
+{
+    key: "gedge/examples/methods/callee",
+    methods: [
+        {
+            path: "my/method/path",
+            params: [
+                {
+                    path: "param1",
+                    base_type: "int",
+                    props: {
+                        desc: "name of the project"
+                    }
+                },
+                {
+                    path: "param2",
+                    model_path: "bar/VERSION/2",
+                }
+            ],
+            responses: [
+                {
+                    code: 200,
+                    type: "ok",
+                    body: [
+                        {
+                            path: "res1",
+                            base_type: "int",
+                            props: {
+                                desc: "a body item named res1"
+                            }
+                        }
+                    ],
+                    props: {
+                        desc: "successfully executed method"
+                    }
+                },
+                {
+                    code: 400,
+                    type: "err",
+                    body: [
+                        {
+                            path: "res1",
+                            base_type: "int"
+                        }
+                    ],
+                },
+                {
+                    code: 202,
+                    type: "info"
+                }
+            ],
+            props: {
+                desc: "example method calls"
+            },
+        }    
+    ]
+}

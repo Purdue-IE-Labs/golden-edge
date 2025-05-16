@@ -1,0 +1,14 @@
+{
+    path: "parent",
+    version: 1,
+    tags: [
+        // base tag
+        {
+            path: "foo/bar/baz/qux",
+            base_type: "float",
+            props: {
+                desc: "A parent thing that should be embedded",
+            }
+        },
+    ]
+}

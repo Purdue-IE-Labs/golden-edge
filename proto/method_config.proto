@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "response_config.proto";
+import "data_model_config.proto";
+import "prop.proto";
+
+message MethodConfig {
+    string path = 1;
+    repeated DataItemConfig params = 2;
+    repeated ResponseConfig responses = 3;
+    repeated Prop props = 4;
+}

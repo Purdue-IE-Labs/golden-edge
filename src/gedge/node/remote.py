@@ -2,24 +2,26 @@ from __future__ import annotations
 
 from queue import Queue, Empty
 import time
-from gedge.node.tag_data import TagData
-from gedge.node.method import Method
-from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponse
+from gedge.node.method import MethodConfig
+from gedge.node.method_response import ResponseConfig, get_response_config
 from gedge.node import codes
 from gedge import proto
 from gedge.node.error import MethodLookupError, SessionError, TagLookupError
 from gedge.comm.comm import Comm
-from gedge.node.tag import Tag
 from gedge.node.tag_bind import TagBind
 from gedge.comm.keys import *
-import uuid
 
 from typing import Any, Iterator, Callable, TYPE_CHECKING
 
-from gedge.node.tag_write_reply import TagWriteReply
+from gedge.node.reply import Response
+from gedge.py_proto.base_data import BaseData
+from gedge.py_proto.conversions import dict_proto_to_value, dict_value_to_proto, list_from_proto, props_to_json5
+from gedge.py_proto.data_model import DataItem
+from gedge.py_proto.data_model_config import DataModelConfig
+from gedge.py_proto.data_model_ref import DataModelRef
+from gedge.py_proto.tag_config import Tag, TagConfig 
 if TYPE_CHECKING:
-    from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
+    from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback, TagValue, TagBaseValue
     from gedge.node.subnode import RemoteSubConnection
 
 import logging
@@ -38,16 +40,18 @@ class RemoteConnection:
         TODO: perhaps we should subscribe to this node's meta message, in which case all the following utility variables (self.tags, self.methods, self.responses) 
         would need to react to that (i.e. be properties)
         '''
+        if not self._comm.is_online(ks):
+            raise ValueError(f"Node {ks.user_key} is not online, so it cannot be connected to!")
         self.meta = self._comm.pull_meta_message(ks)
-        tags: list[Tag] = [Tag.from_proto(t) for t in self.meta.tags]
-        self.tags = {t.path: t for t in tags}
-        methods: list[Method] = [Method.from_proto(m) for m in self.meta.methods]
-        self.methods = {m.path: m for m in methods}
-        self.responses: dict[str, dict[int, MethodResponse]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.tag_config = self.meta.tags
+        self.methods = self.meta.methods
+        self.responses: dict[str, dict[int, ResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
+        self.models = self.meta.models
 
         from gedge.node.subnode import SubnodeConfig
-        subnodes: list[SubnodeConfig] = [SubnodeConfig.from_proto(s, self.ks) for s in self.meta.subnodes]
-        self.subnodes: dict[str, SubnodeConfig] = {s.name: s for s in subnodes}
+        self.subnodes: dict[str, SubnodeConfig] = self.meta.subnodes
+
+        self.binds: dict[str, TagBind] = {}
 
     def __enter__(self):
         return self
@@ -75,10 +79,20 @@ class RemoteConnection:
         Returns:
             None
         '''
-        if path not in self.tags:
+        if not self.tag_config.is_valid_path(path):
             raise TagLookupError(path, self.ks.name)
-
-        self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tags)
+        
+        # group = self.tag_config.get_group(path)
+        # if group:
+        #     self.add_tag_group_callback(group, on_tag_data)
+        #     return
+        self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tag_config)
+    
+    def add_tag_group_callback(self, group_path: str, on_group_data: TagDataCallback) -> None:
+        if not self.tag_config.is_valid_group_path(group_path):
+            raise LookupError(group_path)
+        
+        self._comm.group_data_subscriber(self.ks, group_path, on_group_data, self.tag_config)
 
     def add_state_callback(self, on_state: StateCallback) -> None:
         '''
@@ -149,11 +163,15 @@ class RemoteConnection:
         Returns:
             TagBind: The new TagBind
         '''
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        tag = self.tags[path]
-        bind = TagBind(self.ks, self._comm, tag, value, self.write_tag)
+        tag = self.tag_config.get_tag(path)
+        if tag.is_model_ref():
+            raise ValueError(f"cannot bind to a model tag {path}")
+        bind = TagBind(self.ks, path, self._comm, self.tag_config, value, self._write_tag, self._on_tag_bind_close)
+        self.binds[path] = bind
         return bind
+
+    def _on_tag_bind_close(self, path: str):
+        del self.binds[path]
     
     def subnode(self, name: str) -> RemoteSubConnection:
         '''
@@ -189,7 +207,7 @@ class RemoteConnection:
         r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r
 
-    def _write_tag(self, path: str, value: Any) -> TagWriteReply:
+    def _write_tag(self, path: str, value: TagBaseValue, tag: Tag) -> Response:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
@@ -201,29 +219,23 @@ class RemoteConnection:
             TagWriteReply: The reply from the tag write
         '''
         logger.info(f"Remote node '{self.key}' received write request at path '{path}' with value '{value}'")
-        if path not in self.tags:
-            raise TagLookupError(path, self.ks.name)
-        tag = self.tags[path]
-        response = self._comm.write_tag(self.ks, tag.path, TagData.py_to_proto(value, tag.type))
-        code, error = response.code, response.error
+        config = self.tag_config.get_config(path)
+        base_type = config.get_base_type()
+        if not base_type:
+            raise ValueError("cannot write to model type")
+        response = self._comm.write_tag(self.ks, path, BaseData.from_value(value, base_type))
+        code = response.code
 
-        '''
-        Bit of a design decision here. The issue is that golden-edge reserved codes do not have 
-        any props, so we would get an error here. So, if the error field is not empty, we 
-        can assume that something went wrong and the user should only be looking at 
-        'code' and 'error' rather than props, because they are sorta in 'undefined behavior'.
-        For well-defined errors (i.e. 401: project already running), the user should 
-        define these in the meta and have the requisite props.
-        '''
-        props = {}    
-        if not error:
-            r = [r for r in self.tags[path].responses if r.code == code] 
-            props = r[0].props.to_value()
+        responses, _ = self.tag_config.all_writable_tags()[path]
+        config = get_response_config(code, responses)
 
-        reply = TagWriteReply(self.ks.tag_write_path(path), code, error, value, props)
+        body: dict[str, TagValue] = dict_proto_to_value(dict(response.body), config.body)
+        props = props_to_json5(config.props)
+
+        reply = Response(self.ks.tag_write_path(path), code, config.type, body, props)
         return reply
 
-    def write_tag(self, path: str, value: Any) -> TagWriteReply:
+    def write_tag(self, path: str, value: Any) -> Response:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
@@ -240,9 +252,13 @@ class RemoteConnection:
         Returns:
             TagWriteReply: The reply from the tag write
         '''
-        return self._write_tag(path, value)
+        if path not in self.tag_config.all_writable_tags():
+            raise LookupError(f"tag {path} not writable")
 
-    async def write_tag_async(self, path: str, value: Any) -> TagWriteReply:
+        tag = self.tag_config.get_tag(path)
+        return self._write_tag(path, value, tag)
+
+    async def write_tag_async(self, path: str, value: Any) -> Response:
         '''
         Writes the passed value to the tag at the passed path and returns the reply
 
@@ -261,8 +277,13 @@ class RemoteConnection:
         Returns:
             TagWriteReply: The reply from the tag write
         '''
-        return self._write_tag(path, value)
+        if path not in self.tag_config.all_writable_tags():
+            raise LookupError(f"tag {path} not writable")
+
+        tag = self.tag_config.get_tag(path)
+        return self._write_tag(path, value, tag)
     
+    # TODO: this should have a timeout
     def call_method(self, _path: str, _on_reply: MethodReplyCallback, **kwargs) -> None:
         '''
         Registers the passed MethodReplyCallback and then calls the method at the passed path and all replies get routed to the passed Callback
@@ -289,18 +310,14 @@ class RemoteConnection:
             raise MethodLookupError(_path, self.ks.name)
         
         method = self.methods[_path]
-        params: dict[str, proto.TagData] = {}
-        for key, value in kwargs.items():
-            data_type = method.params[key].type
-            params[key] = TagData.py_to_proto(value, data_type)
-
+        params = method.params_py_to_proto(kwargs) 
         logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
         self._comm.query_method(self.ks, _path, self.node_id, params, _on_reply, self.methods[_path])
     
     # CAUTION: because this is a generator, just calling it (session.call_method_iter(...)) will do nothing,
     # it must be iterated upon to actually run
     # timeout in milliseconds
-    def call_method_iter(self, _path: str, _timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
+    def call_method_iter(self, _path: str, _timeout: float | None = None, **kwargs) -> Iterator[Response]:
         '''
         Calls the method along the passed path with an optional timeout
 
@@ -329,16 +346,12 @@ class RemoteConnection:
 
         method = self.methods[_path]
         for param in method.params:
-            if param not in kwargs:
+            if param.path not in kwargs:
                 raise LookupError(f"Parameter {param} defined in config but not included in method call for method {method.path}")
         
-        params: dict[str, proto.TagData] = {}
-        for key, value in kwargs.items():
-            data_type = method.params[key].type
-            params[key] = TagData.py_to_proto(value, data_type)
-        
-        replies: Queue[MethodReply] = Queue()
-        def _on_reply(reply: MethodReply) -> None:
+        params: dict[str, proto.DataItem] = dict_value_to_proto(kwargs, method.params)
+        replies: Queue[Response] = Queue()
+        def _on_reply(reply: Response) -> None:
             replies.put(reply)
 
         logger.info(f"Querying method of node {self.ks.name} at path {_path} with params {params.keys()}")
@@ -360,8 +373,7 @@ class RemoteConnection:
                 key_expr = method_response_from_call(key_expr)
                 self._comm.cancel_subscription(key_expr)
                 raise TimeoutError(f"Timeout of method call at path {method.path} exceeded")
-            # Design decision: we don't give a codes.DONE to the iterator that the user uses
-            # However, we do give them method and tag errors because they could be useful
             yield res
-            if res.code in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
+            if codes.is_final_method_response(res):
+                logger.debug("Ending call_method_iter iterator")
                 return

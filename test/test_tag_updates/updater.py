@@ -9,11 +9,11 @@ config_str = json5.dumps({
     "tags": [
         {
             "path": "my/tag/1",
-            "type": "int",
+            "base_type": "int",
         },
         {
             "path": "my/tag/2",
-            "type": "float",
+            "base_type": "float",
         }
     ]
 })

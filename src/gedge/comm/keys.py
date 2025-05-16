@@ -1,4 +1,7 @@
 from __future__ import annotations
+from sys import version
+
+import zenoh
 
 NODE = "NODE"
 META = "META"
@@ -9,6 +12,12 @@ STATE = "STATE"
 METHODS = "METHODS"
 RESPONSE = "RESPONSE"
 SUBNODES = "SUBNODES"
+MODELS = "MODELS"
+VERSION = "VERSION"
+GROUPS = "GROUPS"
+
+import logging
+logger = logging.getLogger(__name__)
 
 def key_join(*components: str):
     return "/".join(components)
@@ -39,11 +48,37 @@ def method_key_prefix(prefix: str, name: str):
 
 def liveliness_key_prefix(prefix: str, name: str):
     return node_key_prefix(prefix, name)
+
 def subnodes_key_prefix(prefix: str, node_name: str):
     return key_join(node_key_prefix(prefix, node_name), SUBNODES)
 
 def method_response_from_call(key_expr: str):
     return key_join(key_expr, RESPONSE)
+
+def model_fetch(path: str):
+    # * is version
+    return key_join(MODELS, path, VERSION, "*")
+
+def version_from_model(key_expr: str) -> int:
+    v = key_expr.split('/')[-1]
+    return int(v)
+
+def parse_model_path(key_expr: str) -> tuple[str, int]:
+    version = version_from_model(key_expr)
+
+    # we ignore MODELS and version, so 1:-1
+    components = key_expr.split("/")
+    components = components[(components.index(MODELS) + 1) : components.index(VERSION)]
+    return key_join(*components), version
+
+def add_model_version(key_expr: str, version: int) -> str:
+    return key_join(key_expr, VERSION, str(version))
+
+def model_path(path: str, version: int) -> str:
+    return add_model_version(model_path_latest(path), version)
+
+def model_path_latest(path: str) -> str:
+    return key_join(MODELS, path)
 
 def internal_to_user_key(key_expr: str):
     prefix = NodeKeySpace.prefix_from_key(key_expr)
@@ -51,17 +86,31 @@ def internal_to_user_key(key_expr: str):
     return key_join(prefix, name)
 
 def overlap(key1: str, key2: str):
-    # incredibly simple algorithm to handle * semantics like zenoh does
-    # TODO: handle ** and ? in the future
-    key1_split = key1.split('/')
-    key2_split = key2.split('/')
-    if len(key1_split) != len(key2_split):
-        return False
-    
-    for key1_component, key2_component in zip(key1_split, key2_split):
-        if key1_component != "*" and key2_component != "*" and key1_component != key2_component:
-            return False
-    return True
+    k1 = zenoh.KeyExpr(key1)
+    return k1.intersects(zenoh.KeyExpr(key2))
+
+def tag_path_from_key(key_expr: str):
+    components = key_expr.split("/")
+    try:
+        i = components.index(DATA)
+    except:
+        try: 
+            i = components.index(WRITE)
+        except:
+            raise ValueError(f"No tag path found in {key_expr}")
+    return key_join(*components[(i + 1):])
+
+def group_path_from_key(key_expr: str):
+    components = key_expr.split("/")
+    try:
+        j = components.index(DATA)
+    except:
+        try: 
+            j = components.index(WRITE)
+        except:
+            raise ValueError(f"No tag path found in {key_expr}")
+    i = components.index(GROUPS)
+    return key_join(*components[(i+1):j])
 
 # this defines a key prefix and a name
 class NodeKeySpace:
@@ -98,7 +147,7 @@ class NodeKeySpace:
     @staticmethod
     def prefix_from_key(key_expr: str):
         components = key_expr.split(NODE)
-        return components[0]
+        return components[0][:-1]
     
     @staticmethod
     def internal_to_user_key(key_expr: str):
@@ -176,6 +225,7 @@ class NodeKeySpace:
         self.state_key_prefix = state_key_prefix(prefix, name)
         self.tag_data_key_prefix = tag_data_key_prefix(prefix, name)
         self.tag_write_key_prefix = tag_write_key_prefix(prefix, name)
+        self.group_key_prefix = key_join(self.node_key_prefix, TAGS, GROUPS)
         self.liveliness_key_prefix = liveliness_key_prefix(prefix, name)
         self.method_key_prefix = method_key_prefix(prefix, name)
         self.subnodes_key_prefix = subnodes_key_prefix(prefix, name)
@@ -185,6 +235,12 @@ class NodeKeySpace:
     
     def tag_write_path(self, path: str):
         return key_join(self.tag_write_key_prefix, path)
+    
+    def group_data_path(self, path: str):
+        return key_join(self.group_key_prefix, path, DATA)
+
+    def group_write_path(self, path: str):
+        return key_join(self.group_key_prefix, path, WRITE)
     
     def method_path(self, path: str):
         return key_join(self.method_key_prefix, path)
@@ -202,6 +258,7 @@ class NodeKeySpace:
     def contains(self, key_expr: str):
         name = self.name_from_key(key_expr)
         prefix = self.prefix_from_key(key_expr)
+        # logger.debug(f"Comparing {name}:{self.name} and {prefix}:{self.prefix}")
         return name == self.name and prefix == self.prefix
     
     def __repr__(self) -> str:

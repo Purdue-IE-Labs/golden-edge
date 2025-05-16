@@ -4,17 +4,17 @@ import pathlib
 def vice_tag_write_handler(query: gedge.TagWriteQuery) -> None:
     print("vice tag write handler")
     if query.value > 10:
-        query.reply(400)
+        query.reply_err(400)
         return
-    query.reply(200)
+    query.reply_ok(200)
 
 def mill_method_handler(query: gedge.MethodQuery) -> None:
     print("mill method handler")
-    query.reply(401)
+    query.reply_err(401)
 
 def inner_subnode_method_handler(query: gedge.MethodQuery) -> None:
     print("inner subnode method handler")
-    query.reply(200)
+    query.reply_ok(200)
 
 here = pathlib.Path(__file__).parent / "gedge.json5"
 node = gedge.NodeConfig.from_json5(str(here))

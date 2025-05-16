@@ -22,16 +22,17 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from . import tag_data_pb2 as tag__data__pb2
+from . import type_pb2 as type__pb2
+from . import base_data_pb2 as base__data__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nprop.proto\x1a\x0etag_data.proto\"8\n\x04Prop\x12\x17\n\x04type\x18\x07 \x01(\x0e\x32\t.DataType\x12\x17\n\x05value\x18\x08 \x01(\x0b\x32\x08.TagDatab\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nprop.proto\x1a\ntype.proto\x1a\x0f\x62\x61se_data.proto\"F\n\x04Prop\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x17\n\x04type\x18\x02 \x01(\x0e\x32\t.BaseType\x12\x18\n\x05value\x18\x03 \x01(\x0b\x32\t.BaseDatab\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'prop_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_PROP']._serialized_start=30
-  _globals['_PROP']._serialized_end=86
+  _globals['_PROP']._serialized_start=43
+  _globals['_PROP']._serialized_end=113
 # @@protoc_insertion_point(module_scope)

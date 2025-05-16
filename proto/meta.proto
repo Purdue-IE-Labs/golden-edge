@@ -1,13 +1,16 @@
 syntax = "proto3";
 
-import "method.proto";
-import "tag.proto";
-import "subnode.proto";
+import "method_config.proto";
+import "tag_config.proto";
+import "subnode_config.proto";
+import "data_model_config.proto";
+import "prop.proto";
 
 message Meta {
-    optional bool tracking = 7;
-    string key = 8;
-    repeated Tag tags = 9;
-    repeated Method methods = 10;
-    repeated Subnode subnodes = 11;
+    string key = 1;
+    TagConfig tags = 2;
+    repeated MethodConfig methods = 3;
+    repeated SubnodeConfig subnodes = 4;
+    repeated DataModelConfig models = 5;
+    repeated Prop props = 6;
 }

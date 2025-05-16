@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+// These messages are defined because "repeated" is not allowed in a "oneof"
+message ListInt {
+    repeated uint32 list = 1;
+}
+message ListLong {
+    repeated uint64 list = 1;
+}
+message ListFloat {
+    repeated float list = 1;
+}
+message ListString {
+    repeated string list = 1;
+}
+message ListBool {
+    repeated bool list = 1;
+}
+
+message BaseData {
+    oneof data {
+        uint32 int_data = 1;
+        uint64 long_data = 2;
+        float float_data = 3;
+        string string_data = 4;
+        bool bool_data = 5;
+        ListInt list_int_data = 6;
+        ListLong list_long_data = 7;
+        ListFloat list_float_data = 8;
+        ListString list_string_data = 9;
+        ListBool list_bool_data = 10;
+    };
+}

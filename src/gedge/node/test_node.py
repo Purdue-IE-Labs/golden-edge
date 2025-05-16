@@ -1,20 +1,11 @@
 from __future__ import annotations
 
-import uuid
-from gedge import proto
-from gedge.comm.mock_comm import MockCallback, MockComm, MockSample
-from gedge.node import codes
-from gedge.node.body import BodyData
-from gedge.node.error import MethodLookupError
-from gedge.node.gtypes import TagValue, ZenohCallback
-from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponse
+from gedge.comm.mock_comm import MockComm
 from gedge.node.node import NodeConfig, NodeSession
-from gedge.node.prop import Props
-from gedge.node.query import MethodQuery
-from gedge.node.tag_data import TagData
 
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Iterator
+
+from gedge.node.reply import Response
 if TYPE_CHECKING:
     from gedge.node.gtypes import MethodReplyCallback
 
@@ -44,7 +35,7 @@ class TestNodeSession(NodeSession):
         pass
 
     # This call is exactly the same as remote, just on the session itself and not remote
-    def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[MethodReply]:
+    def call_method_iter(self, path: str, timeout: float | None = None, **kwargs) -> Iterator[Response]:
         # connect to self
         remote = self.connect_to_remote(self.ks.user_key)
         return remote.call_method_iter(path, timeout, **kwargs)

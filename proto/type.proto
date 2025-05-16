@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+enum BaseType {
+    UNKNOWN = 0;
+    INT = 1;
+    LONG = 2;
+    FLOAT = 3;
+    STRING = 4;
+    BOOL = 5;
+    LIST_INT = 6;
+    LIST_LONG = 7;
+    LIST_FLOAT = 8;
+    LIST_STRING = 9;
+    LIST_BOOL = 10;
+}
+
+// The type specifies a path where 
+// that model can be found to be retrieved
+// if no version provided, we grab the latest
+message DataModelRef {
+    string path = 1;
+    optional uint32 version = 2;
+}
+
+message Type {
+    oneof type {
+        BaseType base_type = 1;
+        DataModelRef data_model_ref = 2;
+    }
+}
+
+/*
+Type and Config are the distinction between a model 
+that has been pulled vs. one that has not been pulled.
+In a json5 object, as someone is building their model,
+they will use only the model path. However, when a 
+node publishes its Meta, it will embed all those 
+models into the message and not just the paths.
+*/

@@ -3,7 +3,7 @@
     tags: [
         {
             path: "tag/write",
-            type: "int",
+            base_type: "int",
             writable: true,
             props: {
                 "desc": "testing a tag write",
@@ -11,12 +11,14 @@
             responses: [
                 {
                     code: 200, 
+                    type: "ok",
                     props: {
                         "desc": "tag updated with value"
                     }
                 },
                 {
                     code: 400,
+                    type: "err",
                     props: {
                         "desc": "invalid value (>10)"
                     }

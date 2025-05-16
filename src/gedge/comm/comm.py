@@ -6,28 +6,25 @@ import zenoh
 import json
 from gedge.comm.sequence_number import SequenceNumber
 from gedge.node import codes
-from gedge.node.body import BodyData
-from gedge.node.error import NodeLookupError, TagLookupError
+from gedge.node.error import NodeLookupError, QueryEnd, TagLookupError
 from gedge import proto
 from gedge.comm import keys
-from gedge.comm.keys import NodeKeySpace, internal_to_user_key, method_response_from_call
+from gedge.comm.keys import NodeKeySpace, group_path_from_key, internal_to_user_key, key_join, method_response_from_call, tag_path_from_key
 
 from typing import Any, TYPE_CHECKING, Callable
 
-from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodHandler, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, TagWriteHandler
-from gedge.node.method import Method
-from gedge.node.method_reply import MethodReply
-from gedge.node.method_response import MethodResponse
-from gedge.node.param import params_proto_to_py
-from gedge.node.prop import Props
-from gedge.node.query import MethodQuery
-from gedge.node.tag import Tag, WriteResponse
-from gedge.node.tag_data import TagData
-from gedge.node.tag_write_query import TagWriteQuery
+from gedge.node.reply import Response
+from gedge.py_proto.base_data import BaseData
+from gedge.py_proto.conversions import props_to_json5
+from gedge.py_proto.data_model_config import DataItemConfig, DataModelConfig
+from gedge.node.query import MethodQuery, TagWriteQuery
+from gedge.py_proto.data_model_ref import DataModelRef
+from gedge.py_proto.state import State
+from gedge.py_proto.tag_config import Tag, TagConfig 
 if TYPE_CHECKING:
-    from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
-
-ProtoMessage = proto.Meta | proto.TagData | proto.WriteResponseData | proto.State | proto.MethodQueryData | proto.ResponseData | proto.WriteResponseData
+    from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, ZenohCallback, ZenohQueryCallback, ProtoMessage
+    from gedge.node.method import MethodConfig
+    from gedge.py_proto.meta import Meta
 
 import logging
 logger = logging.getLogger(__name__)
@@ -40,7 +37,9 @@ class Comm:
         config = json.dumps({
             "mode": "client",
             "connect": {
-                "endpoints": connections
+                "endpoints": connections,
+                "timeout_ms": 3 * 1000,
+                "exit_on_failure": True
             }
         })
         self.config = config
@@ -83,7 +82,10 @@ class Comm:
         '''
 
         logger.info(f"Closing remote connection to {ks.user_key}")
+        # TODO: will this be affected by one node having multiple instance connections to
+        # the same remote? do we even allow that?
         subscriptions = [s for s in self.subscriptions if ks.contains(str(s.key_expr))]
+        logger.debug(f"Undeclaring {len(subscriptions)} remote subscriptions")
         for s in subscriptions:
             s.undeclare()
 
@@ -100,9 +102,13 @@ class Comm:
             bytes: The ProtoMessage converted to bytes
         '''
         b = proto.SerializeToString()
+        logger.debug(f"Size of serialized protobuf: {len(b)}")
         # TODO: base64 is needed due to errors with carriage returns in influxdb
         # which we should try to address in a better way than this
+        # Base64 adds about 25% to the payload size (y = 4/3 * x, where x is the original payload and y is the new payload)
+        # Example: 5 bytes encoded as base64 will become 8 bytes
         b = base64.b64encode(b)
+        logger.debug(f"Size of serialized protobuf base64 encoded {len(b)}")
         return b
     
     def deserialize(self, proto: ProtoMessage, payload: bytes) -> Any:
@@ -131,10 +137,8 @@ class Comm:
         Returns:
             None
         '''
-        logger.debug(f"putting proto on key_expr '{key_expr}'")
+        logger.debug(f"putting proto on key_expr '{key_expr}' with value {value}")
         b = self.serialize(value)
-
-        # TODO: how should sequence numbers be handled with queries and all that
         self.session.put(key_expr, b, encoding="application/protobuf", attachment=bytes(self.sequence_number))
         self.sequence_number.increment()
     
@@ -161,45 +165,88 @@ class Comm:
             on_liveliness_change(str(sample.key_expr), is_online)
         return _on_liveliness
 
-    def _on_tag_data(self, on_tag_data: TagDataCallback, tags: dict[str, Tag]) -> ZenohCallback:
+    # Tag Data is always of type BaseData
+    def _on_tag_data(self, on_tag_data: TagDataCallback, tag_config: TagConfig) -> ZenohCallback:
         def _on_tag_data(sample: zenoh.Sample):
-            tag_data: proto.TagData = self.deserialize(proto.TagData(), sample.payload.to_bytes())
-            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {tag_data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
-            path: str = NodeKeySpace.tag_path_from_key(str(sample.key_expr))
-            if path not in tags:
+            data: proto.BaseData = self.deserialize(proto.BaseData(), sample.payload.to_bytes())
+            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
+            path: str = tag_path_from_key(str(sample.key_expr))
+            try:
+                config = tag_config.get_config(path)
+            except:
                 node: str = NodeKeySpace.name_from_key(str(sample.key_expr))
                 raise TagLookupError(path, node)
-            tag_config = tags[path]
-            value = TagData.proto_to_py(tag_data, tag_config.type)
+            base_type = config.type.get_base_type()
+            if base_type is None:
+                raise ValueError("cannot write to model object")
+            value = BaseData.proto_to_py(data, base_type)
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
         return _on_tag_data
+    
+    def _on_group_data_feed_to_tag_data_subscriber(self, on_tag_data: TagDataCallback, tag_config: TagConfig, path: str) -> ZenohCallback:
+        def _func(sample: zenoh.Sample):
+            data: proto.TagGroup = self.deserialize(proto.TagGroup(), sample.payload.to_bytes())
+            group_path: str = group_path_from_key(str(sample.key_expr))
+            configs = tag_config.get_group_member_configs(group_path)
+            base_type = configs[path].get_base_type()
+            if not base_type:
+                raise ValueError
+            value = BaseData.proto_to_py(data.data[path], base_type)
+            logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
+            on_tag_data(str(sample.key_expr), value)
+        return _func
+    
+    '''
+    TODO: eventually, support nesting in API
+    Example:
+    update_group({"tag/tag": 10})
+    vs
+    update_group({
+        "tag": {
+            "tag": 10
+        }
+    })
+    '''
+    def _on_group_data(self, on_group_data: TagDataCallback, tag_config: TagConfig) -> ZenohCallback:
+        def _on_group_data(sample: zenoh.Sample):
+            data: proto.TagGroup = self.deserialize(proto.TagGroup(), sample.payload.to_bytes())
+            logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
+            group_path: str = group_path_from_key(str(sample.key_expr))
+            configs = tag_config.get_group_member_configs(group_path)
+            # print(configs)
+
+            new_data: dict[str, TagValue] = {}
+            # value here must be of type BaseData
+            for key, value in data.data.items():
+                new_data[key] = BaseData.from_proto(value, configs[key].get_base_type()).to_py() # type: ignore
+            on_group_data(str(sample.key_expr), new_data)
+        return _on_group_data
 
     def _on_state(self, on_state: StateCallback) -> ZenohCallback:
         def _on_state(sample: zenoh.Sample):
             state: proto.State = self.deserialize(proto.State(), sample.payload.to_bytes())
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received state message: online = {state.online}")
-            on_state(str(sample.key_expr), state)
+            on_state(str(sample.key_expr), State.from_proto(state))
         return _on_state
 
     def _on_meta(self, on_meta: MetaCallback) -> ZenohCallback:
         def _on_meta(sample: zenoh.Sample):
             meta: proto.Meta = self.deserialize(proto.Meta(), sample.payload.to_bytes())
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received meta message")
-            on_meta(str(sample.key_expr), meta)
+            on_meta(str(sample.key_expr), Meta.from_proto(meta))
         return _on_meta
 
-    def _on_method_reply(self, on_reply: MethodReplyCallback, method: Method) -> ZenohCallback:
+    def _on_method_reply(self, on_reply: MethodReplyCallback, method: MethodConfig) -> ZenohCallback:
         def _on_reply(sample: zenoh.Sample) -> None:
             if not sample:
                 logger.warning(f"reply from method failed")
                 return
-            r: proto.ResponseData = self.deserialize(proto.ResponseData(), sample.payload.to_bytes())
+            r: proto.Response = self.deserialize(proto.Response(), sample.payload.to_bytes())
             self._handle_on_method_reply(method, str(sample.key_expr), r, on_reply)
         return _on_reply
     
-    def _handle_on_method_reply(self, method: Method, key_expr: str, r: proto.ResponseData, on_reply: MethodReplyCallback) -> None:
-        responses = {r.code: r for r in method.responses}
+    def _handle_on_method_reply(self, method: MethodConfig, key_expr: str, r: proto.Response, on_reply: MethodReplyCallback) -> None:
         '''
         Design decision here. The problem is that golden-edge reserved codes do not have a 
         config backing (we could add one if we wanted), so we have to create a config on 
@@ -210,100 +257,99 @@ class Comm:
         they need to see the error ones to know that something went terribly wrong.
         '''
         logger.info(f"Received reply from method at path '{method.path}' with code {r.code}")
-        if r.code in {codes.DONE, codes.METHOD_ERROR}:
-            response: MethodResponse = MethodResponse(r.code, Props.empty(), {})
-        else:
-            response: MethodResponse = responses[r.code]
-        body: dict[str, BodyData] = {}
-        for key, value in r.body.items():
-            data_type = response.body[key].type
-            props = response.body[key].props
-            body[key] = BodyData(TagData.proto_to_py(value, data_type), props.to_value())
-        props = response.props.to_value()
-        reply = MethodReply(key_expr, r.code, body, r.error, props)
+        response_config = codes.config_from_code(r.code, method.responses)
+        body: dict[str, TagValue] = response_config.body_proto_to_value(dict(r.body))
+        props = props_to_json5(response_config.props)
+        reply = Response(key_expr, r.code, response_config.type, body, props)
         on_reply(reply)
-        if r.code in {codes.DONE, codes.METHOD_ERROR}:
+        if codes.is_final_method_response(reply):
             logger.debug(f"remove subscription for key expr {key_expr}")
             self.cancel_subscription(key_expr)
     
-    def _tag_write_reply(self, query: zenoh.Query) -> Callable[[int, str], None]:
-        def _reply(code: int, error: str = ""):
-            write_response = proto.WriteResponseData(code=code, error=error)
+    def _tag_write_reply(self, query: zenoh.Query, tag: Tag) -> Callable[[int, dict[str, TagValue]], None]:
+        def _reply(code: int, body: dict[str, TagValue]):
+            path = tag_path_from_key(str(query.key_expr))
+            responses, _ = tag.write_config[path]
+            response_config = codes.config_from_code(code, responses)
+            new_body: dict[str, proto.DataItem] = response_config.body_value_to_proto(body)
+            write_response = proto.Response(code=code, body=new_body)
             b = self.serialize(write_response)
             query.reply(key_expr=str(query.key_expr), payload=b)
         return _reply
 
-    def _on_tag_write(self, tag: Tag) -> ZenohQueryCallback:
+    def _on_tag_write(self, tag: Tag, path: str) -> ZenohQueryCallback:
+        from gedge.node.method_response import ResponseType
         def _on_write(query: zenoh.Query) -> None:
-            reply = self._tag_write_reply(query)
-            try:
-                if not query.payload:
-                    raise ValueError(f"Empty write request")
-                proto_data = self.deserialize(proto.TagData(), query.payload.to_bytes())
-                data: TagValue = TagData.proto_to_py(proto_data, tag.type)
+            reply = self._tag_write_reply(query, tag)
+            if not query.payload:
+                reply(codes.CALLBACK_ERR, {"reason": "Empty write request"})
+                return
+            proto_data = self.deserialize(proto.BaseData(), query.payload.to_bytes())
+
+            try: 
+                config = tag.get_config(path)
+                data: BaseData = BaseData.from_proto(proto_data, config.get_base_type()) # type: ignore
                 logger.info(f"Node {query.key_expr} received tag write at path '{tag.path}' with value '{data}'")
+            except:
+                reply(codes.CALLBACK_ERR, {"reason": f"invalid path {path}"})
+                return
 
-                t = TagWriteQuery(str(query.key_expr), data, tag, reply)
-                assert tag.write_handler is not None
-                tag.write_handler(t)
-                
-                try:
-                    code = t.code
-                    error = t.error
-                except:
-                    raise ValueError(f"Tag write handler must call 'reply(...)' at some point")
-
-                write_responses: dict[int, WriteResponse] = {r.code:r for r in tag.responses}
-                if code not in write_responses:
-                    raise LookupError(f"Tag write handler for tag {tag.path} given incorrect code {code} not found in callback config")
-
-                response = [code, error]
+            t = TagWriteQuery(str(query.key_expr), reply, tag.write_config[path][0], [], data.to_py())
+            try:
+                _, handler = tag.write_config[path]
+                if handler is None:
+                    raise Exception(f"No handler provided for tag {path}")
+                handler(t)
+            except QueryEnd as e:
+                pass
             except Exception as e:
-                logger.warning(f"Sending tag write response on path {tag.path}: error={repr(e)}")
-                response = [code, error]
+                t._reply(codes.CALLBACK_ERR, {"reason": str(e)}, ResponseType.ERR)
             finally:
-                reply(*response)
+                if not t._responses_sent or t._responses_sent[-1].type == ResponseType.INFO:
+                    t._reply(codes.CALLBACK_ERR, { "reason": "tag write handler did not finish function with OK or ERR message" }, ResponseType.ERR)
+            # reply(code, body)
         return _on_write
     
-    def _method_reply(self, key_expr: str, method: Method) -> Callable[[int, dict[str, TagValue], str], None]:
+    def _method_reply(self, key_expr: str, method: MethodConfig) -> Callable[[int, dict[str, TagValue]], None]:
         responses = method.responses
-        def _reply(code: int, body: dict[str, TagValue] = {}, error: str = "") -> None:
-            if code not in {i.code for i in responses} and code not in {codes.DONE, codes.METHOD_ERROR, codes.TAG_ERROR}:
-                raise ValueError(f"invalid repsonse code {code}")
-            new_body: dict[str, proto.TagData] = {}
-            for key, value in body.items():
-                response = [i for i in responses if i.code == code][0]
-                data_type = response.body[key].type
-                new_body[key] = TagData.py_to_proto(value, data_type)
-            r = proto.ResponseData(code=code, body=new_body, error=error)
+        def _reply(code: int, body: dict[str, TagValue]) -> None:
+            response_config = codes.config_from_code(code, responses)
+            new_body: dict[str, proto.DataItem] = response_config.body_value_to_proto(body)
+            r = proto.Response(code=code, body=new_body)
             self._send_proto(key_expr=key_expr, value=r)
         return _reply
     
-    def _on_method_query(self, method: Method):
+    def _on_method_query(self, method: MethodConfig):
         def _on_query(sample: zenoh.Sample) -> None:
-            m = self.deserialize(proto.MethodQueryData(), sample.payload.to_bytes())
+            m = self.deserialize(proto.MethodCall(), sample.payload.to_bytes())
             self._handle_method_query(method, str(sample.key_expr), m)
         return _on_query
 
-    def _handle_method_query(self, method: Method, key_expr: str, value: proto.MethodQueryData):
-        params: dict[str, Any] = params_proto_to_py(dict(value.params), method.params)
+    def _handle_method_query(self, method: MethodConfig, key_expr: str, value: proto.MethodCall):
+        from gedge.node.method_response import ResponseType
+        p = dict(value.params)
+        params: dict[str, TagValue] = method.params_proto_to_py(p)
         
         key_expr = method_response_from_call(key_expr)
-        reply = self._method_reply(key_expr, method)
-        q = MethodQuery(key_expr, params, reply, method.responses)
+        reply_func = self._method_reply(key_expr, method)
+        q = MethodQuery(key_expr, reply_func, method.responses, [], params)
         try:
             name = NodeKeySpace.user_key_from_key(key_expr)
             logger.info(f"Node {name} method call at path '{method.path}' with params {params}")
             logger.debug(f"Received from {key_expr}")
             assert method.handler is not None, "No method handler provided"
             method.handler(q)
-            code = codes.DONE
-            error = ""
+        except QueryEnd as e:
+            pass
         except Exception as e:
-            code = codes.METHOD_ERROR
-            error = repr(e)
+            # print("ENCOUNTERED EXCEPTION")
+            body = {
+                "reason": str(e)
+            }
+            q._reply(codes.CALLBACK_ERR, body, ResponseType.ERR) 
         finally:
-            reply(code, {}, error)
+            if not q._responses_sent or q._responses_sent[-1].type == ResponseType.INFO:
+                q._reply(codes.CALLBACK_ERR, { "reason": "method handler did not finish function with OK or ERR message" }, ResponseType.ERR)
 
     def liveliness_subscriber(self, ks: NodeKeySpace, handler: LivelinessCallback) -> None:
         '''
@@ -427,7 +473,12 @@ class Comm:
         zenoh_handler = self._on_state(handler)
         self._subscriber(key_expr, zenoh_handler)
     
-    def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tags: dict[str, Tag]) -> None:
+    def cancel_tag_data_subscription(self, ks: NodeKeySpace, path: str) -> None:
+        # TODO: handle groups
+        key_expr = ks.tag_data_path(path)
+        self.cancel_subscription(key_expr)
+    
+    def tag_data_subscriber(self, ks: NodeKeySpace, path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
         '''
         Declares a Tag Data subscriber with the passed handler on the passed node with the passed tags at the passed path
 
@@ -437,32 +488,49 @@ class Comm:
             ks (NodeKeySpace): The key space of the node recieving the Tag Data handler
             path (str): The path of the tags in the passed node
             handler (TagDataCallback): A TagDataCallback handler
-            tags (dict[str, Tag]): A dictionary of tags
+            tag_config (TagConfig): Tag configuration for this node. It includes all tag and writable tag configurations
 
         Returns:
             None
         '''
-        key_expr = ks.tag_data_path(path)
-        zenoh_handler = self._on_tag_data(handler, tags)
+
+        group = tag_config.get_group(path)
+        if group:
+            key_expr = ks.group_data_path(group)
+            zenoh_handler = self._on_group_data_feed_to_tag_data_subscriber(handler, tag_config, path)
+            self._subscriber(key_expr, zenoh_handler)
+        else:
+            key_expr = ks.tag_data_path(path)
+            zenoh_handler = self._on_tag_data(handler, tag_config)
+            self._subscriber(key_expr, zenoh_handler)
+    
+    def group_data_subscriber(self, ks: NodeKeySpace, group_path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
+        key_expr = ks.group_data_path(group_path)
+        zenoh_handler = self._on_group_data(handler, tag_config)
         self._subscriber(key_expr, zenoh_handler)
 
-    def tag_queryable(self, ks: NodeKeySpace, tag: Tag) -> zenoh.Queryable:
+    def tag_queryable(self, ks: NodeKeySpace, tag: Tag, path: str | None = None) -> zenoh.Queryable:
         '''
-        Declares a new queryable handler with the passed tag on the passed node
+        Registeres a zenoh queryable at <prefix>/NODE/<name>/TAGS/DATA/<path>
+        If path is None, path defaults to the tag's path. This is to allow for queryables on tags embedded within models.
 
         Arguments:
-            ks (NodeKeySpace): The key space of the node that is declaring a queryable on the passed tag
-            tag (Tag): The tag that is being given the queryable status
+            ks (NodeKeySpace): The key space of the node that has the queryable
+            tag (Tag): The tag that has the queryable declared on it (or a subtag of it)
+            path (str | None): The path on this node where the queryable should be registered
 
         Returns:
             zenoh.Queryable: A Zenoh key expression that is able to recieve queries and has a registered response defined
         '''
-        key_expr = ks.tag_write_path(tag.path)
-        zenoh_handler = self._on_tag_write(tag)
+        if path is None:
+            path = tag.path
+
+        key_expr = ks.tag_write_path(path)
+        zenoh_handler = self._on_tag_write(tag, path)
         logger.debug(f"tag queryable on {key_expr}")
         return self._queryable(key_expr, zenoh_handler)
     
-    def query_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> zenoh.Reply:
+    def _query_tag(self, key_expr: str, value: proto.BaseData) -> zenoh.Reply:
         '''
         Sends the passed value to the Tag on the passed path in the passed node
 
@@ -475,10 +543,15 @@ class Comm:
             zenoh.Reply: The reply from Zenoh after passing the parameter value to the tag on the passed node
         '''
         b = self.serialize(value)
-        logger.debug(f"querying tag at path {ks.tag_write_path(path)}")
-        return self._query_sync(ks.tag_write_path(path), payload=b)
+        logger.debug(f"querying tag at path {key_expr}")
+        return self._query_sync(key_expr, payload=b)
     
-    def method_queryable(self, ks: NodeKeySpace, method: Method) -> None:
+    def _query_group(self, key_expr: str, value: proto.TagGroup) -> zenoh.Reply:
+        b = self.serialize(value)
+        logger.debug(f"querying group at path {key_expr}")
+        return self._query_sync(key_expr, payload=b)
+    
+    def method_queryable(self, ks: NodeKeySpace, method: MethodConfig) -> None:
         '''
         Declares a method subscriber on the passed node with the passed method
 
@@ -494,7 +567,7 @@ class Comm:
         zenoh_handler = self._on_method_query(method)
         self._subscriber(key_expr, zenoh_handler)
     
-    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, params: dict[str, proto.TagData], on_reply: MethodReplyCallback, method: Method) -> str:
+    def query_method(self, ks: NodeKeySpace, path: str, caller_id: str, params: dict[str, proto.DataItem], on_reply: MethodReplyCallback, method: MethodConfig) -> str:
         '''
         Queries the tag along the passed path between the caller and method query and then sends the response along proto
         
@@ -512,7 +585,7 @@ class Comm:
         '''
         method_query_id = str(uuid.uuid4())
         query_key_expr = ks.method_query(path, caller_id, method_query_id)
-        query_data = proto.MethodQueryData(params=params)
+        query_data = proto.MethodCall(params=params)
 
         response_key_expr = ks.method_response(path, caller_id, method_query_id)
         zenoh_handler = self._on_method_reply(on_reply, method)
@@ -521,7 +594,7 @@ class Comm:
 
         return query_key_expr
 
-    def update_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData):
+    def update_tag(self, ks: NodeKeySpace, path: str, value: proto.BaseData):
         '''
         Updates the tag within the passed node along the passed path with the passed value
         
@@ -536,7 +609,7 @@ class Comm:
         key_expr = ks.tag_data_path(path)
         self._send_proto(key_expr, value)
 
-    def write_tag(self, ks: NodeKeySpace, path: str, value: proto.TagData) -> proto.WriteResponseData:
+    def write_tag(self, ks: NodeKeySpace, path: str, value: BaseData) -> proto.Response:
         '''
         Queries the tag on the passed path in the passed node with the passed value
         
@@ -548,15 +621,20 @@ class Comm:
         Returns:
             proto.WriteResponseData
         '''
-        reply = self.query_tag(ks, path, value)
+        reply = self._query_tag(ks.tag_write_path(path), value.to_proto())
         if reply.ok:
-            d: proto.WriteResponseData = self.deserialize(proto.WriteResponseData(), reply.result.payload.to_bytes())
+            d: proto.Response = self.deserialize(proto.Response(), reply.result.payload.to_bytes())
             return d
-        else:
-            # TODO: more granular exception?
-            raise Exception(f"Failure in receiving tag write reply for tag at path {path}")
+        raise Exception(f"Failure in receiving tag write reply for tag at path {path}")
+    
+    def write_group(self, key_expr: str, value: dict[str, proto.BaseData]) -> proto.Response:
+        reply = self._query_group(key_expr, proto.TagGroup(data=value))
+        if reply.ok:
+            d: proto.Response = self.deserialize(proto.Response(), reply.result.payload.to_bytes())
+            return d
+        raise Exception(f"Failure in receiving tag write reply for group at path {group_path_from_key(key_expr)}")
 
-    def send_state(self, ks: NodeKeySpace, state: proto.State):
+    def send_state(self, ks: NodeKeySpace, state: State):
         '''
         Sends the passed state to the passed node
         
@@ -568,9 +646,9 @@ class Comm:
             None
         '''
         key_expr = ks.state_key_prefix
-        self._send_proto(key_expr, state)
+        self._send_proto(key_expr, state.to_proto())
 
-    def send_meta(self, ks: NodeKeySpace, meta: proto.Meta):
+    def send_meta(self, ks: NodeKeySpace, meta: Meta):
         '''
         Sends the passed meta to the passed node
         
@@ -582,9 +660,9 @@ class Comm:
             None
         '''
         key_expr = ks.meta_key_prefix
-        self._send_proto(key_expr, meta)
+        self._send_proto(key_expr, meta.to_proto())
     
-    def pull_meta_messages(self, only_online: bool = False):
+    def pull_meta_messages(self, only_online: bool = False) -> list[Meta]:
         '''
         Pulls all Metas in the current Zenoh session of online nodes
 
@@ -596,8 +674,9 @@ class Comm:
         Returns:
             list[Meta]: A list of the Meta messages
         '''
+        from gedge.py_proto.meta import Meta
         res = self.session.get(keys.key_join("**", keys.NODE, "*", keys.META))
-        messages: list[proto.Meta] = []
+        messages: list[Meta] = []
         for r in res:
             r: zenoh.Reply
             if not r.ok:
@@ -610,12 +689,13 @@ class Comm:
                 is_online = self.is_online(ks)
                 if only_online and not is_online:
                     continue
-                messages.append(meta)
+                messages.append(Meta.from_proto(meta))
             except Exception as e:
-                raise ValueError(f"Could not deserialize meta from historian")
+                raise ValueError(f"Could not deserialize meta from historian: {e}")
         return messages
 
-    def pull_meta_message(self, ks: NodeKeySpace) -> proto.Meta:
+    def pull_meta_message(self, ks: NodeKeySpace) -> Meta:
+        from gedge.py_proto.meta import Meta
         '''
         Returns the Meta of the passed node
         
@@ -633,7 +713,7 @@ class Comm:
             raise NodeLookupError(ks.user_key)
         
         meta = self.deserialize(proto.Meta(), reply.result.payload.to_bytes())
-        return meta
+        return Meta.from_proto(meta)
             
     def is_online(self, ks: NodeKeySpace) -> bool:
         '''
@@ -648,7 +728,119 @@ class Comm:
         try:
             reply = self._query_liveliness(ks)
             if not reply.ok:
-                return False
+                raise Exception # generic exception to trigger the except:
             return reply.ok.kind == zenoh.SampleKind.PUT
         except:
             return False
+    
+    def _pull_all_model_versions(self, path: str) -> list[DataModelConfig]:
+        models = []
+        res = self.session.get(keys.model_fetch(path))
+        for r in res:
+            r: zenoh.Reply
+            if r.err:
+                continue
+            result = r.result
+            assert isinstance(result, zenoh.Sample)
+            try:
+                config = self.deserialize(proto.DataModelConfig(), result.payload.to_bytes())
+                config = DataModelConfig.from_proto(config)
+                pulled_version = keys.version_from_model(str(result.key_expr))
+                if config.version != pulled_version:
+                    logger.warning(f"Versions do not match for model {path}, model says {config.version}, key says {pulled_version}")
+                    return []
+                models.append(config)
+            except:
+                raise ValueError(f"Could not deserialize model at path {path} from historian")
+        return models
+    
+    def _pull_model_with_version(self, path: str, version: int) -> DataModelConfig | None:
+        try:
+            res = self.session.get(keys.model_path(path, version)).recv()
+            if res.err:
+                raise Exception
+        except:
+            logger.info(f"No model found at path {path} with version {version}")
+            return None
+        assert isinstance(res.result, zenoh.Sample)
+        s = res.result
+        try:
+            config = self.deserialize(proto.DataModelConfig(), s.payload.to_bytes())
+            config = DataModelConfig.from_proto(config)
+        except:
+            raise ValueError(f"Could not deserialize model at path {path} (version {version}) from historian")
+
+        pulled_version = keys.version_from_model(str(s.key_expr))
+        if config.version != pulled_version:
+            logger.warning(f"Versions do not match for model {path}, model says {config.version}, key says {pulled_version}")
+            return None
+        return config
+    
+    # TODO: just take a DataModelType
+    # we expand everything when we return it
+    def pull_model(self, path: str, version: int | None = None) -> DataModelConfig | None:
+        if version is not None:
+            model = self._pull_model_with_version(path, version)
+            if not model:
+                logger.info(f"No model at path {path} with version {version}")
+                return None
+        else:
+            models = self._pull_all_model_versions(path)
+            if not models:
+                logger.info(f"No model at path {path}")
+                return None
+            model = max(models, key=lambda m : m.version)
+        
+        if model.parent is not None:
+            if not self._fetch(model.parent):
+                logger.warning(f"Unable to fetch parent model {model.parent.path}")
+        for item in model.items:
+            ref = item.get_model_ref()
+            if not ref:
+                continue
+            if not self._fetch(ref):
+                logger.warning(f"Unable to fetch model {item.path} for tag at path {item.path}")
+        return model
+    
+    def push_model(self, model: DataModelConfig, push_embedded: bool = True) -> bool:
+        # TODO: if they use an embedded model but pass push_embedded=False, we run the risk of losing that model
+        if push_embedded:
+            # Design decision: if we want to push recursively, we only do this for embedded models, not just path ones
+            # Embedded includes both model and model_file
+            pass
+            # for tag in model.items:
+            #     model_config = tag.config.get_model_config()
+            #     if not model_config:
+            #         continue
+            #     logger.debug(f"Pushing embedded model {model_config.path}")
+            #     if not self.push_model(model_config, push_embedded):
+            #         return False
+            #     tag.config.to_model_path()
+
+        res = self.pull_model(model.path)
+        if res and res.version + 1 != model.version:
+            # TODO: here we may check for equality of models before updating the version, 
+            # but for now we just update and push
+            logger.info(f"Trying to update a model at path {model.path} without incrementing version, latest model in historian is {res.version}, you passed {model.version}! Updating model to version {res.version + 1}...")
+            model.version = res.version + 1
+        if not res and model.version not in {0, 1}:
+            logger.warning(f"New model must start at version 0 or 1, found version {model.version}")
+            return False
+        self._put_model(model)
+        return True
+    
+    def _put_model(self, model: DataModelConfig):
+        key_expr = keys.model_path(model.path, model.version)
+        self._send_proto(key_expr, model.to_proto())
+
+    def fetch_model(self, config: DataItemConfig) -> DataModelConfig | None:
+        ref = config.get_model_ref()
+        if not ref:
+            return None
+        return self._fetch(ref)
+    
+    def _fetch(self, ref: DataModelRef) -> DataModelConfig | None:
+        return self.pull_model(ref.path, ref.version)
+    
+    def send_group(self, key_expr: str, proto: proto.TagGroup):
+        self._send_proto(key_expr, proto)
