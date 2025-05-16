@@ -36,6 +36,7 @@ class Meta:
         methods: list[proto.MethodConfig] = [m.to_proto() for m in self.methods.values()]
         subnodes: list[proto.SubnodeConfig] = [s.to_proto() for s in self.subnodes.values()]
         models: list[proto.DataModelConfig] = [m.to_proto() for m in self.models.values()]
-        meta = proto.Meta(key=self.key, tags=tags, methods=methods, subnodes=subnodes, models=models)
+        props: list[proto.Prop] = [p.to_proto() for p in self.props.values()]
+        meta = proto.Meta(key=self.key, tags=tags, methods=methods, subnodes=subnodes, models=models, props=props)
         return meta
     

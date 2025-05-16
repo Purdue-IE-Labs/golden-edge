@@ -16,6 +16,9 @@ MODELS = "MODELS"
 VERSION = "VERSION"
 GROUPS = "GROUPS"
 
+import logging
+logger = logging.getLogger(__name__)
+
 def key_join(*components: str):
     return "/".join(components)
 
@@ -144,7 +147,7 @@ class NodeKeySpace:
     @staticmethod
     def prefix_from_key(key_expr: str):
         components = key_expr.split(NODE)
-        return components[0]
+        return components[0][:-1]
     
     @staticmethod
     def internal_to_user_key(key_expr: str):
@@ -255,6 +258,7 @@ class NodeKeySpace:
     def contains(self, key_expr: str):
         name = self.name_from_key(key_expr)
         prefix = self.prefix_from_key(key_expr)
+        # logger.debug(f"Comparing {name}:{self.name} and {prefix}:{self.prefix}")
         return name == self.name and prefix == self.prefix
     
     def __repr__(self) -> str:

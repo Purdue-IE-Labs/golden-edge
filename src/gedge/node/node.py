@@ -535,6 +535,7 @@ class NodeSession:
         '''
         # verify that key expression with this key prefix and name is not online
         metas = self._comm.pull_meta_messages(only_online=True)
+        # TODO: this is becoming an expensive operation? Either that or my computer is buggin
         assert not any([x.key == self.ks.user_key for x in metas]), f"{[x.key for x in metas]} are online, and {self.ks.user_key} match!"
 
     def _startup(self):

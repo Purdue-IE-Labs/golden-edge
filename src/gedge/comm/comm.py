@@ -82,7 +82,10 @@ class Comm:
         '''
 
         logger.info(f"Closing remote connection to {ks.user_key}")
+        # TODO: will this be affected by one node having multiple instance connections to
+        # the same remote? do we even allow that?
         subscriptions = [s for s in self.subscriptions if ks.contains(str(s.key_expr))]
+        logger.debug(f"Undeclaring {len(subscriptions)} remote subscriptions")
         for s in subscriptions:
             s.undeclare()
 
@@ -671,6 +674,7 @@ class Comm:
         Returns:
             list[Meta]: A list of the Meta messages
         '''
+        from gedge.py_proto.meta import Meta
         res = self.session.get(keys.key_join("**", keys.NODE, "*", keys.META))
         messages: list[Meta] = []
         for r in res:
@@ -687,7 +691,7 @@ class Comm:
                     continue
                 messages.append(Meta.from_proto(meta))
             except Exception as e:
-                raise ValueError(f"Could not deserialize meta from historian")
+                raise ValueError(f"Could not deserialize meta from historian: {e}")
         return messages
 
     def pull_meta_message(self, ks: NodeKeySpace) -> Meta:
