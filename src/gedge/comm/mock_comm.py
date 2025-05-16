@@ -8,7 +8,7 @@ from gedge import proto
 from gedge.comm import keys
 from gedge.comm.keys import NodeKeySpace
 
-from typing import Any, TYPE_CHECKING, Callable
+from typing import Any, TYPE_CHECKING, Callable, override
 
 from gedge.node import codes
 from gedge.node.gtypes import MethodHandler, MethodReplyCallback, TagBaseValue, TagValue, ZenohQueryCallback
@@ -17,11 +17,10 @@ from gedge.py_proto.data_model import DataItem
 from gedge.node.query import TagWriteQuery
 import threading
 
+from gedge.py_proto.meta import Meta
 from gedge.py_proto.tag_config import Tag, TagConfig, ResponseConfig
 if TYPE_CHECKING:
-    from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback
-
-ProtoMessage = proto.Meta | proto.DataItem | proto.Response | proto.State | proto.MethodCall
+    from gedge.node.gtypes import ZenohCallback, ZenohQueryCallback, ZenohReplyCallback, ProtoMessage
 
 import logging
 logger = logging.getLogger(__name__)
@@ -46,7 +45,7 @@ class MockComm(Comm):
         # just maps key expressions to functions
         self.subscribers: dict[str, list[MockCallback]] = defaultdict(list)
         self.active_methods: dict[str, MethodReplyCallback] = dict()
-        self.metas: dict[str, proto.Meta] = dict()
+        self.metas: dict[str, Meta] = dict()
 
     def __enter__(self):
         logger.info(f"Mock connection")
@@ -86,7 +85,7 @@ class MockComm(Comm):
     def method_queryable(self, ks: NodeKeySpace, method: MethodConfig) -> None:
         super().method_queryable(ks, method)
     
-    def pull_meta_message(self, ks: NodeKeySpace) -> proto.Meta:
+    def pull_meta_message(self, ks: NodeKeySpace) -> Meta:
         return self.metas[ks.user_key]
 
     def send_meta(self, ks: NodeKeySpace, meta: proto.Meta):

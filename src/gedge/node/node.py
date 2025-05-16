@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pathlib
 import uuid
-from gedge.node.gtypes import TagValue
 from gedge.node.method import MethodConfig
 from gedge.node.method_response import ResponseConfig
 from gedge.py_proto.base_data import BaseData
@@ -13,11 +12,11 @@ from gedge.py_proto.data_model_config import DataModelConfig, DataItemConfig
 from gedge.py_proto.data_model_ref import DataModelRef
 from gedge.py_proto.props import Prop
 from gedge.node.remote import RemoteConnection
-from gedge.proto import Meta, State, MethodCall
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
 from gedge.py_proto.singleton import Singleton
+from gedge.py_proto.state import State
 from gedge.py_proto.tag_config import Tag, TagConfig
 from gedge import py_proto
 from gedge.node.tag_bind import TagBind
@@ -31,6 +30,7 @@ if TYPE_CHECKING:
     from gedge.node.gtypes import LivelinessCallback, MetaCallback, StateCallback, TagDataCallback, TagBaseValue, ZenohQueryCallback, TagWriteHandler, MethodHandler
     from gedge.node.subnode import SubnodeConfig
     from gedge.node.subnode import SubnodeSession
+    from gedge.py_proto.meta import Meta
 
 import logging
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ class NodeConfig:
         self.methods: dict[str, MethodConfig] = dict()
         self.subnodes: dict[str, SubnodeConfig] = dict()
         self.models: dict[str, DataModelConfig] = dict()
+        self.props: dict[str, Prop] = dict()
 
     @classmethod
     def from_json5(cls, path: str):
@@ -94,6 +95,9 @@ class NodeConfig:
         for subnode_json in obj.get("subnodes", []):
             subnode = SubnodeConfig.from_json5(subnode_json, config.ks)
             config.subnodes[subnode.name] = subnode
+        
+        props = {key: Prop.from_json5(key, p) for key, p in obj.get("props", {}).items()}
+        config.props = props
         
         return config
 
@@ -308,12 +312,9 @@ class NodeConfig:
         Returns:
             Meta
         '''
+        from gedge.py_proto.meta import Meta
         self._verify_tags()
-        tags = self.tag_config.to_proto()
-        methods: list[proto.MethodConfig] = [m.to_proto() for m in self.methods.values()]
-        subnodes: list[proto.SubnodeConfig] = [s.to_proto() for s in self.subnodes.values()]
-        ms: list[proto.DataModelConfig] = [m.to_proto() for m in self.models.values()]
-        meta = Meta(key=self.key, tags=tags, methods=methods, subnodes=subnodes, models=ms)
+        meta = Meta(self.key, self.tag_config, self.methods, self.subnodes, self.models, self.props)
         return meta
 
     def _connect(self, connections: list[str]):
@@ -699,7 +700,7 @@ class NodeSession:
         '''
         online_str = "online" if online else "offline"
         logger.info(f"Updating node state: {online_str}")
-        self._comm.send_state(self.ks, State(online=online))
+        self._comm.send_state(self.ks, State(online))
 
     def subnode(self, name: str) -> SubnodeSession:
         '''

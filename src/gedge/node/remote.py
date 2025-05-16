@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from queue import Queue, Empty
 import time
-from gedge.node.gtypes import TagBaseValue, TagValue
 from gedge.node.method import MethodConfig
 from gedge.node.method_response import ResponseConfig, get_response_config
 from gedge.node import codes
@@ -22,7 +21,7 @@ from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.data_model_ref import DataModelRef
 from gedge.py_proto.tag_config import Tag, TagConfig 
 if TYPE_CHECKING:
-    from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback
+    from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback, TagValue, TagBaseValue
     from gedge.node.subnode import RemoteSubConnection
 
 import logging
@@ -44,15 +43,13 @@ class RemoteConnection:
         if not self._comm.is_online(ks):
             raise ValueError(f"Node {ks.user_key} is not online, so it cannot be connected to!")
         self.meta = self._comm.pull_meta_message(ks)
-        self.tag_config = TagConfig.from_proto(self.meta.tags)
-        methods: list[MethodConfig] = [MethodConfig.from_proto(m) for m in self.meta.methods]
-        self.methods = {m.path: m for m in methods}
+        self.tag_config = self.meta.tags
+        self.methods = self.meta.methods
         self.responses: dict[str, dict[int, ResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
-        self.models: dict[str, DataModelConfig] = {DataModelRef(m.path, m.version).full_path: DataModelConfig.from_proto(m) for m in self.meta.models}
+        self.models = self.meta.models
 
         from gedge.node.subnode import SubnodeConfig
-        subnodes: list[SubnodeConfig] = [SubnodeConfig.from_proto(s, self.ks) for s in self.meta.subnodes]
-        self.subnodes: dict[str, SubnodeConfig] = {s.name: s for s in subnodes}
+        self.subnodes: dict[str, SubnodeConfig] = self.meta.subnodes
 
         self.binds: dict[str, TagBind] = {}
 

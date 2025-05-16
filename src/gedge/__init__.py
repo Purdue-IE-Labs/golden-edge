@@ -4,6 +4,8 @@ from gedge.node.method_response import ResponseConfig, ResponseType
 from gedge.node.query import MethodQuery, TagWriteQuery
 from gedge.node.reply import Response
 from gedge.py_proto.singleton import Singleton
+from gedge.py_proto.state import State
+from gedge.py_proto.meta import Meta
 from .comm.mock_comm import MockComm
 from .node.node import NodeConfig, NodeSession
 from .node.test_node import TestNodeSession

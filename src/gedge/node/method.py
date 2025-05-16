@@ -1,7 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
-from gedge.node.gtypes import TagValue
 from gedge.py_proto.base_data import BaseData
 from gedge.py_proto.data_model import DataItem
 from gedge.py_proto.data_model_config import DataItemConfig
@@ -12,7 +11,7 @@ from typing import Any, Self, TYPE_CHECKING
 
 from gedge.py_proto.conversions import list_from_json5, list_from_proto, list_to_proto
 if TYPE_CHECKING:
-    from gedge.node.gtypes import MethodHandler
+    from gedge.node.gtypes import MethodHandler, TagValue
     from gedge.node.method_response import ResponseConfig
 
 @dataclass

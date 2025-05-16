@@ -19,12 +19,12 @@ from gedge.py_proto.conversions import props_to_json5
 from gedge.py_proto.data_model_config import DataItemConfig, DataModelConfig
 from gedge.node.query import MethodQuery, TagWriteQuery
 from gedge.py_proto.data_model_ref import DataModelRef
+from gedge.py_proto.state import State
 from gedge.py_proto.tag_config import Tag, TagConfig 
 if TYPE_CHECKING:
-    from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, ZenohCallback, ZenohQueryCallback
+    from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, ZenohCallback, ZenohQueryCallback, ProtoMessage
     from gedge.node.method import MethodConfig
-
-ProtoMessage = proto.Meta | proto.DataItem | proto.Response | proto.State | proto.MethodCall | proto.DataModelConfig | proto.BaseData | proto.TagGroup
+    from gedge.py_proto.meta import Meta
 
 import logging
 logger = logging.getLogger(__name__)
@@ -224,14 +224,14 @@ class Comm:
         def _on_state(sample: zenoh.Sample):
             state: proto.State = self.deserialize(proto.State(), sample.payload.to_bytes())
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received state message: online = {state.online}")
-            on_state(str(sample.key_expr), state)
+            on_state(str(sample.key_expr), State.from_proto(state))
         return _on_state
 
     def _on_meta(self, on_meta: MetaCallback) -> ZenohCallback:
         def _on_meta(sample: zenoh.Sample):
             meta: proto.Meta = self.deserialize(proto.Meta(), sample.payload.to_bytes())
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received meta message")
-            on_meta(str(sample.key_expr), meta)
+            on_meta(str(sample.key_expr), Meta.from_proto(meta))
         return _on_meta
 
     def _on_method_reply(self, on_reply: MethodReplyCallback, method: MethodConfig) -> ZenohCallback:
@@ -631,7 +631,7 @@ class Comm:
             return d
         raise Exception(f"Failure in receiving tag write reply for group at path {group_path_from_key(key_expr)}")
 
-    def send_state(self, ks: NodeKeySpace, state: proto.State):
+    def send_state(self, ks: NodeKeySpace, state: State):
         '''
         Sends the passed state to the passed node
         
@@ -643,9 +643,9 @@ class Comm:
             None
         '''
         key_expr = ks.state_key_prefix
-        self._send_proto(key_expr, state)
+        self._send_proto(key_expr, state.to_proto())
 
-    def send_meta(self, ks: NodeKeySpace, meta: proto.Meta):
+    def send_meta(self, ks: NodeKeySpace, meta: Meta):
         '''
         Sends the passed meta to the passed node
         
@@ -657,9 +657,9 @@ class Comm:
             None
         '''
         key_expr = ks.meta_key_prefix
-        self._send_proto(key_expr, meta)
+        self._send_proto(key_expr, meta.to_proto())
     
-    def pull_meta_messages(self, only_online: bool = False) -> list[proto.Meta]:
+    def pull_meta_messages(self, only_online: bool = False) -> list[Meta]:
         '''
         Pulls all Metas in the current Zenoh session of online nodes
 
@@ -672,7 +672,7 @@ class Comm:
             list[Meta]: A list of the Meta messages
         '''
         res = self.session.get(keys.key_join("**", keys.NODE, "*", keys.META))
-        messages: list[proto.Meta] = []
+        messages: list[Meta] = []
         for r in res:
             r: zenoh.Reply
             if not r.ok:
@@ -685,12 +685,13 @@ class Comm:
                 is_online = self.is_online(ks)
                 if only_online and not is_online:
                     continue
-                messages.append(meta)
+                messages.append(Meta.from_proto(meta))
             except Exception as e:
                 raise ValueError(f"Could not deserialize meta from historian")
         return messages
 
-    def pull_meta_message(self, ks: NodeKeySpace) -> proto.Meta:
+    def pull_meta_message(self, ks: NodeKeySpace) -> Meta:
+        from gedge.py_proto.meta import Meta
         '''
         Returns the Meta of the passed node
         
@@ -708,7 +709,7 @@ class Comm:
             raise NodeLookupError(ks.user_key)
         
         meta = self.deserialize(proto.Meta(), reply.result.payload.to_bytes())
-        return meta
+        return Meta.from_proto(meta)
             
     def is_online(self, ks: NodeKeySpace) -> bool:
         '''
