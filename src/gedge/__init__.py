@@ -1,16 +1,23 @@
-from gedge.node.query import MethodQuery
-from gedge.node.tag_write_query import TagWriteQuery
+import pathlib
+from gedge.node.codes import OK, ERR, CALLBACK_ERR
+from gedge.node.method_response import ResponseConfig, ResponseType
+from gedge.node.query import MethodQuery, TagWriteQuery
+from gedge.node.reply import Response
 from gedge.py_proto.singleton import Singleton
+from gedge.py_proto.state import State
+from gedge.py_proto.meta import Meta
 from .comm.mock_comm import MockComm
 from .node.node import NodeConfig, NodeSession
 from .node.test_node import TestNodeSession
-
 
 import logging
 import os
 
 level = os.environ.get("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=level)
+try:
+    logging.basicConfig(level=level)
+except:
+    logging.basicConfig(level="NOTSET")
 
 ZENOH_PORT = 7447
 def connect(config: NodeConfig, *connections: str) -> NodeSession:
@@ -30,4 +37,6 @@ def mock_connect(config: NodeConfig) -> TestNodeSession:
     return session
 
 def use_models(model_dir: str):
+    if not pathlib.Path(model_dir).exists():
+        raise ValueError(f"model directory {model_dir} does not exist")
     Singleton().set_model_dir(model_dir)

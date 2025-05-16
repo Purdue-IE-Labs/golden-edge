@@ -17,11 +17,17 @@ enum BaseType {
 // The type specifies a path where 
 // that model can be found to be retrieved
 // if no version provided, we grab the latest
-message DataModelType {
+message DataModelRef {
     string path = 1;
     optional uint32 version = 2;
 }
 
+message Type {
+    oneof type {
+        BaseType base_type = 1;
+        DataModelRef data_model_ref = 2;
+    }
+}
 
 /*
 Type and Config are the distinction between a model 
@@ -31,16 +37,3 @@ they will use only the model path. However, when a
 node publishes its Meta, it will embed all those 
 models into the message and not just the paths.
 */
-
-/*
-Type has been removed in favor of a Config object that can hold both the model path
-or the expanded model object
-Config {
-    BaseType
-    or {
-        DataModelPath
-        or
-        DataModelConfigObject
-    }
-}
-*/ 

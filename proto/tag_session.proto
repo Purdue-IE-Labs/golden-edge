@@ -1,6 +1,0 @@
-syntax = "proto3";
-
-message TagWriteResponse {
-    int32 code = 1;
-    optional string error = 2;
-}

@@ -1,25 +1,12 @@
 syntax = "proto3";
 
+import "response_config.proto";
 import "data_model_config.proto";
-import "params_config.proto";
-import "body_config.proto";
+import "prop.proto";
 
 message MethodConfig {
     string path = 1;
-    Props props = 2;
-    ParamsConfig params = 3;
-    repeated MethodResponseConfig responses = 4;
-}
-
-message MethodResponseConfig {
-    int32 code = 1;
-    MethodResponseType type = 4;
-    Props props = 2;
-    BodyConfig body = 3;
-}
-
-enum MethodResponseType {
-    OK = 0;
-    ERR = 1;
-    INFO = 2;
+    repeated DataItemConfig params = 2;
+    repeated ResponseConfig responses = 3;
+    repeated Prop props = 4;
 }

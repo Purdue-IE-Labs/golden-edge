@@ -14,23 +14,26 @@ def handler(query: gedge.TagWriteQuery):
     time.sleep(3)
     print("wrote tag")
     time.sleep(3)
-    query.reply(200)
+    query.reply_ok(200)
 
 json_ = json5.dumps({
     "key": "testing/async",
     "tags": [
         {
             "path": "telemetry/tag",
-            "type": "list[float]",
+            "base_type": "list[float]",
             "props": {
                 "desc": "This tag should be updated once per second"
             },
         },
         {
             "path": "slow/writable/tag",
-            "type": "int",
+            "base_type": "int",
             "writable": True,
-            "responses": [200],
+            "responses": {
+                "code": 200,
+                "type": "ok"
+            },
         }
     ],
 })

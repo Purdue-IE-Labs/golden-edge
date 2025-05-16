@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "type.proto";
+import "base_data.proto";
+
+// We require a Prop object because it is distinct from Body and Param
+// In those cases, we are specifying strictly configurations (i.e. 
+// type and props) while a Prop is a type and a value
+// We include it in this file because otherwise we get recursive imports
+message Prop {
+    string key = 1;
+    BaseType type = 2;
+    BaseData value = 3;
+}

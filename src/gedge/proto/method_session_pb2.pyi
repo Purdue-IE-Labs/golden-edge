@@ -14,25 +14,8 @@ class MethodCall(_message.Message):
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: str
-        value: _data_model_session_pb2.DataObject
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_data_model_session_pb2.DataObject, _Mapping]] = ...) -> None: ...
+        value: _data_model_session_pb2.DataItem
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_data_model_session_pb2.DataItem, _Mapping]] = ...) -> None: ...
     PARAMS_FIELD_NUMBER: _ClassVar[int]
-    params: _containers.MessageMap[str, _data_model_session_pb2.DataObject]
-    def __init__(self, params: _Optional[_Mapping[str, _data_model_session_pb2.DataObject]] = ...) -> None: ...
-
-class MethodResponse(_message.Message):
-    __slots__ = ("code", "body", "error")
-    class BodyEntry(_message.Message):
-        __slots__ = ("key", "value")
-        KEY_FIELD_NUMBER: _ClassVar[int]
-        VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: str
-        value: _data_model_session_pb2.DataObject
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_data_model_session_pb2.DataObject, _Mapping]] = ...) -> None: ...
-    CODE_FIELD_NUMBER: _ClassVar[int]
-    BODY_FIELD_NUMBER: _ClassVar[int]
-    ERROR_FIELD_NUMBER: _ClassVar[int]
-    code: int
-    body: _containers.MessageMap[str, _data_model_session_pb2.DataObject]
-    error: str
-    def __init__(self, code: _Optional[int] = ..., body: _Optional[_Mapping[str, _data_model_session_pb2.DataObject]] = ..., error: _Optional[str] = ...) -> None: ...
+    params: _containers.MessageMap[str, _data_model_session_pb2.DataItem]
+    def __init__(self, params: _Optional[_Mapping[str, _data_model_session_pb2.DataItem]] = ...) -> None: ...

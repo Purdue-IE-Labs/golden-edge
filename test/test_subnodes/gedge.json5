@@ -3,47 +3,58 @@
     tags: [
         {
             path: "root/tag",
-            type: "list[int]",
+            base_type: "list[int]",
         }
     ],
     methods: [
         {
             path: "call/method",
-            params: {
-                name: {
-                    type: "string",
+            params: [
+                {
+                    path: "name",
+                    base_type: "string",
                     props: {
                         desc: "name of the project"
                     }
                 },
-                speed: "int",
-            },
+                {
+                    path: "speed",
+                    base_type: "int",
+                },
+            ],
             responses: [
                 {
                     code: 200,
-                    body: {
-                        res1: {
-                            type: "int",
+                    type: "ok",
+                    body: [
+                        {
+                            path: "res1",
+                            base_type: "int",
                             props: {
                                 desc: "a body item named res1"
                             }
                         }
-                    },
+                    ],
                     props: {
                         desc: "successfully executed method"
                     }
                 },
                 {
                     code: 400,
-                    body: {
-                        res1: "int",
-                    },
+                    type: "err",
+                    body: [
+                        {
+                            path: "res1",
+                            base_type: "int"
+                        }
+                    ],
                     props: {
                         desc: "speed must be in range [0, 100]"
                     }
                 },
                 {
                     code: 401,
+                    type: "err",
                     props: {
                         desc: "name cannot be longer than 30 characters"
                     }
@@ -60,7 +71,7 @@
             tags: [
                 {
                     path: "tag/write",
-                    type: "int",
+                    base_type: "int",
                     writable: true,
                     props: {
                         "desc": "testing a subnode (vice) tag write",
@@ -68,12 +79,14 @@
                     responses: [
                         {
                             code: 200, 
+                            type: "ok",
                             props: {
                                 "desc": "vice tag updated with value"
                             }
                         },
                         {
                             code: 400,
+                            type: "err",
                             props: {
                                 "desc": "invalid value for vice tag (>10)"
                             }
@@ -88,7 +101,7 @@
             tags: [
                 {
                     path: "siemens/tag",
-                    type: "list[bool]"
+                    base_type: "list[bool]"
                 }
             ],
             methods: [],
@@ -98,7 +111,7 @@
                     tags: [
                         {
                             path: "siemens/inner/tag",
-                            type: "float",
+                            base_type: "float",
                             props: {
                                 "desc": "testing a subnode subnode (inner) tag",
                             },
@@ -107,8 +120,12 @@
                     methods: [
                         {
                             path: "inner/method",
-                            params: {},
-                            responses: [200]
+                            responses: [
+                                {
+                                    code: 200,
+                                    type: "ok"
+                                }
+                            ]
                         }
                     ]
                 }

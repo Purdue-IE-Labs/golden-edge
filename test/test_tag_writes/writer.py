@@ -4,7 +4,7 @@ import gedge
 def state_callback(str, state):
     print(f"State changed: {state} for {str}")
 
-def meta_callback(meta_data):
+def meta_callback(str, meta_data):
     print(f"Received metadata: {meta_data}")
 
 def liveliness_callback(str, liveliness_status):

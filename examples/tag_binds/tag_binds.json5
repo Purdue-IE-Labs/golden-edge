@@ -1,0 +1,14 @@
+{
+    key: "gedge/examples/tag_binds/updater",
+    tags: [
+        {
+            path: "base/tag/1",
+            base_type: "int",
+            writable: true,
+        },
+        {
+            path: "base/tag/2",
+            base_type: "float",
+        }
+    ]
+}

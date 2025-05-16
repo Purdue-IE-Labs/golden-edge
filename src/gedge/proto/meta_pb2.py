@@ -26,15 +26,16 @@ from . import method_config_pb2 as method__config__pb2
 from . import tag_config_pb2 as tag__config__pb2
 from . import subnode_config_pb2 as subnode__config__pb2
 from . import data_model_config_pb2 as data__model__config__pb2
+from . import prop_pb2 as prop__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nmeta.proto\x1a\x13method_config.proto\x1a\x10tag_config.proto\x1a\x14subnode_config.proto\x1a\x17\x64\x61ta_model_config.proto\"\xb5\x01\n\x04Meta\x12\x15\n\x08tracking\x18\x01 \x01(\x08H\x00\x88\x01\x01\x12\x0b\n\x03key\x18\x02 \x01(\t\x12\x18\n\x04tags\x18\x03 \x03(\x0b\x32\n.TagConfig\x12\x1e\n\x07methods\x18\x04 \x03(\x0b\x32\r.MethodConfig\x12 \n\x08subnodes\x18\x05 \x03(\x0b\x32\x0e.SubnodeConfig\x12 \n\x06models\x18\x06 \x03(\x0b\x32\x10.DataModelConfigB\x0b\n\t_trackingb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\nmeta.proto\x1a\x13method_config.proto\x1a\x10tag_config.proto\x1a\x14subnode_config.proto\x1a\x17\x64\x61ta_model_config.proto\x1a\nprop.proto\"\xa7\x01\n\x04Meta\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x04tags\x18\x02 \x01(\x0b\x32\n.TagConfig\x12\x1e\n\x07methods\x18\x03 \x03(\x0b\x32\r.MethodConfig\x12 \n\x08subnodes\x18\x04 \x03(\x0b\x32\x0e.SubnodeConfig\x12 \n\x06models\x18\x05 \x03(\x0b\x32\x10.DataModelConfig\x12\x14\n\x05props\x18\x06 \x03(\x0b\x32\x05.Propb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'meta_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_META']._serialized_start=101
-  _globals['_META']._serialized_end=282
+  _globals['_META']._serialized_start=113
+  _globals['_META']._serialized_end=280
 # @@protoc_insertion_point(module_scope)

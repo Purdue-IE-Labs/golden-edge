@@ -1,0 +1,51 @@
+{
+  key: "gedge/examples/tag_writes/writee",
+  tags: [
+    {
+      path: "base/tag",
+      base_type: "int",
+    },
+    {
+      path: "base/tag/writable",
+      base_type: "float",
+      writable: true,
+      responses: [
+        {
+          code: 200,
+          type: "ok",
+        },
+        {
+          code: 400,
+          type: "err",
+        },
+      ],
+    },
+    {
+      path: "base/tag/writable/no/handler",
+      base_type: "bool",
+      writable: true,
+    },
+    {
+      path: "model/tag",
+      model_path: "bar/VERSION/2",
+    },
+  ],
+  writable_config: [
+    {
+      path: "model/tag/foo/bar/baz",
+      // here, we do not specify an err type,
+      // so gedge will use its buit-in err message
+      // additionally, info messages are not allowed
+      // in tag writes, because the idea of a tag write
+      // is that it is either success or failure.
+      // If info is needed, it should probably be
+      // a method call
+      responses: [
+        {
+          code: 205,
+          type: "ok",
+        },
+      ],
+    },
+  ],
+}

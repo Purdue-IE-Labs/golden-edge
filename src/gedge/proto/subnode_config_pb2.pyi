@@ -15,7 +15,7 @@ class SubnodeConfig(_message.Message):
     METHODS_FIELD_NUMBER: _ClassVar[int]
     SUBNODES_FIELD_NUMBER: _ClassVar[int]
     name: str
-    tags: _containers.RepeatedCompositeFieldContainer[_tag_config_pb2.TagConfig]
+    tags: _tag_config_pb2.TagConfig
     methods: _containers.RepeatedCompositeFieldContainer[_method_config_pb2.MethodConfig]
     subnodes: _containers.RepeatedCompositeFieldContainer[SubnodeConfig]
-    def __init__(self, name: _Optional[str] = ..., tags: _Optional[_Iterable[_Union[_tag_config_pb2.TagConfig, _Mapping]]] = ..., methods: _Optional[_Iterable[_Union[_method_config_pb2.MethodConfig, _Mapping]]] = ..., subnodes: _Optional[_Iterable[_Union[SubnodeConfig, _Mapping]]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., tags: _Optional[_Union[_tag_config_pb2.TagConfig, _Mapping]] = ..., methods: _Optional[_Iterable[_Union[_method_config_pb2.MethodConfig, _Mapping]]] = ..., subnodes: _Optional[_Iterable[_Union[SubnodeConfig, _Mapping]]] = ...) -> None: ...

@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from . import data_model_session_pb2 as data__model__session__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14method_session.proto\x1a\x18\x64\x61ta_model_session.proto\"q\n\nMethodCall\x12\'\n\x06params\x18\x01 \x03(\x0b\x32\x17.MethodCall.ParamsEntry\x1a:\n\x0bParamsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1a\n\x05value\x18\x02 \x01(\x0b\x32\x0b.DataObject:\x02\x38\x01\"\x9f\x01\n\x0eMethodResponse\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x12\'\n\x04\x62ody\x18\x02 \x03(\x0b\x32\x19.MethodResponse.BodyEntry\x12\x12\n\x05\x65rror\x18\x03 \x01(\tH\x00\x88\x01\x01\x1a\x38\n\tBodyEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1a\n\x05value\x18\x02 \x01(\x0b\x32\x0b.DataObject:\x02\x38\x01\x42\x08\n\x06_errorb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14method_session.proto\x1a\x18\x64\x61ta_model_session.proto\"o\n\nMethodCall\x12\'\n\x06params\x18\x01 \x03(\x0b\x32\x17.MethodCall.ParamsEntry\x1a\x38\n\x0bParamsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x18\n\x05value\x18\x02 \x01(\x0b\x32\t.DataItem:\x02\x38\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,14 +34,8 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_METHODCALL_PARAMSENTRY']._loaded_options = None
   _globals['_METHODCALL_PARAMSENTRY']._serialized_options = b'8\001'
-  _globals['_METHODRESPONSE_BODYENTRY']._loaded_options = None
-  _globals['_METHODRESPONSE_BODYENTRY']._serialized_options = b'8\001'
   _globals['_METHODCALL']._serialized_start=50
-  _globals['_METHODCALL']._serialized_end=163
+  _globals['_METHODCALL']._serialized_end=161
   _globals['_METHODCALL_PARAMSENTRY']._serialized_start=105
-  _globals['_METHODCALL_PARAMSENTRY']._serialized_end=163
-  _globals['_METHODRESPONSE']._serialized_start=166
-  _globals['_METHODRESPONSE']._serialized_end=325
-  _globals['_METHODRESPONSE_BODYENTRY']._serialized_start=259
-  _globals['_METHODRESPONSE_BODYENTRY']._serialized_end=315
+  _globals['_METHODCALL_PARAMSENTRY']._serialized_end=161
 # @@protoc_insertion_point(module_scope)

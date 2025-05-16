@@ -1,0 +1,63 @@
+{
+    key: "test/method/calls/callee",
+    methods: [
+        {
+            path: "call/method",
+            base_type: "int",
+            params: [
+                {
+                    path: "name",
+                    base_type: "string",
+                    props: {
+                        desc: "name of the project"
+                    }
+                },
+                {
+                    path: "speed",
+                    base_type: "int",
+                }
+            ],
+            responses: [
+                {
+                    code: 200,
+                    type: "ok",
+                    body: [
+                        {
+                            path: "res1",
+                            base_type: "int",
+                            props: {
+                                desc: "a body item named res1"
+                            }
+                        }
+                    ],
+                    props: {
+                        desc: "successfully executed method"
+                    }
+                },
+                {
+                    code: 400,
+                    type: "err",
+                    body: [
+                        {
+                            path: "res1",
+                            base_type: "int"
+                        }
+                    ],
+                    props: {
+                        desc: "speed must be in range [0, 100]"
+                    }
+                },
+                {
+                    code: 401,
+                    type: "err",
+                    props: {
+                        desc: "name cannot be longer than 30 characters"
+                    }
+                }
+            ],
+            props: {
+                desc: "testing method calls"
+            },
+        }    
+    ]
+}
