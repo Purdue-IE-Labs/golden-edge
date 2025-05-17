@@ -1,4 +1,6 @@
+import random
 import sys
+import time
 import gedge
 import pathlib
 
@@ -13,26 +15,28 @@ else:
     ip_address = "localhost"
 
 def level_1a_tag_write_handler(query: gedge.TagWriteQuery) -> None:
-    print("vice tag write handler")
+    print("level 1a tag write handler")
     if query.value > 10:
         query.reply_err(400)
     query.reply_ok(200)
 
 def root_method_handler(query: gedge.MethodQuery) -> None:
-    print("mill method handler")
-    query.reply_err(401)
+    print("root method handler")
+    query.reply_ok()
 
 def level_1b_level_2a_method_handler(query: gedge.MethodQuery) -> None:
-    print("inner subnode method handler")
+    print("level 1b level 2a method handler")
     query.reply_ok(200)
 
-here = pathlib.Path(__file__).parent / "gedge.json5"
+here = pathlib.Path(__file__).parent / "callee.json5"
 node = gedge.NodeConfig.from_json5(str(here))
-node.add_method_handler("call/method", handler=root_method_handler)
+node.add_method_handler("root/method", handler=root_method_handler)
 
+# in order to add handlers to subnodes, we need to subnode the node with this syntax
 level_1a = node.subnode("level-1a")
 level_1a.add_tag_write_handler("tag/write", handler=level_1a_tag_write_handler)
 
+# dig straight down to the subnode that we want
 level_1b_level_2a = node.subnode("level-1b/level-2a")
 level_1b_level_2a.add_method_handler("inner/method", handler=level_1b_level_2a_method_handler)
 
@@ -60,14 +64,19 @@ with gedge.connect(node, ip_address) as session:
     level_1a.update_tag("tag/write", value=239)
 
     try:
+        # this line fails because subnode 'level-2a' does not have a tag 'tag/write'
+        # that tag is actually defined only on 'level-1a'
         level_2a.update_tag("tag/write", value=239)
     except Exception as e:
         print(f"EXCEPTION: {e}")
 
     session.update_tag("root/tag", [1, 2])
 
-    # updating a model tag
-    level_1a.update_tag("model/tag/qux", 123)
-
     while True:
-        pass
+        # updating a model tag
+        level_1a.update_tag("model/tag/qux", random.randint(0, 10))
+        time.sleep(1)
+
+        # updating a base tag
+        level_2a.update_tag("inner/tag", random.random())
+        time.sleep(1)
