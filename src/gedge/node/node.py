@@ -714,6 +714,9 @@ class NodeSession:
             SubnodeSession: The new session for the subnode
         '''
         from gedge.node.subnode import SubnodeSession
+
+        logger.info(f"Fetching subnode {name}...")
+
         # need to return a subnode session
         if "/" in name:
             curr_node: NodeConfig | SubnodeConfig = self.config
@@ -723,11 +726,13 @@ class NodeSession:
                     raise ValueError(f"No subnode {s}")
                 curr_node = curr_node.subnodes[s]
             session = SubnodeSession(curr_node, self._comm) # type: ignore
+            logger.debug(f"Found subnode with name {curr_node.name}") # type: ignore
             return session
 
         if name not in self.subnodes:
             raise ValueError(f"No subnode {name}") 
         session = SubnodeSession(self.config.subnodes[name], self._comm)
+        logger.debug(f"Found subnode with name {name}")
         return session
 
     def sleep(self):

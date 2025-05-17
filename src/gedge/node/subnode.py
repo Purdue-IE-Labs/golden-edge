@@ -9,6 +9,7 @@ from gedge.node.method import MethodConfig
 from gedge.node.method_response import ResponseConfig
 from gedge.node.node import NodeConfig, NodeSession
 from gedge.node.remote import RemoteConnection
+from gedge.node.tag_bind import TagBind
 from gedge.py_proto.tag_config import Tag, TagConfig
 
 import logging
@@ -82,6 +83,7 @@ class SubnodeSession(NodeSession):
         self.methods: dict[str, MethodConfig] = self.config.methods
         self.method_responses: dict[str, dict[int, ResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         self.subnodes: dict[str, SubnodeConfig] = self.config.subnodes
+        self.binds: dict[str, TagBind] = {}
     
     def subnode(self, name: str) -> SubnodeSession:
         session = SubnodeSession(self.subnodes[name], self._comm)

@@ -1,0 +1,137 @@
+{
+    key: "gedge/examples/subnodes/callee",
+    tags: [
+        {
+            path: "root/tag",
+            base_type: "list[int]",
+        }
+    ],
+    methods: [
+        {
+            path: "call/method",
+            params: [
+                {
+                    path: "name",
+                    base_type: "string",
+                    props: {
+                        desc: "name of the project"
+                    }
+                },
+                {
+                    path: "speed",
+                    base_type: "int",
+                },
+            ],
+            responses: [
+                {
+                    code: 200,
+                    type: "ok",
+                    body: [
+                        {
+                            path: "res1",
+                            base_type: "int",
+                            props: {
+                                desc: "a body item named res1"
+                            }
+                        }
+                    ],
+                    props: {
+                        desc: "successfully executed method"
+                    }
+                },
+                {
+                    code: 400,
+                    type: "err",
+                    body: [
+                        {
+                            path: "res1",
+                            base_type: "int"
+                        }
+                    ],
+                    props: {
+                        desc: "speed must be in range [0, 100]"
+                    }
+                },
+                {
+                    code: 401,
+                    type: "err",
+                    props: {
+                        desc: "name cannot be longer than 30 characters"
+                    }
+                }
+            ],
+            props: {
+                desc: "testing method calls"
+            },
+        }
+    ],
+    subnodes: [
+        {
+            name: "level-1a",
+            tags: [
+                {
+                    path: "tag/write",
+                    base_type: "int",
+                    writable: true,
+                    props: {
+                        "desc": "testing a subnode (vice) tag write",
+                    },
+                    responses: [
+                        {
+                            code: 200, 
+                            type: "ok",
+                            props: {
+                                "desc": "vice tag updated with value"
+                            }
+                        },
+                        {
+                            code: 400,
+                            type: "err",
+                            props: {
+                                "desc": "invalid value for vice tag (>10)"
+                            }
+                        }
+                    ]
+                },
+                {
+                    path: "model/tag",
+                    model_path: "bar"
+                }
+            ],
+        },
+        {
+            name: "level-1b",
+            tags: [
+                {
+                    path: "base/tag",
+                    base_type: "list[bool]"
+                }
+            ],
+            subnodes: [
+                {
+                    name: "level-2a",
+                    tags: [
+                        {
+                            path: "inner/tag",
+                            base_type: "float",
+                            props: {
+                                "desc": "testing a subnode subnode (inner) tag",
+                            },
+                        }
+                    ],
+                    methods: [
+                        {
+                            path: "inner/method",
+                            responses: [
+                                {
+                                    code: 200,
+                                    type: "ok"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
