@@ -1,6 +1,7 @@
 # gedge
 
-The cli has three major commands:
+The purpose of the `gedge` cli is to make it easy to create, publish, and consume models that live on the
+historian. It has three major commands:
 
 1. `gedge push`
 2. `gedge pull`

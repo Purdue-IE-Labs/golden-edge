@@ -1,52 +1,53 @@
+// Massive configuration file that shows off nearly every feature of gedge configuration
 {
-    key: "gedge/examples/everything",
-    tags: [
+  key: "gedge/examples/everything",
+  tags: [
+    {
+      // a tag of type 'model' is not writable, only tags of type 'base'
+
+      // model tag must specify a model_path
+      path: "tag/1",
+
+      // this gets the latest qux that is pulled locally
+      model_path: "qux",
+      props: {
+        desc: "testing a data object",
+      },
+    },
+    {
+      path: "tag/2",
+
+      // we can target a specific version of the model, we search the model-dir for this file
+      model_path: "bar/VERSION/2",
+      props: {
+        desc: "bar",
+      },
+    },
+    {
+      // this tag will live at topic 'gedge/examples/NODE/everything/TAGS/DATA/base_tag'
+      path: "base_tag",
+      base_type: "int",
+
+      // because this is a base tag, we can declare it as writable
+      writable: true,
+      responses: [
         {
-            // a tag of type 'model' is not writable, only tags of type 'base'
-
-            // model tag must specify a model_path
-            path: "tag/1",
-
-            // this gets the latest qux that is pulled locally
-            model_path: "qux",
-            props: {
-                desc: "testing a data object",
-            },
-        }, 
-        {
-            path: "tag/2",
-
-            // we can target a specific version of the model, we search the model-dir for this file
-            model_path: "bar/VERSION/2",
-            props: {
-                desc: "bar"
-            },
+          code: 200,
+          type: "ok",
         },
-        {
-            // this tag will live at topic 'gedge/examples/NODE/everything/TAGS/DATA/base_tag'
-            path: "base_tag",
-            base_type: "int",
+      ],
+    },
+    {
+      path: "writable/tag/no/responses",
+      base_type: "float",
 
-            // because this is a base tag, we can declare it as writable
-            writable: true,
-            responses: [
-                {
-                    code: 200,
-                    type: "ok"
-                }
-            ]
-        },
-        {
-            path: "writable/tag/no/responses",
-            base_type: "float",
-            
-            // despite the fact that this tag is writable, we need not provide responses
-            // gedge comes with well-defined responses that can be used for OK and ERR message responses
-            writable: true,
-        }
-    ],
+      // despite the fact that this tag is writable, we need not provide responses
+      // gedge comes with well-defined responses that can be used for OK and ERR message responses
+      writable: true,
+    },
+  ],
 
-    /*
+  /*
     This section specifies tags as writable and defines their responses. 
     The tag paths here must be represented above (in 'tags' section) in one of two ways:
     (1) base tag (example: path="base_tag")
@@ -54,32 +55,32 @@
         is of type 'qux', which is a model that has tag 'tag' on it, which is of type 'int').
         Thus, this eventually points back to a base tag still.
     */
-    writable_config: [
+  writable_config: [
+    {
+      path: "tag/1/tag",
+
+      // every response (for both tag writes and methods), must include, at a minimum
+      // both a code and a type
+      responses: [
         {
-            path: "tag/1/tag",
+          code: 2000,
 
-            // every response (for both tag writes and methods), must include, at a minimum
-            // both a code and a type
-            responses: [
-                {
-                    code: 2000,
-
-                    // the 'type' of a response can be one of ['ok', 'err', 'info']
-                    type: "ok",
-                    props: {
-                        desc: "Project started successfully"
-                    }
-                }
-            ]
+          // the 'type' of a response can be one of ['ok', 'err', 'info']
+          type: "ok",
+          props: {
+            desc: "Project started successfully",
+          },
         },
-        {
-            // here, we don't specify responses and will use the default ones when 
-            // handling a write to this tag path
-            path: "tag/1/tag/2/baz"
-        }
-    ],
+      ],
+    },
+    {
+      // here, we don't specify responses and will use the default ones when
+      // handling a write to this tag path
+      path: "tag/1/tag/2/baz",
+    },
+  ],
 
-    /*
+  /*
     Tag groups allow for automatically updating (and eventually writing to) multiple tags 
     at a time (i.e. in one protobuf message). Eventually, wildcards will be supported.
     Similar to in the case of writable config, all paths in 'tag_paths' must be represented
@@ -88,162 +89,162 @@
     A tag can only be found in a single group. If there is a collision, an error will be thrown 
     when reading the configuration.
     */
-    group_config: [
-        {
-            group_path: "test_group",
-            tag_paths: ["tag/1/tag", "base_tag"]
-        },
-        // throws an error because base_tag already part of group 'test_group'
-        // {
-        //     group_path: "test_group_2",
-        //     tag_paths: ["base_tag"]
-        // }
-    ],
+  group_config: [
+    {
+      group_path: "test_group",
+      tag_paths: ["tag/1/tag", "base_tag"],
+    },
+    // throws an error because base_tag already part of group 'test_group'
+    // {
+    //     group_path: "test_group_2",
+    //     tag_paths: ["base_tag"]
+    // }
+  ],
 
-    /*
+  /*
     Methods must include a path and can optionally include parameters and responses.
     */
-    methods: [
+  methods: [
+    {
+      // this method will live at topic 'gedge/examples/NODE/everything/METHODS/example/method'
+      path: "example/method",
+
+      // can specify a list of tag-looking items with a path, type, and optional properties
+      params: [
         {
-            // this method will live at topic 'gedge/examples/NODE/everything/METHODS/example/method'
-            path: "example/method",
+          // despite this being a path, it is not expected that this be long. It is
+          // just a parameter name. Call it 'name', 'key', 'speed', 'temp', etc. etc.
+          path: "name",
+          base_type: "string",
+          props: {
+            desc: "name of the project",
+          },
+        },
+        {
+          path: "speed",
+          base_type: "int",
+        },
+      ],
 
-            // can specify a list of tag-looking items with a path, type, and optional properties
-            params: [
-                {
-                    // despite this being a path, it is not expected that this be long. It is 
-                    // just a parameter name. Call it 'name', 'key', 'speed', 'temp', etc. etc.
-                    path: "name",
-                    base_type: "string",
-                    props: {
-                        desc: "name of the project"
-                    }
-                },
-                {
-                    path: "speed",
-                    base_type: "int",
-                }
-            ],
-            
-            // a list of responses that the method can return
-            // this is in addition to the built-in responses that gedge will fire in the event of 
-            // something going wrong in the user-defined method
-            responses: [
-                {
-                    code: 200,
-                    type: "ok",
-                    body: [
-                        {
-                            path: "res1",
-                            base_type: "int",
-                            props: {
-                                desc: "a body item named res1"
-                            }
-                        }
-                    ],
-                    props: {
-                        desc: "successfully executed method"
-                    }
-                },
-                {
-                    code: 400,
-                    type: "err",
-                    body: [
-                        {
-                            path: "res1",
-                            base_type: "int"
-                        }
-                    ],
-                    props: {
-                        desc: "speed must be in range [0, 100]"
-                    }
-                },
-                {
-                    code: 401,
-                    type: "err",
-                    props: {
-                        desc: "name cannot be longer than 30 characters"
-                    }
-                }
-            ],
-            props: {
-                desc: "testing method calls"
+      // a list of responses that the method can return
+      // this is in addition to the built-in responses that gedge will fire in the event of
+      // something going wrong in the user-defined method
+      responses: [
+        {
+          code: 200,
+          type: "ok",
+          body: [
+            {
+              path: "res1",
+              base_type: "int",
+              props: {
+                desc: "a body item named res1",
+              },
             },
-        }
-    ],
+          ],
+          props: {
+            desc: "successfully executed method",
+          },
+        },
+        {
+          code: 400,
+          type: "err",
+          body: [
+            {
+              path: "res1",
+              base_type: "int",
+            },
+          ],
+          props: {
+            desc: "speed must be in range [0, 100]",
+          },
+        },
+        {
+          code: 401,
+          type: "err",
+          props: {
+            desc: "name cannot be longer than 30 characters",
+          },
+        },
+      ],
+      props: {
+        desc: "testing method calls",
+      },
+    },
+  ],
 
-    /*
+  /*
     Subnodes look basically just like a list of what was 
     defined above. It is a list of objects that have some 
     combination of 'name', 'tags', 'methods', 'writable_config', 'group_config',
     and 'subnodes'
     Subnodes can have more subnodes, recursing infinitely if desired
     */
-    subnodes: [
+  subnodes: [
+    {
+      name: "subnode1",
+      tags: [
         {
-            name: "subnode1",
-            tags: [
-                {
-                    path: "tag/write",
-                    base_type: "int",
-                    writable: true,
-                    props: {
-                        "desc": "testing a subnode (vice) tag write",
-                    },
-                    responses: [
-                        {
-                            code: 200, 
-                            type: "ok",
-                            props: {
-                                "desc": "tag updated successfully"
-                            }
-                        },
-                        {
-                            code: 400,
-                            type: "err",
-                            props: {
-                                "desc": "invalid tag value"
-                            }
-                        }
-                    ]
-                },
-            ],
+          path: "tag/write",
+          base_type: "int",
+          writable: true,
+          props: {
+            desc: "testing a subnode (vice) tag write",
+          },
+          responses: [
+            {
+              code: 200,
+              type: "ok",
+              props: {
+                desc: "tag updated successfully",
+              },
+            },
+            {
+              code: 400,
+              type: "err",
+              props: {
+                desc: "invalid tag value",
+              },
+            },
+          ],
         },
+      ],
+    },
+    {
+      name: "subnode2",
+      tags: [
         {
-            name: "subnode2",
-            tags: [
+          path: "tag",
+          base_type: "list[bool]",
+        },
+      ],
+      subnodes: [
+        {
+          name: "inner-subnode",
+          tags: [
+            {
+              path: "siemens/inner/tag",
+              base_type: "float",
+              props: {
+                desc: "testing a subnode subnode (inner) tag",
+              },
+            },
+          ],
+          methods: [
+            {
+              // this method lives at
+              // 'gedge/examples/NODE/everything/SUBNODES/subnode2/SUBNODES/inner-subnode/METHODS/inner/method/'
+              path: "inner/method",
+              responses: [
                 {
-                    path: "tag",
-                    base_type: "list[bool]"
-                }
-            ],
-            subnodes: [
-                {
-                    name: "inner-subnode",
-                    tags: [
-                        {
-                            path: "siemens/inner/tag",
-                            base_type: "float",
-                            props: {
-                                "desc": "testing a subnode subnode (inner) tag",
-                            },
-                        }
-                    ],
-                    methods: [
-                        {
-                            // this method lives at 
-                            // 'gedge/examples/NODE/everything/SUBNODES/subnode2/SUBNODES/inner-subnode/METHODS/inner/method/'
-                            path: "inner/method",
-                            responses: [
-                                {
-                                    code: 200,
-                                    type: "ok"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
+                  code: 200,
+                  type: "ok",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
 }
