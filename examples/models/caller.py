@@ -1,6 +1,7 @@
 import pathlib
 import random
 import sys
+import time
 import gedge
 
 def on_data(key_expr: str, value: gedge.TagBaseValue):
@@ -29,6 +30,17 @@ with gedge.connect(config, ip_address) as session:
     responses = remote.call_method_iter("call/method", model=qux, speed=100)
     for response in responses:
         print(response.code, response.props, response.body)
+
+    time.sleep(3)
+    qux = {
+        "foo/bar/baz/qux": random.random(),
+        "tag": random.randint(0, 10),
+    }
+    responses = remote.call_method_iter("call/method", model=qux, speed=10)
+    for response in responses:
+        print(response.code, response.props, response.body)
+    
+    time.sleep(3)
 
     remote.add_tag_data_callback("tag/1/foo/bar/baz/qux", on_data)
     session.sleep()

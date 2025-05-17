@@ -67,6 +67,16 @@ them in the node definition. This is a node configuration file.
           },
         },
         {
+          code: 202,
+          type: "ok",
+          body: [
+            {
+              path: "res1",
+              model_path: "qux"
+            }
+          ]
+        },
+        {
           code: 400,
           type: "err",
           body: [

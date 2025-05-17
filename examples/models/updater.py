@@ -24,6 +24,15 @@ def handler(query: gedge.MethodQuery):
 
     if speed < 0 or speed > 100:
         query.reply_err(400, body={"res1": speed})
+    
+    if speed == 10:
+        response_model = {
+            "tag": 12,
+            "tag/2": {
+                "foo/bar/baz": 10.4
+            }
+        }
+        query.reply_ok(202, body={"res1": response_model})
 
     # passing a model back as a body item
     # importantly, this need not include all items of a 
