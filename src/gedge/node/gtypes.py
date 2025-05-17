@@ -9,9 +9,12 @@ from gedge.py_proto.state import State
 
 # a node defines this on its own config for its writable tags
 TagBaseValue = int | float | bool | str | list[int] | list[float] | list[bool] | list[str]
-# dict is the representation of a DataModel
+
+# dict is the representation of a DataModel and a TagGroup
 TagGroupValue = dict[str, TagBaseValue]
+
 TagValue = TagBaseValue | TagGroupValue
+
 ProtoMessage = proto.Meta | proto.DataItem | proto.Response | proto.State | proto.MethodCall | proto.DataModelConfig | proto.BaseData | proto.TagGroup
 
 TagWriteHandler = Callable[[TagWriteQuery], None]
@@ -21,7 +24,6 @@ MethodReplyCallback = Callable[[Response], None]
 KeyExpr = str
 StateCallback = Callable[[KeyExpr, State], None]
 MetaCallback = Callable[[KeyExpr, Meta], None]
-# TagDataCallback = Callable[[KeyExpr, TagBaseValue | DataObject], None]
 TagDataCallback = Callable[[KeyExpr, TagBaseValue], None]
 TagGroupDataCallback = Callable[[KeyExpr, TagGroupValue], None]
 LivelinessCallback = Callable[[KeyExpr, bool], None]

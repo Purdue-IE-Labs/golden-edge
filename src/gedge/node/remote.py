@@ -81,6 +81,8 @@ class RemoteConnection:
         '''
         if not self.tag_config.is_valid_path(path):
             raise TagLookupError(path, self.ks.name)
+        if not self.tag_config.is_base_type(path):
+            raise ValueError(f"Cannot add callback for model tag (only base tags) at path {path}")
         
         # group = self.tag_config.get_group(path)
         # if group:

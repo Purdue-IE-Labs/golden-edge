@@ -96,7 +96,7 @@ class DataItem:
         configs = {c.path: c for c in model_config.items}
         for k, v in value.items():
             if k not in configs:
-                raise LookupError(f"No tag with path {k} included in model data for model {config.path}, but that tag is in the model definition!")
+                raise LookupError(f"No tag with path {k} defined on model {model_config.path}, but that tag is in the model data!")
             res.data[k] = cls.from_value(v, configs[k])
             # res.data.append(cls.from_value(value[k], v))
         return res

@@ -1,0 +1,101 @@
+/*
+It is very important to know the difference 
+between a model json configuration file and a 
+node configuration file. A model json configuration 
+file is purely for defining models. A node 
+configuration file is for consuming models and using 
+them in the node definition. This is a node configuration file.
+*/
+{
+  key: "gedge/examples/models/updater",
+  tags: [
+    {
+      path: "tag/1",
+      model_path: "qux",
+      props: {
+        desc: "testing a data object",
+      },
+    },
+    {
+      path: "tag/2",
+      // these are both disallowed in node config, only allowed in model config
+      // model_file: "./bar.json5",
+      // model: {
+      //     path: "stuff",
+      //     version: 1
+      // },
+      model_path: "bar",
+
+      // this would throw an error because bar is a model
+      // writable: true,
+      // responses: [
+      //     {
+      //         code: 100,
+      //         type: "ok"
+      //     }
+      // ],
+      props: {
+        desc: "bar",
+      },
+    },
+  ],
+  methods: [
+    {
+      path: "call/method",
+      params: [
+        {
+          path: "model",
+          model_path: "qux/VERSION/1",
+          props: {
+            desc: "a parameter to a method that is a data model (woah)",
+          },
+        },
+        {
+          path: "speed",
+          base_type: "int",
+        },
+      ],
+      responses: [
+        {
+          code: 200,
+          type: "ok",
+          body: [
+            {
+              path: "res1",
+              model_path: "bar",
+              props: {
+                desc: "a body item of a method response that is a data model (woah)",
+              },
+            },
+          ],
+          props: {
+            desc: "successfully executed method",
+          },
+        },
+        {
+          code: 400,
+          type: "err",
+          body: [
+            {
+              path: "res1",
+              base_type: "int",
+            },
+          ],
+          props: {
+            desc: "speed must be in range [0, 100]",
+          },
+        },
+        {
+          code: 401,
+          type: "err",
+          props: {
+            desc: "name cannot be longer than 30 characters",
+          },
+        },
+      ],
+      props: {
+        desc: "testing method calls",
+      },
+    },
+  ],
+}

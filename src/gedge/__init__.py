@@ -1,5 +1,6 @@
 import pathlib
 from gedge.node.codes import OK, ERR, CALLBACK_ERR
+from gedge.node.gtypes import TagGroupValue, TagBaseValue
 from gedge.node.method_response import ResponseConfig, ResponseType
 from gedge.node.query import MethodQuery, TagWriteQuery
 from gedge.node.reply import Response
