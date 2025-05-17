@@ -72,24 +72,24 @@ def _pull(path: str, version: int | None, ip_address: str, model_dir: str):
 
 def main():
     parser = argparse.ArgumentParser(prog="gedge", description="Handle models in golden-edge", epilog="Try 'gedge --help' for more info")
-    parser.add_argument('--ip-address', type=str, default="192.168.4.60", help="IP address where historian lives")
+    parser.add_argument('--ip-address', type=str, default="localhost", help="IP address where historian lives")
     
     # currently for pushing, we search what we currently have
-    parser.add_argument("--model-dir", type=str, help="outptut directory where all pulled models will go")
+    parser.add_argument("--model-dir", type=str, help="Output directory where all pulled models will go. This is required for 'gedge pull' and 'gedge push-pull'")
 
     subparsers = parser.add_subparsers(title="subcommands", help="subcommand help")
 
-    push_parser = subparsers.add_parser("push", help="Subcommand for pushing models to historian")
+    push_parser = subparsers.add_parser("push", description="Subcommand for pushing models to historian.")
     push_parser.add_argument("--json-dir", type=str, default=None, help="directory where we should search for json files (defaults to parent directory of path argument)")
     push_parser.add_argument("path", type=str, help="path to json5 file describing model")
     push_parser.set_defaults(func=push)
 
-    pull_parser = subparsers.add_parser("pull", help="Subcommand for pulling models from historian")
+    pull_parser = subparsers.add_parser("pull", help="Subcommand for pulling models from historian.")
     pull_parser.add_argument("--version", type=int, default=None, help="version of the model to pull (defaults to latest)")
     pull_parser.add_argument("path", type=str, help="path where model lives in the historian (not including MODELS/ prefix)")
     pull_parser.set_defaults(func=pull)
 
-    push_pull_parser = subparsers.add_parser("push-pull", help="Pushes model to historian and pulls it")
+    push_pull_parser = subparsers.add_parser("push-pull", help="Pushes model to historian and pulls it into directory specified by --model-dir. This directory should then be used in scripts so that gedge can find pulled models")
     push_pull_parser.add_argument("--json-dir", type=str, default=None, help="directory where we should search for json files (defaults to parent directory of path argument)")
     push_pull_parser.add_argument("path", type=str, help="path to json5 file describing model")
     push_pull_parser.set_defaults(func=push_pull)

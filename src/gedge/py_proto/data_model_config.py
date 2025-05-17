@@ -143,6 +143,9 @@ class DataModelConfig:
         path = to_file_path(self.path, self.version)
         return path
     
+    def to_model_ref(self) -> DataModelRef:
+        return DataModelRef(self.path, self.version)
+    
     @classmethod
     def from_json5(cls, j: Any) -> Self:
         if not isinstance(j, dict):

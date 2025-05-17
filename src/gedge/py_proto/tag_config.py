@@ -74,10 +74,6 @@ class Tag:
         from gedge.py_proto.data_model_config import DataItemConfig
         if not isinstance(j, dict):
             raise ValueError(f"invalid tag, expected dict, got {j}")
-        if "model_file" in j:
-            raise ValueError("Cannot provide path to json5 model file in node config! Use model_path.")
-        if "model" in j:
-            raise ValueError("Cannot provide model definition in node config! Use model_path.")
         config = DataItemConfig.from_json5(j)
 
         w = writable

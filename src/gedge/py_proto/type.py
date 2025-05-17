@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import pathlib
 from typing import TYPE_CHECKING, Any, Self
+
+import json5
 
 from gedge import proto
 from gedge.py_proto.base_type import BaseType
 from gedge.py_proto.data_model_ref import DataModelRef
+from gedge.py_proto.singleton import Singleton
 
 if TYPE_CHECKING:
     from gedge.py_proto.data_model_config import DataModelConfig
@@ -29,7 +33,13 @@ class Type:
         raise ValueError(f"none of fields for proto.Type were set")
     
     def to_json5(self):
-        raise NotImplementedError
+        base_type = self.get_base_type()
+        if base_type:
+            return base_type.to_json5()
+        else:
+            model_path = self.get_model_ref()
+            assert model_path is not None
+            return {"model_path": model_path.to_json5()}
     
     @classmethod
     def from_json5(cls, j: Any):

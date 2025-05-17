@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import pathlib
 from typing import Any, Self, TYPE_CHECKING
+
+import json5
 
 from gedge import proto
 from gedge.comm import keys
 from gedge.py_proto.load_models import load, to_file_path
+from gedge.py_proto.singleton import Singleton
 
 if TYPE_CHECKING:
     from gedge.py_proto.data_model_config import DataModelConfig
@@ -49,6 +53,8 @@ class DataModelRef:
     @classmethod
     def from_json5(cls, json5: Any) -> Self:
         if isinstance(json5, dict):
+            if "model_path" not in json5:
+                raise ValueError(f"Invalid model ref {json5}, must specify either a base_type or a model_path")
             return cls.from_json5(json5["model_path"])
 
         components = json5.split("/")
