@@ -29,6 +29,11 @@ def handler2(query: gedge.TagWriteQuery) -> None:
 
     if query.value > 15.5:
         query.reply_ok(205)
+    elif query.value < 0.0:
+        # if we never call any version of query.reply, gedge will 
+        # catch this and return an error, noting that we used the 
+        # API incorrectly
+        return
 
     # if we use an empty query.reply_err() call, gedge 
     # uses the default err message instead of a code we defined

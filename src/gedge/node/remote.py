@@ -21,7 +21,7 @@ from gedge.py_proto.data_model_config import DataModelConfig
 from gedge.py_proto.data_model_ref import DataModelRef
 from gedge.py_proto.tag_config import Tag, TagConfig 
 if TYPE_CHECKING:
-    from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback, TagValue, TagBaseValue
+    from gedge.node.gtypes import TagDataCallback, StateCallback, MetaCallback, LivelinessCallback, MethodReplyCallback, TagValue, TagBaseValue, TagGroupDataCallback
     from gedge.node.subnode import RemoteSubConnection
 
 import logging
@@ -88,7 +88,7 @@ class RemoteConnection:
         #     return
         self._comm.tag_data_subscriber(self.ks, path, on_tag_data, self.tag_config)
     
-    def add_tag_group_callback(self, group_path: str, on_group_data: TagDataCallback) -> None:
+    def add_tag_group_callback(self, group_path: str, on_group_data: TagGroupDataCallback) -> None:
         if not self.tag_config.is_valid_group_path(group_path):
             raise LookupError(group_path)
         

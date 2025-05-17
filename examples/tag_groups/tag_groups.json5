@@ -25,8 +25,10 @@
       },
     },
     {
-      path: "base_tag",
+      path: "tag/3",
       base_type: "int",
+
+      // only for a base type, this syntax is valid to define it as writable
       writable: true,
       responses: [
         {
@@ -34,6 +36,10 @@
           type: "ok",
         },
       ],
+    },
+    {
+      path: "tag/4",
+      base_type: "float",
     },
   ],
   writable_config: [
@@ -54,15 +60,18 @@
     },
   ],
   group_config: [
+    // a tag can only be a part of 0 or 1 group(s)
+    // in the future, we will support syntax for wildcards
+    // but for now, you need to specify tag paths explicitly
     {
       group_path: "test_group",
-      tag_paths: ["tag/1/tag", "base_tag"],
+      tag_paths: ["tag/1/tag", "tag/2/qux", "tag/3", "tag/4"],
     },
 
-    // throws an error because base_tag already part of tag
+    // throws an error because tag/3 already part of tag
     // {
     //     group_path: "test_group_2",
-    //     tag_paths: ["base_tag"]
+    //     tag_paths: ["tag/3"]
     // }
   ],
 }

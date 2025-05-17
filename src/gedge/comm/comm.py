@@ -22,7 +22,7 @@ from gedge.py_proto.data_model_ref import DataModelRef
 from gedge.py_proto.state import State
 from gedge.py_proto.tag_config import Tag, TagConfig 
 if TYPE_CHECKING:
-    from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, ZenohCallback, ZenohQueryCallback, ProtoMessage
+    from gedge.node.gtypes import LivelinessCallback, MetaCallback, MethodReplyCallback, StateCallback, TagDataCallback, TagValue, ZenohCallback, ZenohQueryCallback, ProtoMessage, TagBaseValue, TagGroupDataCallback
     from gedge.node.method import MethodConfig
     from gedge.py_proto.meta import Meta
 
@@ -208,7 +208,7 @@ class Comm:
         }
     })
     '''
-    def _on_group_data(self, on_group_data: TagDataCallback, tag_config: TagConfig) -> ZenohCallback:
+    def _on_group_data(self, on_group_data: TagGroupDataCallback, tag_config: TagConfig) -> ZenohCallback:
         def _on_group_data(sample: zenoh.Sample):
             data: proto.TagGroup = self.deserialize(proto.TagGroup(), sample.payload.to_bytes())
             logger.debug(f"Sample received on key expression {str(sample.key_expr)}, value = {data}, sequence_number = {sample.attachment.to_string() if sample.attachment else 0}")
@@ -216,7 +216,7 @@ class Comm:
             configs = tag_config.get_group_member_configs(group_path)
             # print(configs)
 
-            new_data: dict[str, TagValue] = {}
+            new_data: dict[str, TagBaseValue] = {}
             # value here must be of type BaseData
             for key, value in data.data.items():
                 new_data[key] = BaseData.from_proto(value, configs[key].get_base_type()).to_py() # type: ignore
@@ -504,7 +504,7 @@ class Comm:
             zenoh_handler = self._on_tag_data(handler, tag_config)
             self._subscriber(key_expr, zenoh_handler)
     
-    def group_data_subscriber(self, ks: NodeKeySpace, group_path: str, handler: TagDataCallback, tag_config: TagConfig) -> None:
+    def group_data_subscriber(self, ks: NodeKeySpace, group_path: str, handler: TagGroupDataCallback, tag_config: TagConfig) -> None:
         key_expr = ks.group_data_path(group_path)
         zenoh_handler = self._on_group_data(handler, tag_config)
         self._subscriber(key_expr, zenoh_handler)
