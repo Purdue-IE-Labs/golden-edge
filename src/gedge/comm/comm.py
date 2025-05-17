@@ -776,7 +776,7 @@ class Comm:
             return None
         return config
     
-    # TODO: just take a DataModelType
+    # TODO: just take a DataModelType as the argument
     # we expand everything when we return it
     def pull_model(self, path: str, version: int | None = None) -> DataModelConfig | None:
         if version is not None:
@@ -803,20 +803,6 @@ class Comm:
         return model
     
     def push_model(self, model: DataModelConfig, push_embedded: bool = True) -> bool:
-        # TODO: if they use an embedded model but pass push_embedded=False, we run the risk of losing that model
-        if push_embedded:
-            # Design decision: if we want to push recursively, we only do this for embedded models, not just path ones
-            # Embedded includes both model and model_file
-            pass
-            # for tag in model.items:
-            #     model_config = tag.config.get_model_config()
-            #     if not model_config:
-            #         continue
-            #     logger.debug(f"Pushing embedded model {model_config.path}")
-            #     if not self.push_model(model_config, push_embedded):
-            #         return False
-            #     tag.config.to_model_path()
-
         res = self.pull_model(model.path)
         if res and res.version + 1 != model.version:
             # TODO: here we may check for equality of models before updating the version, 

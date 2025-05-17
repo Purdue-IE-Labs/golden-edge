@@ -221,7 +221,6 @@ class TagConfig:
     
     def add_group_config_json5(self, j: list):
         # TODO: handle wildcards
-        # TODO: check before connection if any are part of more than one group
         for group in j:
             group = TagGroupConfig.from_json5(group)
             for path in group.items:
@@ -230,7 +229,6 @@ class TagConfig:
                     raise LookupError(f"invalid group path {path}")
                 c = t.get_config(path)
                 if c.is_model_ref():
-                    # TODO: expand this to include all its tags
                     raise ValueError(f"model {path} cannot be writable, only tags of it")
                 t.add_group(path, group.path)
     

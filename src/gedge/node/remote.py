@@ -285,7 +285,12 @@ class RemoteConnection:
         tag = self.tag_config.get_tag(path)
         return self._write_tag(path, value, tag)
     
-    # TODO: this should have a timeout
+    # TODO: this should have a timeout, just like call_method_iter
+    # the reason we prefix the parameters with "_" is so that it does not 
+    # conflict with the kwargs that the user passes in (i.e. a user could 
+    # reasonably include a parameter "path", and we don't want that to 
+    # collide with our paramter "path", so we rename our parameter on "call_method"
+    # to "_path")
     def call_method(self, _path: str, _on_reply: MethodReplyCallback, **kwargs) -> None:
         '''
         Registers the passed MethodReplyCallback and then calls the method at the passed path and all replies get routed to the passed Callback

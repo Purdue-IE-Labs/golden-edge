@@ -282,7 +282,10 @@ class NodeConfig:
         '''
         for path in self.tag_config:
             tag = self.tag_config[path]
-            # TODO: fix, what to verify here vs. at config loading time?
+            # TODO: for now, we lazily evaluate this
+            # that is to say, we don't check for handler or responses now, 
+            # but only when someone tries to write to the tag
+
             # if tag.writable:
             #     assert tag.handler is not None, f"Tag {path} declared as writable but no write handler was provided"
             #     assert len(tag.responses) > 0, f"Tag {path} declared as writable but no responses registered for write handler"
@@ -331,8 +334,6 @@ class NodeConfig:
         models = self.get_models()
         self.models = {m.full_path: m for m in models}
 
-        # TODO: ensure they provided a handler for all tag writes and methods
-
         return NodeSession(self, Comm(connections))
 
 class NodeSession:
@@ -353,7 +354,6 @@ class NodeSession:
 
         # TODO: subscribe to our own meta to handle changes to config during session?
         self.meta = self.config.build_meta()
-        # TODO: put models in singleton?
         logger.debug(f"Built meta: {self.meta}")
 
         self._startup()
@@ -535,7 +535,6 @@ class NodeSession:
         '''
         # verify that key expression with this key prefix and name is not online
         metas = self._comm.pull_meta_messages(only_online=True)
-        # TODO: this is becoming an expensive operation? Either that or my computer is buggin
         assert not any([x.key == self.ks.user_key for x in metas]), f"{[x.key for x in metas]} are online, and {self.ks.user_key} match!"
 
     def _startup(self):

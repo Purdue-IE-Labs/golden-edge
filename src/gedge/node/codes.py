@@ -1,7 +1,4 @@
-# temporary, this will change
-# TODO: add decorators to check conditions of input arguments
 # reserved: 0-99 (TODO: check in outward facing functions that they don't violate this)
-# TODO: change classes to dataclasses
 
 from gedge.node.method_response import ResponseConfig, ResponseType
 from gedge.node.reply import Response

@@ -49,7 +49,6 @@ class DataModelRef:
             raise LookupError(f"Must provide version to get file path of model {self.full_path}")
         return to_file_path(self.path, self.version)
     
-    # TODO: what should a dictionary parent look like
     @classmethod
     def from_json5(cls, json5: Any) -> Self:
         if isinstance(json5, dict):
