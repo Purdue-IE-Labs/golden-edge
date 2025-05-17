@@ -40,9 +40,9 @@ class MethodConfig:
     def from_json5(cls, j: Any) -> Self:
         from gedge.node.method_response import ResponseConfig
         if not isinstance(j, dict):
-            raise ValueError(f"Invalid method config {j}")
+            raise ValueError(f"Invalid method config, expected dict, got {j}")
         if "path" not in j:
-            raise LookupError(f"Method must have path, {j}")
+            raise LookupError(f"Method must have 'path', got {j}")
         path = j["path"]
         props = []
         for k, v in j.get("props", {}).items():

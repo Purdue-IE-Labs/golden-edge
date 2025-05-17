@@ -25,7 +25,7 @@ class DataItem:
         if not isinstance(j, dict):
             type = config.type.get_base_type()
             if not type:
-                raise ValueError(f"Data model configuration has a base type here, but you passed a model {j}")
+                raise ValueError(f"Data model configuration has a base type here, but you passed a model: {j}")
             data = BaseData.from_value(j, type)
             return cls(data, config)
 
@@ -63,7 +63,7 @@ class DataItem:
         if oneof == "base_data":
             type = config.get_base_type()
             if not type:
-                raise ValueError(f"config is not base type but proto has {proto.base_data} base data, {proto.model_data}")
+                raise ValueError(f"config is not base type but proto has {proto.base_data} base data")
             data = BaseData.from_proto(proto.base_data, type)
         elif oneof == "model_data":
             model_data = dict(proto.model_data.data)

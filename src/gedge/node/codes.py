@@ -64,7 +64,7 @@ def config_from_predefined_code(code: int) -> ResponseConfig:
         CALLBACK_ERR: CALLBACK_ERR_CONFIG
     }
     if code not in mapping:
-        raise ValueError(f"invalid code {code}")
+        raise ValueError(f"invalid built-in code used in response: {code}")
 
     return mapping[code]
 

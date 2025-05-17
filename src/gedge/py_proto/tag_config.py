@@ -51,7 +51,7 @@ class Tag:
         def _get_config(model: DataModelConfig, curr_path: str) -> DataItemConfig:
             matches = [item for item in model.items if path.startswith(key_join(curr_path, item.path))]
             if not matches:
-                raise ValueError
+                raise ValueError(f"cannot find item on model {model.path}")
             best_match = max(matches, key = lambda item: len(os.path.commonprefix([path, key_join(curr_path, item.path)])))
 
             # base case
@@ -60,13 +60,13 @@ class Tag:
 
             m = best_match.load_model()
             if not m:
-                raise ValueError
+                raise ValueError("Could not load model")
             config = _get_config(m, key_join(curr_path, best_match.path))
             return config
 
         m = self.load_model()
         if not m:
-            raise ValueError
+            raise ValueError("Could not load model")
         return _get_config(m, self.path)
 
     @classmethod
@@ -279,6 +279,8 @@ class TagConfig:
             t = self.get_tag(path)
             if path in t.group_config:
                 res.add(t.group_config[path])
+            else:
+                raise ValueError(f"path {path} not part of any group")
         return list(res)
     
     def get_group(self, path: str) -> str | None:

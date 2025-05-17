@@ -92,7 +92,7 @@ class RemoteConnection:
     
     def add_tag_group_callback(self, group_path: str, on_group_data: TagGroupDataCallback) -> None:
         if not self.tag_config.is_valid_group_path(group_path):
-            raise LookupError(group_path)
+            raise LookupError(f"Cannot find group {group_path}")
         
         self._comm.group_data_subscriber(self.ks, group_path, on_group_data, self.tag_config)
 
@@ -167,7 +167,7 @@ class RemoteConnection:
         '''
         tag = self.tag_config.get_tag(path)
         if tag.is_model_ref():
-            raise ValueError(f"cannot bind to a model tag {path}")
+            raise ValueError(f"cannot bind to a model tag (only base tags) {path}")
         bind = TagBind(self.ks, path, self._comm, self.tag_config, value, self._write_tag, self._on_tag_bind_close)
         self.binds[path] = bind
         return bind
@@ -193,7 +193,7 @@ class RemoteConnection:
             subnodes = name.split("/")
             for s in subnodes:
                 if s not in curr_node.subnodes:
-                    raise ValueError(f"No subnode {s}")
+                    raise ValueError(f"No subnode {s} when trying to find subnode {name}")
                 curr_node = curr_node.subnodes[s]
             # we inherit comm
             # different uuid or same?
@@ -203,7 +203,7 @@ class RemoteConnection:
             return r
 
         if name not in self.subnodes:
-            raise ValueError(f"No subnode {name}") 
+            raise ValueError(f"No subnode {name} in config for {self.key}") 
         curr_node = self.subnodes[name]
         logger.debug(self._comm.session.is_closed())
         r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
@@ -224,7 +224,7 @@ class RemoteConnection:
         config = self.tag_config.get_config(path)
         base_type = config.get_base_type()
         if not base_type:
-            raise ValueError("cannot write to model type")
+            raise ValueError(f"cannot write to model type at path {path}")
         response = self._comm.write_tag(self.ks, path, BaseData.from_value(value, base_type))
         code = response.code
 

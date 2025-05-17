@@ -178,7 +178,7 @@ class Comm:
                 raise TagLookupError(path, node)
             base_type = config.type.get_base_type()
             if base_type is None:
-                raise ValueError("cannot write to model object")
+                raise ValueError(f"cannot write to model object {config.path}")
             value = BaseData.proto_to_py(data, base_type)
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
@@ -191,7 +191,7 @@ class Comm:
             configs = tag_config.get_group_member_configs(group_path)
             base_type = configs[path].get_base_type()
             if not base_type:
-                raise ValueError
+                raise ValueError(f"cannot subscribe to model data at path {path}")
             value = BaseData.proto_to_py(data.data[path], base_type)
             logger.debug(f"Remote node {internal_to_user_key(str(sample.key_expr))} received value {value} for tag {path}")
             on_tag_data(str(sample.key_expr), value)
@@ -750,8 +750,8 @@ class Comm:
                     logger.warning(f"Versions do not match for model {path}, model says {config.version}, key says {pulled_version}")
                     return []
                 models.append(config)
-            except:
-                raise ValueError(f"Could not deserialize model at path {path} from historian")
+            except Exception as e:
+                raise ValueError(f"Could not deserialize model at path {path} from historian: {e}")
         return models
     
     def _pull_model_with_version(self, path: str, version: int) -> DataModelConfig | None:

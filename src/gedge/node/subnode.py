@@ -32,9 +32,9 @@ class SubnodeConfig(NodeConfig):
     @classmethod
     def from_json5(cls, json: Any, parent: NodeKeySpace):
         if not isinstance(json, dict):
-            raise ValueError(f"subnode must be dict: {json}")
+            raise ValueError(f"subnode must be dict, got {json}")
         if "name" not in json:
-            raise ValueError(f"subnode must have name")
+            raise ValueError(f"subnode must have 'name'")
         
         name = json["name"]
         if "/" in name:
@@ -111,6 +111,7 @@ class RemoteSubConnection(RemoteConnection):
         self.responses: dict[str, dict[int, ResponseConfig]] = {key:{r.code:r for r in value.responses} for key, value in self.methods.items()}
         self.subnodes: dict[str, SubnodeConfig] = self.meta.subnodes
     
+    # TODO: this function is repeated 4 times, we need to refactor desperately
     def subnode(self, name: str) -> RemoteSubConnection:
         def on_close(key):
             pass
@@ -119,7 +120,7 @@ class RemoteSubConnection(RemoteConnection):
             subnodes = name.split("/")
             for s in subnodes:
                 if s not in curr_node.subnodes:
-                    raise ValueError(f"No subnode {s}")
+                    raise ValueError(f"No subnode {s} when trying to find subnode {name}")
                 curr_node = curr_node.subnodes[s]
             # we inherit comm
             # different uuid or same?
@@ -128,7 +129,7 @@ class RemoteSubConnection(RemoteConnection):
             return r
 
         if name not in self.subnodes:
-            raise ValueError(f"No subnode {name}") 
+            raise ValueError(f"No subnode {name} in config for {self.key}") 
         curr_node = self.subnodes[name]
         r = RemoteSubConnection(name, curr_node.ks, curr_node, self._comm, self.node_id, on_close)
         return r

@@ -205,12 +205,12 @@ class NodeConfig:
             subnodes = name.split("/")
             for s in subnodes:
                 if s not in curr_node.subnodes:
-                    raise ValueError(f"No subnode {s}")
+                    raise ValueError(f"No subnode {s} when trying to find subnode {name}")
                 curr_node = curr_node.subnodes[s]
             return curr_node # type: ignore
 
         if name not in self.subnodes:
-            raise ValueError(f"No subnode {name}") 
+            raise ValueError(f"No subnode {name} in config for {self.key}") 
         return self.subnodes[name]
 
     def add_tag(self, path: str, type: Type, props: dict[str, Any] = {}) -> Tag:
@@ -620,7 +620,7 @@ class NodeSession:
         if not self.tag_config.is_valid_path(path):
             raise ValueError(f"cannot bind to invalid path {path}")
         if not self.tag_config.is_base_type(path):
-            raise ValueError(f"cannot bind to model tag {path}")
+            raise ValueError(f"cannot bind to model tag (only base tags) {path}")
         bind = TagBind(self.ks, path, self._comm, self.tag_config, value, self._update_tag, self._on_tag_bind_close)
         self.binds[path] = bind
         return bind
@@ -671,7 +671,7 @@ class NodeSession:
         if len(groups) > 1:
             raise ValueError(f"tags are from multiple groups: {groups}")
         elif len(groups) == 0:
-            raise ValueError(f"no group")
+            raise ValueError(f"no groups found for group {list(group.keys())}")
         
         group_path: str = groups.pop()
         new_group: dict[str, proto.BaseData] = {}
@@ -723,14 +723,14 @@ class NodeSession:
             subnodes = name.split("/")
             for s in subnodes:
                 if s not in curr_node.subnodes:
-                    raise ValueError(f"No subnode {s}")
+                    raise ValueError(f"No subnode {s} when trying to find subnode {name}")
                 curr_node = curr_node.subnodes[s]
             session = SubnodeSession(curr_node, self._comm) # type: ignore
             logger.debug(f"Found subnode with name {curr_node.name}") # type: ignore
             return session
 
         if name not in self.subnodes:
-            raise ValueError(f"No subnode {name}") 
+            raise ValueError(f"No subnode {name} in config for {self.config.key}") 
         session = SubnodeSession(self.config.subnodes[name], self._comm)
         logger.debug(f"Found subnode with name {name}")
         return session

@@ -24,7 +24,7 @@ ZENOH_PORT = 7447
 def connect(config: NodeConfig, *connections: str) -> NodeSession:
     conns = list(connections)
     if len(conns) == 0:
-        raise ValueError("Must provide at least one connection point")
+        raise ValueError("Must provide at least one connection point to gedge.connect(config, connections)")
     
     # allow for the user to pass in just an IP, we complete the rest
     for i in range(len(conns)):

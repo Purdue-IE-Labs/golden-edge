@@ -153,7 +153,7 @@ class DataModelConfig:
         if "path" not in j:
             raise LookupError(f"Model config must include keyword 'path', found {j}")
         if "version" not in j:
-            raise LookupError(f"Model config must include version, found {j}")
+            raise LookupError(f"Model config must include keyword 'version', found {j}")
 
         path = j["path"]
         parent = None

@@ -64,7 +64,7 @@ class BaseType(Enum):
             "list[bool]": BaseType.LIST_BOOL,
         }
         if t not in mapping:
-            raise ValueError(f"Invalid type {t}")
+            raise ValueError(f"Invalid base type {t}")
         return cls(mapping[t])
 
     def to_proto(self) -> proto.BaseType:

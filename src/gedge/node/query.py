@@ -26,6 +26,8 @@ class Query:
     _responses_sent: list[ResponseConfig]
 
     def _log_message(self, message_type: str, code: int):
+        # this is overriden in subclasses, no one should every use Query
+        # only use TagWriteQuery or MethodQuery
         raise NotImplementedError
 
     def _reply(self, code: int, body: dict[str, Any], type: ResponseType):

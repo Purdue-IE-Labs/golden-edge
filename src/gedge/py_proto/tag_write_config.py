@@ -20,10 +20,3 @@ class TagWriteConfig:
     def from_proto(cls, proto: proto.TagWriteConfig):
         responses = list_from_proto(ResponseConfig, proto.responses)
         return cls(proto.path, responses)
-    
-    def to_json5(self):
-        raise NotImplementedError
-    
-    @classmethod
-    def from_json5(cls, j: Any):
-        raise NotImplementedError

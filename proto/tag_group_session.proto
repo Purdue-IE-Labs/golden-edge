@@ -2,6 +2,11 @@ syntax = "proto3";
 
 import "base_data.proto";
 
+/*
+This looks practically identical to a DataModel object, with the only 
+distinction being that TagGroups only send BaseDatas, while DataModel objects 
+can hold nested models
+*/
 message TagGroup {
     map<string, BaseData> data = 1;
 }
