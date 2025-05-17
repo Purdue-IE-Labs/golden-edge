@@ -1,57 +1,58 @@
+// OUTDATED: we no longer support model_file or model, instead opting for a step-by-step push-pull sequence if models depend on one another
 {
-    path: "foo/bar",
-    version: 1,
-    // for each tag, one and only one of ['base_type', 'model', 'model_path', 'model_file'] is required!
-    tags: [
-        // base tag
-        {
-            path: "foo/bar/baz",
-            base_type: "bool",
-            props: {
-                desc: "A simple description",
-            }
-        },
-        // model tag to a file
-        {
-            path: "baz",
-            // here, we pass a relative path to a json5 model definition
-            // if we do this, we also need to pass argument --json-dir in the cli
-            // this option is not available in a node definition that is using a model
-            model_file: "./qux.json5",
-            props: {
-                desc: "Another description"
-            }
-        },
-        // model tag with model embedded
-        {
-            path: "foo/bar",
-            // the cli will parse this as a separate model
-            model: {
-                path: "bar",
-                version: 1,
-                tags: [
-                    {
-                        path: "tag10",
-                        base_type: "float",
-                    }
-                ]
-            },
-            props: {
-                // model_prop: {
-                //     /*
-                //     must provide both path and model
-                //     the hard part about this is that it doesn't fit nicely in any case.
-                //     that is to say, here, we are both defining a model, then within that model, 
-                //     using another model. we're trying to do two things at once. so, in order for 
-                //     this to work, the user would first need to push-pull bar.
-                //     */
-                //     model_path: "bar",
-                //     model: {
-                //         "foo/bar/baz": 100.0,
-                //         "baz": true
-                //     }
-                // },
-            }
-        }
-    ]
+  path: "foo/bar",
+  version: 1,
+  // for each tag, one and only one of ['base_type', 'model', 'model_path', 'model_file'] is required!
+  tags: [
+    // base tag
+    {
+      path: "foo/bar/baz",
+      base_type: "bool",
+      props: {
+        desc: "A simple description",
+      },
+    },
+    // model tag to a file
+    {
+      path: "baz",
+      // here, we pass a relative path to a json5 model definition
+      // if we do this, we also need to pass argument --json-dir in the cli
+      // this option is not available in a node definition that is using a model
+      model_file: "./qux.json5",
+      props: {
+        desc: "Another description",
+      },
+    },
+    // model tag with model embedded
+    {
+      path: "foo/bar",
+      // the cli will parse this as a separate model
+      model: {
+        path: "bar",
+        version: 1,
+        tags: [
+          {
+            path: "tag10",
+            base_type: "float",
+          },
+        ],
+      },
+      props: {
+        // model_prop: {
+        //     /*
+        //     must provide both path and model
+        //     the hard part about this is that it doesn't fit nicely in any case.
+        //     that is to say, here, we are both defining a model, then within that model,
+        //     using another model. we're trying to do two things at once. so, in order for
+        //     this to work, the user would first need to push-pull bar.
+        //     */
+        //     model_path: "bar",
+        //     model: {
+        //         "foo/bar/baz": 100.0,
+        //         "baz": true
+        //     }
+        // },
+      },
+    },
+  ],
 }
