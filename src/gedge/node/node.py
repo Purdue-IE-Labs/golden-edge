@@ -12,6 +12,7 @@ from gedge.py_proto.data_model_config import DataModelConfig, DataItemConfig
 from gedge.py_proto.data_model_ref import DataModelRef
 from gedge.py_proto.props import Prop
 from gedge.node.remote import RemoteConnection
+from gedge.node.visRemote import VisualRemoteConnection
 from gedge import proto
 from gedge.node.error import MethodLookupError, TagLookupError
 from gedge.comm.comm import Comm
@@ -460,7 +461,18 @@ class NodeSession:
         Connects the current node to a remote node at 'key'
         Raises a ValueError if the remote node 'key' is not online
 
-        Example Implementation:
+        Arguments:
+            key (str): The key of the remote node
+            on_state (StateCallback | None): Optional StateCallback for the connection
+            on_meta (MetaCallback | None): Optional MetaCallback for the connection
+            on_liveliness_change (LivelinessCallback | None): Optional LivelinessCallback for the connection
+            tag_data_callbacks (dict[str, TagDataCallbacks] = {}): Optional Dictionary of TagDataCallbacks
+
+        Returns:
+            RemoteConnection: The new connection between the current node and remote node
+
+        **Example**::
+
             def state_callback(str, state):
                 print(f"State changed: {state} for {str}")
 
@@ -479,16 +491,6 @@ class NodeSession:
                     on_meta=meta_callback, 
                     on_liveliness_change=liveliness_callback, 
                     tag_data_callbacks={"tag": tag_data_callback})
-
-        Arguments:
-            key (str): The key of the remote node
-            on_state (StateCallback | None): Optional StateCallback for the connection
-            on_meta (MetaCallback | None): Optional MetaCallback for the connection
-            on_liveliness_change (LivelinessCallback | None): Optional LivelinessCallback for the connection
-            tag_data_callbacks (dict[str, TagDataCallbacks] = {}): Optional Dictionary of TagDataCallbacks
-
-        Returns:
-            RemoteConnection: The new connection between the current node and remote node
         '''
         logger.info(f"Node {self.config.key} connecting to remote node {key}")
 
@@ -506,6 +508,61 @@ class NodeSession:
         self.connections[key] = connection
         
         return connection
+    
+    def connect_to_visual_remote(self, key: str, visual_path: str | None = None, on_state: StateCallback | None = None, on_meta: MetaCallback | None = None, on_liveliness_change: LivelinessCallback | None = None, tag_data_callbacks: dict[str, TagDataCallback] = {}) -> VisualRemoteConnection:
+        '''
+        Connects the current node to a remote node at 'key' and supports visual elements in Grafana
+        Raises a ValueError if the remote node 'key' is not online
+
+        Arguments:
+            key (str): The key of the remote node
+            on_state (StateCallback | None): Optional StateCallback for the connection
+            on_meta (MetaCallback | None): Optional MetaCallback for the connection
+            on_liveliness_change (LivelinessCallback | None): Optional LivelinessCallback for the connection
+            tag_data_callbacks (dict[str, TagDataCallbacks] = {}): Optional Dictionary of TagDataCallbacks
+
+        Returns:
+            RemoteConnection: The new connection between the current node and remote node
+
+        **Example**::
+
+            def state_callback(str, state):
+                print(f"State changed: {state} for {str}")
+
+            def meta_callback(meta_data):
+                print(f"Received metadata: {meta_data}")
+
+            def liveliness_callback(str, liveliness_status):
+                print(f"Liveliness status: {liveliness_status}, {str}")
+
+            def tag_data_callback(path, data):
+                print(f"Tag data at {path}: {data}")
+            
+                remote = session.connect_to_remote(
+                    key="path", 
+                    on_state=state_callback, 
+                    on_meta=meta_callback, 
+                    on_liveliness_change=liveliness_callback, 
+                    tag_data_callbacks={"tag": tag_data_callback})
+        '''
+        logger.info(f"Node {self.config.key} connecting to remote node {key}")
+        GrafanaPath = key if visual_path is None else visual_path
+
+        connection = VisualRemoteConnection(NodeKeySpace.from_user_key(key), self._comm, self.id, GrafanaPath, self._on_remote_close)
+        if on_state:
+            connection.add_state_callback(on_state)
+        if on_meta:
+            connection.add_meta_callback(on_meta)
+        if on_liveliness_change:
+            connection.add_liveliness_callback(on_liveliness_change)
+
+        for path in tag_data_callbacks:
+            connection.add_tag_data_callback(path, tag_data_callbacks[path])
+
+        self.connections[key] = connection
+        
+        return connection
+
 
     def disconnect_from_remote(self, key: str):
         '''

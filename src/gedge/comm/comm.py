@@ -46,6 +46,7 @@ class Comm:
         self.connections = connections
         self.subscriptions: list[zenoh.Subscriber] = []
         self.sequence_number = SequenceNumber()
+        self._meta_store: dict[str, bytes] = {}
     
     def connect(self):
         '''
@@ -139,6 +140,21 @@ class Comm:
         '''
         logger.debug(f"putting proto on key_expr '{key_expr}' with value {value}")
         b = self.serialize(value)
+        # 2) if this is META, cache and declare it queryable
+        if key_expr.endswith("/META"):
+            # cache the bytes
+            self._meta_store[key_expr] = b
+
+            # declare a handler to reply to any .get() on this key
+            def _meta_handler(query: zenoh.Query):
+                logger.debug(f"Answering GET query for {key_expr}")
+                query.reply(key_expr=key_expr,
+                    payload=self._meta_store[key_expr],
+                    encoding="application/protobuf")
+
+            # (re)declare queryable — harmless if done multiple times
+            self.session.declare_queryable(key_expr, _meta_handler)
+
         self.session.put(key_expr, b, encoding="application/protobuf", attachment=bytes(self.sequence_number))
         self.sequence_number.increment()
     
@@ -685,6 +701,9 @@ class Comm:
 
             try:
                 meta: proto.Meta = self.deserialize(proto.Meta(), result.payload.to_bytes())
+                if not meta.key:
+                    logger.warning("Received Meta with empty key, skipping.")
+                    continue   
                 ks = NodeKeySpace.from_user_key(meta.key)
                 is_online = self.is_online(ks)
                 if only_online and not is_online:
